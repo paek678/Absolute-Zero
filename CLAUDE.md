@@ -19,7 +19,9 @@
 11. **ScriptableObject configs are runtime read-only** — SO field modification at runtime permanently corrupts Editor asset data. Read at init, copy to runtime class.
 12. **Never call `mcp__unityMCP__recompile_scripts`** — breaks MCP WebSocket connection, requires manual restart. Rely on Unity Editor auto-recompile.
 13. **Invoke `unity-*` skills when modifying Unity C# code** — 22 Unity reference skills are installed (lifecycle, state-machines, async-patterns, npc-behavior, procedural-gen, etc.). Before writing or refactoring Unity systems, invoke the matching skill to check correct patterns and avoid common mistakes.
-14. **End-of-phase harness verification** — after completing each work phase:
+15. **Prefer MCP automation over manual instructions** — when Unity Editor settings, scene config, or component setup needs changing, use MCP tools (`execute_code`, `manage_components`, `manage_gameobject`, etc.) to do it directly. Only give manual instructions for things that genuinely cannot be automated (e.g., Unity Cloud Dashboard web UI).
+16. **Namespace final segment must not collide with imported type names** — `AbsoluteZero.UI.Lobby` conflicts with `Unity.Services.Lobbies.Models.Lobby`, causing CS0118. Suffix with category instead (e.g., `LobbyUI`, `PlayerVisuals`).
+17. **End-of-phase harness verification** — after completing each work phase:
     - `Docs/Plans/PLAN_NNN_*.md` — all completed tasks marked `[x]`
     - `Docs/RECENT_CHANGES.md` — change list recorded at top
     - `Docs/ACTIVE_CONTEXT.md` — status + last modified files updated
@@ -41,18 +43,40 @@
 | Game systems | GAME_SYSTEMS.md | `Docs/GAME_SYSTEMS.md` |
 | Network architecture | NETWORK_ARCHITECTURE.md | `Docs/NETWORK_ARCHITECTURE.md` |
 | Known bugs | KNOWN_ISSUES.md | `Docs/KNOWN_ISSUES.md` |
+| Network code reference | ArenaCombat_server | `C:\Users\paek6\Unity Project\ArenaCombat_server` (source project for network migration) |
 
 ---
 
 ## Architecture Summary
 
-- **Network model:** NGO (Netcode for GameObjects), Unity Relay, Host-authoritative
+- **Network model:** NGO 2.11.2 (Netcode for GameObjects), Unity Relay (DTLS), Host-authoritative
 - **No DI** — singleton managers + `GetComponent<T>()` pattern (Unity standard)
+- **Namespace:** `AbsoluteZero` for all code
 - **Turn system:** `AbsoluteZeroTurnManager` — single state machine controlling PrepTurn / AttackTurn / Resolution / GameOver
 - **Data sync:** `NetworkVariable<float>` for temperature, `NetworkVariable<TurnPhase>` for turn state, `NetworkVariable<int>` for timer
-- **Action input:** `[ServerRpc]` from client → host stores in local buffer → simultaneous resolution on AttackTurn
-- **UI:** `AZDemoUI` — reads NetworkVariable callbacks (`OnValueChanged`) to update temperature bars, timer, action buttons
-- **Planned managers:** `RelayManager`, `SessionManager`, `LobbyManager` (ported from ArenaCombat_server base)
+- **Action input:** `[Rpc(SendTo.Server)]` from client → host stores in local buffer → simultaneous resolution on AttackTurn
+- **UI:** All UI is **runtime-built** (no Inspector wiring) — `AZGameUI` and `AZLobbyUI` construct Canvas/buttons/text in code. Uses TMP (TextMeshPro)
+
+### Scenes
+- **LobbyScene** (build index 0) — start scene, has NetworkManager + Managers (DDOL)
+- **GameScene** (build index 1) — loaded via `NetworkManager.SceneManager` after Relay connect
+
+### Key Singletons (all DDOL, on "Managers" GameObject in LobbyScene)
+- `LobbyManager` — lobby CRUD, heartbeat, polling, auto-inits Unity Services in `Start()`
+- `RelayManager` — Relay allocation + join
+- `SessionManager` — scene transition + disconnect handling
+- `PlayerSpawnManager` — spawns Player prefab on client connect
+
+### Game Systems (in GameScene)
+- `AbsoluteZeroTurnManager` (NetworkBehaviour) — server-authoritative state machine
+- `AZGameUI` (MonoBehaviour) — runtime-built Canvas, no Inspector wiring
+- `AZPlayerVisual` (NetworkBehaviour on Player prefab) — capsule with temp-based color
+
+### NetworkManager Config
+- UnityTransport component (DTLS via Relay)
+- `DefaultNetworkPrefabs.asset` → contains Player prefab
+- PlayerPrefab = null (PlayerSpawnManager handles spawning)
+- EnableSceneManagement = true
 
 ---
 
@@ -61,13 +85,20 @@
 ```
 Assets/
 ├── Scenes/
-│   └── SampleScene.unity          # Default URP scene (to be replaced with game scene)
-├── Settings/                      # URP render pipeline settings
-├── TutorialInfo/                  # Unity template (can be removed)
-└── InputSystem_Actions.inputactions
+│   ├── LobbyScene.unity           # Lobby + NetworkManager (build index 0)
+│   └── GameScene.unity            # Turn-based game scene (build index 1)
+├── Scripts/
+│   ├── Core/
+│   │   ├── Game/                  # AbsoluteZeroTurnManager
+│   │   └── Network/              # LobbyManager, RelayManager, SessionManager, PlayerSpawnManager
+│   └── UI/
+│       ├── Game/                  # AZGameUI
+│       └── Lobby/                 # AZLobbyUI
+├── Prefabs/
+│   └── Player.prefab             # NetworkObject with AZPlayerVisual
+├── Settings/                     # URP render pipeline settings
+└── TextMesh Pro/                 # TMP Essential Resources
 ```
-
-> Project is in initial state. Layout will expand as systems are implemented.
 
 ---
 

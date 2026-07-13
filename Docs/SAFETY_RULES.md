@@ -83,6 +83,14 @@ Retired (❌ Disproven) → Delete or revise and re-register
 - **Ported from:** AbyssNode RULE-003 (universal Unity constraint)
 - **Added:** 2026-07-13
 
+### RULE-005: Namespace final segment must not collide with imported type names
+- **Status:** ✅ Verified
+- **Category:** Code
+- **Reason:** `AbsoluteZero.UI.Lobby` resolved to the namespace instead of `Unity.Services.Lobbies.Models.Lobby`, causing CS0118 compilation error
+- **Correct pattern:** Suffix namespace with category (e.g., `LobbyUI`, `PlayerVisuals`). Check if final segment matches any imported type name before creating
+- **Evidence:** `Assets/Scripts/UI/Lobby/AZLobbyUI.cs` — originally used `AbsoluteZero.UI.Lobby`, had to rename to `AbsoluteZero.UI.LobbyUI`
+- **Added:** 2026-07-13
+
 ---
 
 ## ALWAYS DO

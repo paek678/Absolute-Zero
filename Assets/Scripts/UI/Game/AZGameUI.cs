@@ -58,6 +58,7 @@ namespace AbsoluteZero.UI.Game
             if (tm != null)
             {
                 tm.CurrentPhase.OnValueChanged -= OnPhaseChanged;
+                tm.WinnerIndex.OnValueChanged -= OnWinnerChanged;
                 tm.OnResultsReceived -= OnResultsReceived;
             }
         }
@@ -65,6 +66,7 @@ namespace AbsoluteZero.UI.Game
         private void SubscribeToEvents()
         {
             tm.CurrentPhase.OnValueChanged += OnPhaseChanged;
+            tm.WinnerIndex.OnValueChanged += OnWinnerChanged;
             tm.OnResultsReceived += OnResultsReceived;
             OnPhaseChanged(TurnPhase.WaitingForPlayers, tm.CurrentPhase.Value);
         }
@@ -99,17 +101,28 @@ namespace AbsoluteZero.UI.Game
 
                 case TurnPhase.GameOver:
                     SetActionPanelVisible(false);
-                    int winner = tm.WinnerIndex.Value;
-                    int myIndex = tm.GetLocalPlayerIndex();
-                    if (winner < 0)
-                        statusText.text = "DRAW!";
-                    else if (winner == myIndex)
-                        statusText.text = "YOU WIN!";
-                    else
-                        statusText.text = "YOU LOSE...";
+                    UpdateGameOverText();
                     SetGameOverPanelVisible(true);
                     break;
             }
+        }
+
+        private void OnWinnerChanged(int oldVal, int newVal)
+        {
+            if (tm.CurrentPhase.Value != TurnPhase.GameOver) return;
+            UpdateGameOverText();
+        }
+
+        private void UpdateGameOverText()
+        {
+            int winner = tm.WinnerIndex.Value;
+            int myIndex = tm.GetLocalPlayerIndex();
+            if (winner < 0)
+                statusText.text = "DRAW!";
+            else if (winner == myIndex)
+                statusText.text = "YOU WIN!";
+            else
+                statusText.text = "YOU LOSE...";
         }
 
         private void OnResultsReceived(ActionType p1Action, ActionType p2Action,

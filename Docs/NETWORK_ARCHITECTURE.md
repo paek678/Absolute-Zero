@@ -70,3 +70,16 @@ void BroadcastTurnResultClientRpc(float player0TempChange, float player1TempChan
 3. **Action buffer must be cleared each turn** — stale actions from previous turns cause incorrect resolution
 4. **Relay connection timeout: handle gracefully** — show reconnect UI, don't crash
 5. **Host migration is NOT supported in demo** — if host disconnects, game ends
+
+---
+
+## Unity Cloud Services
+
+| Service | Status | Details |
+|---------|--------|---------|
+| **Authentication** | Enabled | Anonymous sign-in, confirmed working |
+| **Relay** | Enabled | Setup completed 2026-07-13 |
+| **Lobby** | Enabled | Setup completed 2026-07-13 |
+
+- **Organization:** paek678
+- **Unity Project ID:** `9c18c8e7-5dae-4847-85a5-a395b6419b0b`
