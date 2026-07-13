@@ -1,0 +1,85 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Edit",
+      "Write",
+      "Glob",
+      "Grep",
+      "Bash(*)",
+      "PowerShell(*)",
+      "Agent",
+      "Artifact",
+      "WebFetch",
+      "WebSearch",
+      "NotebookEdit",
+      "TodoWrite",
+      "DesignSync",
+      "Skill(*)",
+      "mcp__unityMCP__*",
+      "ReadMcpResourceTool",
+      "ReadMcpResourceDirTool",
+      "ListMcpResourcesTool",
+      "ToolSearch",
+      "ReportFindings",
+      "mcp__unityMCP__manage_gameobject",
+      "Bash(mkdir -p \"c:/Users/paek6/Absolute Zero/Assets/Scripts/UI/Lobby\")"
+    ],
+    "deny": [
+      "mcp__unityMCP__recompile_scripts"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\paek6\\.claude",
+      "c:\\Users\\paek6\\Absolute Zero\\Assets\\Scripts\\UI"
+    ]
+  },
+  "model": "claude-opus-4-6",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -ExecutionPolicy Bypass -File .claude/hooks/pre-commit-check.ps1"
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -ExecutionPolicy Bypass -File .claude/hooks/block-md-creation.ps1"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -ExecutionPolicy Bypass -File .claude/hooks/post-edit-check.ps1"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -ExecutionPolicy Bypass -File .claude/hooks/pre-compact-save.ps1"
+          }
+        ]
+      }
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "powershell.exe -ExecutionPolicy Bypass -File .claude/statusline-command.ps1"
+  }
+}
