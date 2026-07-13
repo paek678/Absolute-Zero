@@ -109,3 +109,4 @@ InitTestScene*.unity*
 # Session-volatile harness docs (regenerated each session, causes merge conflicts)
 Docs/ACTIVE_CONTEXT.md
 Docs/RECENT_CHANGES.md
+.mcp.json
