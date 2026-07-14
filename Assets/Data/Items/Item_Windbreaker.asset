@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c1abc1ddd80ba4f4b9783f5a3a6b9d7b, type: 3}
+  m_Name: Item_Windbreaker
+  m_EditorClassIdentifier: Assembly-CSharp::AbsoluteZero.Core.Item.DefenseItemDataSO
+  ItemName: "\uBC14\uB78C\uB9C9\uC774"
+  Description: "\uC628\uB3C4 \uACF5\uACA9\uC744 4\xB0 \uCC28\uB2E8\uD55C\uB2E4."
+  Icon: {fileID: 0}
+  Category: 1
+  SlotType: 0
+  Persistence: 0
+  MaxUses: -1
+  DropWeight: 0
+  RequiresMiniGame: 0
+  MiniGameType: 0
+  MiniGameTimeLimit: 0
+  MiniGameDescription: 
+  BlockAmount: 4
+  Filter: 0
