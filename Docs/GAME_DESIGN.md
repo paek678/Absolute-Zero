@@ -29,8 +29,12 @@ Fan OFF: recovery        First kill = win          → Next turn
 
 ### Prep Phase
 - Fan decreases temperature at **1°/sec** while active
-- Select item to use, then press **"Ready" (준비 끝)** to end prep
-- Ready → fan stops → temperature **recovers at 1°/sec** while waiting for opponent
+- Items are classified as **Sub** (utility) or **Main** (primary action):
+  - **Sub items**: can use multiple per turn (effects applied immediately)
+  - **Main item**: selecting ends turn immediately (max 1 per turn)
+  - Order: **Sub → Main** (OK) / **Main → Sub** (blocked — Main ends turn)
+- Alternative: press **"Ready" (준비 끝)** without Main → Sub effects only
+- Ready / Main select → fan stops → temperature **recovers at 1°/sec**
 - Timer expires with no selection → **idle** (no action taken, fully vulnerable)
 - Temperature hits 0° during prep → **instant loss**
 
@@ -167,16 +171,24 @@ Appears at **2nd prep phase** of each round. Random. Resets per round.
 
 ```
 [1] Click item on floor → [2] Zoom-in + description → [3] "Use" confirm
-                                                            ↓
+                                                            │
                                               (mini-game required?)
                                               YES → play mini-game
                                                     pass → item queued
-                                                    fail → item destroyed, re-select
+                                                    fail → item destroyed
                                               NO  → item queued
-                                                            ↓
-[4] Press "준비 끝" (Ready) → fan OFF, temp recovers → wait for opponent
-    (action locked, cannot change)
+                                                            │
+                                              (Sub or Main?)
+                                              SUB → effect applied, stay in prep
+                                                    can select more Sub or Main
+                                              MAIN → effect queued → TURN END
+                                                     fan OFF, recovery starts
+                                                            │
+Alternative: [4] Press "준비 끝" without Main → Sub effects only → TURN END
 ```
+
+> **Sub → Main (OK)**: use utility items first, then finish with primary action.
+> **Main → Sub (BLOCKED)**: selecting Main immediately ends the turn.
 
 ---
 
