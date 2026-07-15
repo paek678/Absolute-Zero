@@ -215,6 +215,44 @@ namespace AbsoluteZero.EditorTools
                 Assert(Approximately(d.P2.Temperature.Value, 0f) && d.Temp.IsDead(d.P2), "0° 클램프 + IsDead true");
             });
 
+            // ── T16. 안아줘요 티셔츠: 상대 온도 = 내 온도 (내가 더 높으면 무효, 방어 상호작용) ──
+            Test("T16 안아줘요 티셔츠 (온도 동기화)", () =>
+            {
+                using var d = Duel.Create(fan, windbreaker, tea, cat);
+                var hugShirt = ScriptableObject.CreateInstance<AttackItemDataSO>();
+                hugShirt.ItemName = "안아줘요(T)"; hugShirt.Category = ItemCategory.Attack;
+                hugShirt.EqualizeToUserTemp = true; hugShirt.AttackFilter = DamageFilter.Temperature;
+
+                d.P1.Temperature.Value = 10f; d.P2.Temperature.Value = 30f;
+                hugShirt.ExecuteEffect(d.Ctx(0, 0));
+                Assert(Approximately(d.P2.Temperature.Value, 10f), $"30→내 온도 10: 실제 {d.P2.Temperature.Value}");
+
+                d.P1.Temperature.Value = 30f; d.P2.Temperature.Value = 10f;
+                hugShirt.ExecuteEffect(d.Ctx(0, 0));
+                Assert(Approximately(d.P2.Temperature.Value, 30f), $"내가 더 높으면 상대가 올라옴(10→30): 실제 {d.P2.Temperature.Value}");
+
+                d.P1.Temperature.Value = 10f; d.P2.Temperature.Value = 30f;
+                d.Mods[1].ActiveDefense = new DefenseInfo { Filter = DamageFilter.Temperature, BlockAmount = 4f };
+                hugShirt.ExecuteEffect(d.Ctx(0, 0));
+                Assert(Approximately(d.P2.Temperature.Value, 14f), $"바람막이 4° 경감(20-4=16 피해→14): 실제 {d.P2.Temperature.Value}");
+            });
+
+            // ── T17. 타로카드: 상대 준비 완료 후에만 사용 가능 + OpponentRevealed 플래그 ──
+            Test("T17 타로카드 (사용 조건 + 공개 플래그)", () =>
+            {
+                using var d = Duel.Create(fan, windbreaker, tea, cat);
+                var tarot = ScriptableObject.CreateInstance<SpecialItemDataSO>();
+                tarot.ItemName = "타로카드(T)"; tarot.Category = ItemCategory.Special;
+                tarot.SpecialEffect = SpecialEffectType.RevealOpponent;
+
+                d.P2.IsReady.Value = false;
+                Assert(!tarot.CanUse(d.Ctx(0, 0)), "상대 준비 전: 사용 불가");
+                d.P2.IsReady.Value = true;
+                Assert(tarot.CanUse(d.Ctx(0, 0)), "상대 준비 후: 사용 가능");
+                tarot.ExecuteEffect(d.Ctx(0, 0));
+                Assert(d.Mods[0].OpponentRevealed, "사용자 OpponentRevealed 플래그 세팅");
+            });
+
             string summary = $"[SelfTest] {_pass + _fail}개 테스트: {_pass} PASS / {_fail} FAIL";
             if (_fail == 0) Debug.Log($"{summary} — 전부 통과 ✔\n{_report}");
             else Debug.LogError($"{summary}\n{_report}");

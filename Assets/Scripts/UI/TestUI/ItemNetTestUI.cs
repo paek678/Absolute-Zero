@@ -208,6 +208,7 @@ namespace AbsoluteZero.UI.TestUI
         private void Update()
         {
             if (!_gameUiBuilt || _mgr == null) return;
+            if (_me == null || _opp == null) return;   // RULE-011: 플레이 종료/연결 해제로 파괴된 오브젝트 접근 방지
 
             // 페이즈/타이머 (FIX-04: 클라 로컬 계산)
             var phase = (ItemNetTestManager.NetPhase)_mgr.Phase.Value;
