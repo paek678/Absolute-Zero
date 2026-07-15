@@ -11,6 +11,8 @@ GameObject:
   - component: {fileID: 3418326394223257367}
   - component: {fileID: 4853289670753664960}
   - component: {fileID: 5523766031419777325}
+  - component: {fileID: 1234567890123456781}
+  - component: {fileID: 1234567890123456782}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -43,7 +45,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
   GlobalObjectIdHash: 67873306
   InScenePlacedSourceGlobalObjectIdHash: 0
@@ -68,6 +70,32 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c796b3303fa879248a72f86d1945022e, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::AbsoluteZero.Core.Player.AZPlayerVisual
+  ShowTopMostFoldoutHeaderGroup: 1
+--- !u!114 &1234567890123456781
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9220363554850475608}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f2608e2e945fdf94ca05db4e63892342, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::AbsoluteZero.Core.Player.PlayerState
+  ShowTopMostFoldoutHeaderGroup: 1
+--- !u!114 &1234567890123456782
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9220363554850475608}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3c1847514ab44fd489a27f7478aa83bc, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::AbsoluteZero.Core.Player.PlayerInventory
   ShowTopMostFoldoutHeaderGroup: 1

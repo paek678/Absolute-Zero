@@ -4,12 +4,10 @@ namespace AbsoluteZero.Core.Network
 {
     public enum MatchState : byte
     {
-        None = 0,
-        WaitingForPlayers,
-        Countdown,
-        InProgress,
-        Paused,
-        MatchEnd
+        WaitingToStart = 0,
+        RoundInProgress,
+        RoundEnd,
+        MatchComplete
     }
 
     public enum MatchEndReason : byte

@@ -1,4 +1,4 @@
-using AbsoluteZero.Core.Game;
+using AbsoluteZero.Core.Common;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -6,39 +6,42 @@ namespace AbsoluteZero.Core.Player
 {
     public class AZPlayerVisual : NetworkBehaviour
     {
-        private MeshRenderer capsuleRenderer;
-        private Material instanceMaterial;
+        SpriteRenderer _bodyRenderer;
+        PlayerState _playerState;
+
+        const string ENEMY_SPAWN_MARKER = "EnemySpawn";
 
         public override void OnNetworkSpawn()
         {
             base.OnNetworkSpawn();
+            _playerState = GetComponent<PlayerState>();
 
-            var capsule = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            capsule.transform.SetParent(transform, false);
-            capsule.transform.localPosition = Vector3.zero;
+            if (IsOwner)
+                return;
 
-            var col = capsule.GetComponent<CapsuleCollider>();
-            if (col != null) Destroy(col);
+            var marker = GameObject.Find(ENEMY_SPAWN_MARKER);
+            if (marker != null)
+                transform.position = marker.transform.position;
 
-            capsuleRenderer = capsule.GetComponent<MeshRenderer>();
-            instanceMaterial = new Material(capsuleRenderer.material);
-            capsuleRenderer.material = instanceMaterial;
+            var litMat = Resources.Load<Material>("sprite3DMat");
+
+            var body = new GameObject("Body");
+            body.transform.SetParent(transform, false);
+
+            _bodyRenderer = body.AddComponent<SpriteRenderer>();
+            _bodyRenderer.sprite = GameSprites.Get(GameSprites.PLAYER);
+            if (litMat != null)
+                _bodyRenderer.material = litMat;
+            _bodyRenderer.sortingOrder = 10;
         }
 
-        private void Update()
+        void Update()
         {
-            if (instanceMaterial == null) return;
+            if (_bodyRenderer == null || _playerState == null) return;
 
-            var tm = AbsoluteZeroTurnManager.Instance;
-            if (tm == null) return;
-
-            int playerIndex = tm.GetPlayerIndexForClient(OwnerClientId);
-            if (playerIndex < 0) return;
-
-            float temp = tm.GetPlayerTemperature(playerIndex);
+            float temp = _playerState.Temperature.Value;
             float normalized = Mathf.Clamp01(temp / 37f);
-            float hue = Mathf.Lerp(0.6f, 0f, normalized);
-            instanceMaterial.color = Color.HSVToRGB(hue, 0.8f, 1f);
+            _bodyRenderer.color = Color.Lerp(new Color(0.5f, 0.7f, 1f), Color.white, normalized);
         }
     }
 }

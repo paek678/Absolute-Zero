@@ -23,14 +23,16 @@
       "ToolSearch",
       "ReportFindings",
       "mcp__unityMCP__manage_gameobject",
-      "Bash(mkdir -p \"c:/Users/paek6/Absolute Zero/Assets/Scripts/UI/Lobby\")"
+      "Bash(mkdir -p \"c:/Users/paek6/Absolute Zero/Assets/Scripts/UI/Lobby\")",
+      "Bash(mkdir -p \"c:/Users/paek6/Absolute Zero/Assets/Scripts/Core/Match\" \"c:/Users/paek6/Absolute Zero/Assets/Scripts/Core/Turn\" \"c:/Users/paek6/Absolute Zero/Assets/Scripts/Core/Combat\" \"c:/Users/paek6/Absolute Zero/Assets/Scripts/Core/Item\" \"c:/Users/paek6/Absolute Zero/Assets/Scripts/Core/Item/Data\" \"c:/Users/paek6/Absolute Zero/Assets/Scripts/Core/Buff\" \"c:/Users/paek6/Absolute Zero/Assets/Scripts/Core/Common\" \"c:/Users/paek6/Absolute Zero/Assets/ScriptableObjects/Items\")"
     ],
     "deny": [
       "mcp__unityMCP__recompile_scripts"
     ],
     "additionalDirectories": [
       "C:\\Users\\paek6\\.claude",
-      "c:\\Users\\paek6\\Absolute Zero\\Assets\\Scripts\\UI"
+      "c:\\Users\\paek6\\Absolute Zero\\Assets\\Scripts\\UI",
+      "c:\\Users\\paek6\\Absolute Zero\\Assets\\Scripts\\Core"
     ]
   },
   "model": "claude-opus-4-6",

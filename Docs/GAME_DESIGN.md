@@ -29,11 +29,9 @@ Fan OFF: recovery        First kill = win          → Next turn
 
 ### Prep Phase
 - Fan decreases temperature at **1°/sec** while active
-- Items are classified as **Sub** (utility) or **Main** (primary action):
-  - **Sub items**: can use multiple per turn (effects applied immediately)
-  - **Main item**: selecting ends turn immediately (max 1 per turn)
-  - Order: **Sub → Main** (OK) / **Main → Sub** (blocked — Main ends turn)
-- Alternative: press **"Ready" (준비 끝)** without Main → Sub effects only
+- **1 item per turn** — select one item, confirm with "사용하기", then press "준비 끝"
+  - Exception: certain instant-use items (e.g. Tarot Card) activate immediately on confirm, then allow selecting **1 additional item**
+- Alternative: press **"준비 끝"** without selecting any item → no action this turn
 - Ready / Main select → fan stops → temperature **recovers at 1°/sec**
 - Timer expires with no selection → **idle** (no action taken, fully vulnerable)
 - Temperature hits 0° during prep → **instant loss**
@@ -41,7 +39,8 @@ Fan OFF: recovery        First kill = win          → Next turn
 ### Attack Phase
 - Execute in **Ready-press order** (who pressed first goes first)
 - **Defense exception**: always activates regardless of order
-- If first action kills (0°), first player wins (second action behavior TBD — see Q10)
+- If first action kills (0°), **second action is cancelled** — round ends immediately (Q10 confirmed)
+- Simultaneous Ready → **lower temperature acts first** (comeback opportunity) (Q14 confirmed)
 
 ---
 
@@ -115,7 +114,7 @@ Both clients see mirrored view (my items = bottom, opponent = top)
 | Item | Cat | Value | Effect |
 |------|-----|-------|--------|
 | Fan (부채) | ATK | 3° | Opponent temp −3° |
-| Windbreaker (바람막이) | DEF | 4° | Block temp attacks (block mechanic TBD — see Q34) |
+| Windbreaker (바람막이) | DEF | 4° | Partial block: absorbs up to 4° of temp attack damage (6dmg − 4block = 2dmg through) |
 | Warm Tea (따뜻한 차) | REC | 7° | Self temp +7° (consumable) |
 | Cat (고양이) | SAB | — | Reroll ALL opponent random items (consumable) |
 
@@ -136,12 +135,12 @@ Both clients see mirrored view (my items = bottom, opponent = top)
 | Soda (탄산음료) | BUF | −5/+15° | 6% | 5s: gauge-match soda shake |
 | Buldak Noodles (불닭볶음면) | BUF | +17° | 2% | 10s: tap to boil water |
 | Screwdriver (십자드라이버) | SPC | 2°/s fan | 4% | 5s: tighten 3 screws |
-| Tarot Card (속마음 타로카드) | SPC | — | 2% | 5s: pick 1 of 3 cards |
+| Tarot Card (속마음 타로카드) | SPC | — | 2% | 5s: pick 1 of 3 cards (1 correct → use proceeds, wrong/timeout → item destroyed) |
 | Claw Machine (집게손) | SAB | — | 4% | 7s: timing claw grab |
 | Blue Tape (청테이프) | SAB | — | 4% | 5s: timing tape cut |
 | Red Card (레드카드) | SAB | — | 2% | 5s: tap red card |
 
-> **Drop rates sum to 102%** — not a probability distribution. Drop mechanic TBD (see Q35).
+> **Drop rates sum to 102%** — treated as **weighted pool** (e.g. 손풍기 12/102 ≈ 11.8%). Duplicate drops allowed, but **max 3 copies** of same item. Already-owned items can drop again up to the cap.
 > **11 items require mini-games**, 6 do not.
 
 ```
@@ -170,25 +169,26 @@ Appears at **2nd prep phase** of each round. Random. Resets per round.
 ## Item Selection Flow
 
 ```
-[1] Click item on floor → [2] Zoom-in + description → [3] "Use" confirm
-                                                            │
-                                              (mini-game required?)
-                                              YES → play mini-game
-                                                    pass → item queued
-                                                    fail → item destroyed
-                                              NO  → item queued
-                                                            │
-                                              (Sub or Main?)
-                                              SUB → effect applied, stay in prep
-                                                    can select more Sub or Main
-                                              MAIN → effect queued → TURN END
-                                                     fan OFF, recovery starts
-                                                            │
-Alternative: [4] Press "준비 끝" without Main → Sub effects only → TURN END
+[1] Click item on floor → [2] Zoom-in + description overlay → [3] "사용하기" confirm
+                                                                    │
+                                                      (mini-game required?)
+                                                      YES → play mini-game
+                                                            pass → item committed
+                                                            fail → item destroyed, select another
+                                                      NO  → item committed
+                                                                    │
+                                                      (Sub item? e.g. Cat, Tarot Card)
+                                                      YES → queued, turn continues (can still pick Main)
+                                                            → executes at Attack Phase START
+                                                      NO  → Main item queued for Attack Phase
+                                                                    │
+[4] Press "준비 끝" → fan OFF, recovery starts → TURN END
+    (action cannot be changed after "준비 끝")
+
+Alternative: Press "준비 끝" without selecting → no action this turn
 ```
 
-> **Sub → Main (OK)**: use utility items first, then finish with primary action.
-> **Main → Sub (BLOCKED)**: selecting Main immediately ends the turn.
+> **Main/Sub system:** 1 Main + 1 Sub per turn. Main items auto-ready on selection. Sub items (Cat, Tarot Card, Claw Machine, Blue Tape, Red Card) queue during prep and execute at attack phase start before Main resolution.
 
 ---
 
@@ -223,7 +223,7 @@ Check: opponent 0°? → round end or next turn
 |-----------|--------|
 | Opponent temp = 0° | Win the round |
 | Self temp = 0° | Lose the round |
-| Both reach 0° | TBD |
+| Both reach 0° simultaneously | Draw — round voided, replay (no score change) |
 | First to **2 round wins** | Match victory |
 
 ---

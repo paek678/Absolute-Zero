@@ -1,4 +1,10 @@
-using AbsoluteZero.Core.Game;
+using System.Collections;
+using AbsoluteZero.Core.Combat;
+using AbsoluteZero.Core.Common;
+using AbsoluteZero.Core.Item;
+using AbsoluteZero.Core.Match;
+using AbsoluteZero.Core.Player;
+using AbsoluteZero.Core.Turn;
 using TMPro;
 using Unity.Netcode;
 using UnityEngine;
@@ -10,245 +16,397 @@ namespace AbsoluteZero.UI.Game
 {
     public class AZGameUI : MonoBehaviour
     {
-        private AbsoluteZeroTurnManager tm;
+        TurnManager _tm;
+        MatchManager _mm;
+        PlayerState _localPlayer;
+        PlayerState _p1Cached;
+        PlayerState _p2Cached;
 
-        private Canvas canvas;
-        private TextMeshProUGUI phaseText;
-        private TextMeshProUGUI timerText;
-        private TextMeshProUGUI roundText;
-        private TextMeshProUGUI p1NameText;
-        private TextMeshProUGUI p1TempText;
-        private Image p1BarFill;
-        private TextMeshProUGUI p2NameText;
-        private TextMeshProUGUI p2TempText;
-        private Image p2BarFill;
-        private Button attackBtn;
-        private Button defendBtn;
-        private Button chargeBtn;
-        private TextMeshProUGUI statusText;
-        private TextMeshProUGUI resultText;
-        private GameObject actionPanel;
-        private GameObject gameOverPanel;
+        Canvas _overlayCanvas;
+        TextMeshProUGUI _phaseText;
+        TextMeshProUGUI _timerText;
+        TextMeshProUGUI _statusText;
+        TextMeshProUGUI _scoreText;
+        TextMeshProUGUI _myTempText;
+        Image _myBarFill;
+        Image _clockImage;
 
-        private ActionType submittedAction;
-        private bool uiBuilt;
+        Canvas _oppBarCanvas;
+        TextMeshProUGUI _oppTempText;
+        Image _oppBarFill;
 
-        private void Start()
+        Canvas _readyCanvas;
+        Button _readyButton;
+
+        GameObject _gameOverPanel;
+        TextMeshProUGUI _gameOverText;
+
+        ItemWorldDisplay _worldDisplay;
+        GameObject[] _oppItemObjects;
+        bool _oppItemsSpawned;
+
+        TextMeshProUGUI _stackText;
+        string _selectedMainName;
+        string _selectedSubName;
+
+        GameObject _resultPanel;
+        TextMeshProUGUI _resultText;
+        Coroutine _resultHideCoroutine;
+
+        bool _uiBuilt;
+
+        static readonly Vector3 OPP_BAR_OFFSET = new(0f, 2f, 0f);
+        static readonly Vector3 READY_BTN_POS = new(0f, 0.05f, 1.2f);
+        const float WORLD_CANVAS_SCALE = 0.005f;
+
+        void Start()
         {
-            BuildUI();
-            uiBuilt = true;
+            EnsureEventSystem();
+            BuildOverlayUI();
+            BuildOppBarWorldUI();
+            BuildReadyWorldUI();
+            _uiBuilt = true;
+
+            var worldDisplayGO = new GameObject("ItemWorldDisplay");
+            var spawnRoot = GameObject.Find("MyItemSpawnRoot");
+            if (spawnRoot != null)
+                worldDisplayGO.transform.position = spawnRoot.transform.position;
+            _worldDisplay = worldDisplayGO.AddComponent<ItemWorldDisplay>();
+            _worldDisplay.OnWorldItemClicked += OnItemClicked;
         }
 
-        private void Update()
+        void Update()
         {
-            if (!uiBuilt) return;
+            if (!_uiBuilt) return;
 
-            if (tm == null)
+            if (_tm == null)
             {
-                tm = AbsoluteZeroTurnManager.Instance;
-                if (tm == null) return;
+                _tm = TurnManager.Instance;
+                if (_tm == null) return;
+                _mm = FindAnyObjectByType<MatchManager>();
                 SubscribeToEvents();
             }
 
-            UpdateDisplay();
+            if (_localPlayer == null)
+                FindLocalPlayer();
+
+            if (_p1Cached == null || _p2Cached == null)
+                FindAllPlayers();
+
+            UpdateTimerDisplay();
+            UpdateTempDisplay();
+            UpdateScoreDisplay();
+            UpdateOppBarTransform();
+
+            if (!_oppItemsSpawned)
+                TrySpawnOpponentItems();
         }
 
-        private void OnDestroy()
+        void OnDestroy()
         {
-            if (tm != null)
+            TurnManager.OnCombatResult -= OnCombatResultReceived;
+            if (_tm != null)
             {
-                tm.CurrentPhase.OnValueChanged -= OnPhaseChanged;
-                tm.WinnerIndex.OnValueChanged -= OnWinnerChanged;
-                tm.OnResultsReceived -= OnResultsReceived;
+                _tm.CurrentPhase.OnValueChanged -= OnPhaseChanged;
+                _tm.LastRoundWinner.OnValueChanged -= OnWinnerChanged;
             }
-        }
-
-        private void SubscribeToEvents()
-        {
-            tm.CurrentPhase.OnValueChanged += OnPhaseChanged;
-            tm.WinnerIndex.OnValueChanged += OnWinnerChanged;
-            tm.OnResultsReceived += OnResultsReceived;
-            OnPhaseChanged(TurnPhase.WaitingForPlayers, tm.CurrentPhase.Value);
-        }
-
-        #region Event Handlers
-
-        private void OnPhaseChanged(TurnPhase oldPhase, TurnPhase newPhase)
-        {
-            phaseText.text = GetPhaseName(newPhase);
-
-            switch (newPhase)
+            if (_localPlayer != null)
+                _localPlayer.HasSelectedItem.OnValueChanged -= OnHasSelectedItemChanged;
+            if (_worldDisplay != null)
+                _worldDisplay.OnWorldItemClicked -= OnItemClicked;
+            if (_oppItemObjects != null)
             {
-                case TurnPhase.WaitingForPlayers:
-                    statusText.text = "Waiting for opponent...";
-                    SetActionPanelVisible(false);
-                    resultText.text = "";
-                    break;
-
-                case TurnPhase.PrepTurn:
-                    submittedAction = ActionType.None;
-                    SetActionPanelVisible(true);
-                    SetGameOverPanelVisible(false);
-                    SetButtonsInteractable(true);
-                    statusText.text = "Choose your action!";
-                    resultText.text = "";
-                    break;
-
-                case TurnPhase.AttackTurn:
-                    SetActionPanelVisible(false);
-                    statusText.text = "Resolving...";
-                    break;
-
-                case TurnPhase.GameOver:
-                    SetActionPanelVisible(false);
-                    UpdateGameOverText();
-                    SetGameOverPanelVisible(true);
-                    break;
+                foreach (var go in _oppItemObjects)
+                    if (go != null) Destroy(go);
             }
+            CancelInvoke();
         }
 
-        private void OnWinnerChanged(int oldVal, int newVal)
+        void EnsureEventSystem()
         {
-            if (tm.CurrentPhase.Value != TurnPhase.GameOver) return;
-            UpdateGameOverText();
+            if (FindAnyObjectByType<EventSystem>() != null) return;
+            var esGO = new GameObject("EventSystem");
+            esGO.AddComponent<EventSystem>();
+            esGO.AddComponent<InputSystemUIInputModule>();
         }
 
-        private void UpdateGameOverText()
+        void FindLocalPlayer()
         {
-            int winner = tm.WinnerIndex.Value;
-            int myIndex = tm.GetLocalPlayerIndex();
-            if (winner < 0)
-                statusText.text = "DRAW!";
-            else if (winner == myIndex)
-                statusText.text = "YOU WIN!";
+            if (NetworkManager.Singleton == null) return;
+
+            var localObj = NetworkManager.Singleton.SpawnManager?.GetLocalPlayerObject();
+            if (localObj == null) return;
+
+            var ps = localObj.GetComponent<PlayerState>();
+            if (ps == null) return;
+
+            var inv = ps.GetInventory();
+            if (inv == null || ItemManager.Instance == null) return;
+
+            ItemManager.Instance.InitializeClientRegistry(inv);
+
+            _localPlayer = ps;
+            _localPlayer.HasSelectedItem.OnValueChanged += OnHasSelectedItemChanged;
+        }
+
+        void FindAllPlayers()
+        {
+            var players = FindObjectsByType<PlayerState>(FindObjectsSortMode.None);
+            if (players.Length < 2) return;
+
+            if (players[0].OwnerClientId <= players[1].OwnerClientId)
+            {
+                _p1Cached = players[0];
+                _p2Cached = players[1];
+            }
             else
-                statusText.text = "YOU LOSE...";
+            {
+                _p1Cached = players[1];
+                _p2Cached = players[0];
+            }
         }
 
-        private void OnResultsReceived(ActionType p1Action, ActionType p2Action,
-            float p1Delta, float p2Delta)
+        PlayerState GetOpponentPlayer()
         {
-            string p1Act = tm.GetActionName(p1Action);
-            string p2Act = tm.GetActionName(p2Action);
-            string p1Sign = p1Delta >= 0 ? $"+{p1Delta:F0}" : $"{p1Delta:F0}";
-            string p2Sign = p2Delta >= 0 ? $"+{p2Delta:F0}" : $"{p2Delta:F0}";
-
-            resultText.text = $"P1: {p1Act} ({p1Sign}°)    P2: {p2Act} ({p2Sign}°)";
+            if (_localPlayer == null || _p1Cached == null || _p2Cached == null) return null;
+            return _p1Cached.OwnerClientId == _localPlayer.OwnerClientId ? _p2Cached : _p1Cached;
         }
 
-        #endregion
-
-        #region Button Handlers
-
-        private void OnAttackClicked()
+        void SubscribeToEvents()
         {
-            SubmitAction(ActionType.Attack);
+            _tm.CurrentPhase.OnValueChanged += OnPhaseChanged;
+            _tm.LastRoundWinner.OnValueChanged += OnWinnerChanged;
+            TurnManager.OnCombatResult += OnCombatResultReceived;
+            OnPhaseChanged(TurnPhase.WaitingForPlayers, _tm.CurrentPhase.Value);
         }
 
-        private void OnDefendClicked()
+        void OnPhaseChanged(TurnPhase oldPhase, TurnPhase newPhase)
         {
-            SubmitAction(ActionType.Defend);
+            _phaseText.text = newPhase switch
+            {
+                TurnPhase.WaitingForPlayers => "WAITING",
+                TurnPhase.PrepPhase => "PREP PHASE",
+                TurnPhase.AttackPhase => "ATTACK",
+                TurnPhase.ResolutionPhase => "RESOLUTION",
+                TurnPhase.RoundOver => "ROUND OVER",
+                _ => ""
+            };
+
+            if (_readyCanvas != null)
+                _readyCanvas.gameObject.SetActive(newPhase == TurnPhase.PrepPhase);
+
+            if (newPhase == TurnPhase.PrepPhase)
+            {
+                _statusText.text = "Select an item!";
+                _gameOverPanel.SetActive(false);
+                if (_resultPanel != null) _resultPanel.SetActive(false);
+                _selectedMainName = null;
+                _selectedSubName = null;
+                UpdateStackDisplay();
+            }
+            else if (newPhase == TurnPhase.AttackPhase)
+            {
+                _statusText.text = "Resolving...";
+                _gameOverPanel.SetActive(false);
+            }
+            else if (newPhase == TurnPhase.RoundOver)
+            {
+                Invoke(nameof(ShowRoundResult), 0.15f);
+            }
         }
 
-        private void OnChargeClicked()
+        void OnWinnerChanged(int oldVal, int newVal)
         {
-            SubmitAction(ActionType.Charge);
+            if (_tm.CurrentPhase.Value == TurnPhase.RoundOver)
+                ShowRoundResult();
         }
 
-        private void SubmitAction(ActionType action)
+        void OnHasSelectedItemChanged(bool oldVal, bool newVal)
         {
-            if (submittedAction != ActionType.None || tm == null) return;
-
-            submittedAction = action;
-            tm.SubmitActionRpc((byte)action);
-            SetButtonsInteractable(false);
-            statusText.text = $"Submitted: {tm.GetActionName(action)}";
+            if (newVal)
+                _statusText.text = "Item selected!";
         }
 
-        private void OnPlayAgainClicked()
+        void ShowRoundResult()
         {
-            if (tm == null) return;
-            tm.RequestRestartRpc();
+            _gameOverPanel.SetActive(true);
+
+            int winner = _tm.LastRoundWinner.Value;
+            bool isMatchDone = _mm != null && _mm.IsMatchComplete();
+
+            if (winner < 0)
+            {
+                _gameOverText.text = "DRAW!";
+                _gameOverText.color = Color.yellow;
+            }
+            else
+            {
+                bool iAmWinner = _localPlayer != null && _localPlayer.SyncedPlayerIndex.Value == winner;
+                if (isMatchDone)
+                {
+                    _gameOverText.text = iAmWinner ? "MATCH WIN!" : "MATCH LOSE...";
+                    _gameOverText.color = iAmWinner ? new Color(1f, 0.85f, 0.2f) : new Color(0.5f, 0.5f, 0.6f);
+                }
+                else
+                {
+                    _gameOverText.text = iAmWinner ? "ROUND WIN!" : "ROUND LOSE...";
+                    _gameOverText.color = iAmWinner ? new Color(0.3f, 1f, 0.4f) : new Color(1f, 0.3f, 0.3f);
+                    _statusText.text = "Next round starting...";
+                }
+            }
         }
 
-        private void OnBackToLobbyClicked()
+        void UpdateTimerDisplay()
         {
-            var sessionManager = AbsoluteZero.Core.Network.SessionManager.Instance;
+            if (_tm == null || _tm.CurrentPhase.Value != TurnPhase.PrepPhase)
+            {
+                _timerText.text = "";
+                return;
+            }
+
+            _timerText.text = $"{_tm.RemainingTime.Value}";
+        }
+
+        void UpdateTempDisplay()
+        {
+            if (_localPlayer != null)
+            {
+                float myT = _localPlayer.Temperature.Value;
+                _myTempText.text = $"{myT:F0}°";
+                _myBarFill.fillAmount = Mathf.Clamp01(myT / 37f);
+                _myBarFill.color = TempToColor(myT / 37f);
+            }
+
+            var opp = GetOpponentPlayer();
+            if (opp != null)
+            {
+                float oppT = opp.Temperature.Value;
+                _oppTempText.text = $"{oppT:F0}°";
+                _oppBarFill.fillAmount = Mathf.Clamp01(oppT / 37f);
+                _oppBarFill.color = TempToColor(oppT / 37f);
+            }
+        }
+
+        void UpdateScoreDisplay()
+        {
+            if (_mm == null) return;
+            _scoreText.text = $"P1  {_mm.P1RoundWins.Value} : {_mm.P2RoundWins.Value}  P2";
+        }
+
+        void UpdateOppBarTransform()
+        {
+            if (_oppBarCanvas == null) return;
+
+            var cam = Camera.main;
+            if (cam == null) return;
+
+            _oppBarCanvas.worldCamera = cam;
+            _oppBarCanvas.transform.rotation = cam.transform.rotation;
+
+            var opp = GetOpponentPlayer();
+            if (opp != null)
+                _oppBarCanvas.transform.position = opp.transform.position + OPP_BAR_OFFSET;
+        }
+
+        void OnItemClicked(int slotIndex)
+        {
+            if (_localPlayer == null) return;
+            if (_localPlayer.IsReady.Value) return;
+
+            var inv = _localPlayer.GetInventory();
+            if (inv == null || slotIndex >= inv.SlotStates.Count) return;
+
+            var itemData = inv.GetItemData(slotIndex);
+            if (itemData == null) return;
+
+            if (_localPlayer.HasSelectedItem.Value && itemData.SlotType != ItemSlotType.Sub)
+                return;
+
+            _localPlayer.SelectItemServerRpc((byte)slotIndex);
+            _worldDisplay?.NotifyItemConfirmed(slotIndex);
+
+            if (itemData.SlotType == ItemSlotType.Sub)
+                _selectedSubName = itemData.ItemName;
+            else
+                _selectedMainName = itemData.ItemName;
+
+            UpdateStackDisplay();
+
+            _statusText.text = itemData.IsInstantUse
+                ? $"Used: {itemData.ItemName}"
+                : $"Selected: {itemData.ItemName}";
+        }
+
+        void OnReadyClicked()
+        {
+            if (_localPlayer == null) return;
+
+            _localPlayer.PressReadyServerRpc();
+            _statusText.text = _localPlayer.HasSelectedItem.Value
+                ? "Ready!"
+                : "Ready! (No action)";
+            if (_readyCanvas != null)
+                _readyCanvas.gameObject.SetActive(false);
+        }
+
+        void OnBackToLobbyClicked()
+        {
+            var sessionManager = Core.Network.SessionManager.Instance;
             if (sessionManager != null)
                 sessionManager.Disconnect();
         }
 
-        #endregion
-
-        #region Display Update
-
-        private void UpdateDisplay()
-        {
-            float p1Temp = tm.Player1Temp.Value;
-            float p2Temp = tm.Player2Temp.Value;
-
-            p1TempText.text = $"{p1Temp:F0}°";
-            p2TempText.text = $"{p2Temp:F0}°";
-            p1BarFill.fillAmount = Mathf.Clamp01(p1Temp / 37f);
-            p2BarFill.fillAmount = Mathf.Clamp01(p2Temp / 37f);
-
-            p1BarFill.color = TempToColor(p1Temp / 37f);
-            p2BarFill.color = TempToColor(p2Temp / 37f);
-
-            timerText.text = $"{Mathf.CeilToInt(tm.TurnTimer.Value)}";
-            roundText.text = $"Round {tm.RoundNumber.Value}";
-
-            int myIndex = tm.GetLocalPlayerIndex();
-            p1NameText.text = myIndex == 0 ? "Player 1 (You)" : "Player 1";
-            p2NameText.text = myIndex == 1 ? "Player 2 (You)" : "Player 2";
-        }
-
-        private static Color TempToColor(float normalized)
+        static Color TempToColor(float normalized)
         {
             float h = Mathf.Lerp(0.6f, 0f, Mathf.Clamp01(normalized));
             return Color.HSVToRGB(h, 0.8f, 1f);
         }
 
-        private static string GetPhaseName(TurnPhase phase) => phase switch
+        void TrySpawnOpponentItems()
         {
-            TurnPhase.WaitingForPlayers => "WAITING",
-            TurnPhase.PrepTurn => "PREP TURN",
-            TurnPhase.AttackTurn => "ATTACK TURN",
-            TurnPhase.GameOver => "GAME OVER",
-            _ => ""
-        };
+            var opp = GetOpponentPlayer();
+            if (opp == null) return;
 
-        #endregion
+            var inv = opp.GetInventory();
+            if (inv == null || inv.SlotStates == null || inv.SlotStates.Count == 0) return;
+            if (ItemManager.Instance == null) return;
 
-        #region UI Helpers
+            ItemManager.Instance.InitializeClientRegistry(inv);
 
-        private void SetActionPanelVisible(bool visible)
-        {
-            if (actionPanel != null) actionPanel.SetActive(visible);
+            int count = inv.SlotStates.Count;
+            _oppItemObjects = new GameObject[count];
+            var litMat = Resources.Load<Material>("sprite3DMat");
+
+            for (int i = 0; i < count; i++)
+            {
+                var marker = GameObject.Find($"EnemyItem{i + 1}");
+                if (marker == null) continue;
+
+                var itemData = inv.GetItemData(i);
+                string itemName = itemData != null ? itemData.ItemName : "Empty";
+
+                var go = new GameObject($"OppItem_{i}_{itemName}");
+                go.transform.position = marker.transform.position;
+
+                var sr = go.AddComponent<SpriteRenderer>();
+                sr.sprite = GameSprites.GetItemSprite(itemName);
+                if (litMat != null) sr.material = litMat;
+                sr.sortingOrder = 5;
+
+                _oppItemObjects[i] = go;
+            }
+
+            _oppItemsSpawned = true;
         }
-
-        private void SetGameOverPanelVisible(bool visible)
-        {
-            if (gameOverPanel != null) gameOverPanel.SetActive(visible);
-        }
-
-        private void SetButtonsInteractable(bool interactable)
-        {
-            if (attackBtn != null) attackBtn.interactable = interactable;
-            if (defendBtn != null) defendBtn.interactable = interactable;
-            if (chargeBtn != null) chargeBtn.interactable = interactable;
-        }
-
-        #endregion
 
         #region UI Construction
 
-        private void BuildUI()
+        void BuildOverlayUI()
         {
-            var canvasGO = new GameObject("GameCanvas");
-            canvas = canvasGO.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 10;
+            var canvasGO = new GameObject("OverlayCanvas");
+            _overlayCanvas = canvasGO.AddComponent<Canvas>();
+            _overlayCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            _overlayCanvas.sortingOrder = 10;
 
             var scaler = canvasGO.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
@@ -257,92 +415,362 @@ namespace AbsoluteZero.UI.Game
 
             canvasGO.AddComponent<GraphicRaycaster>();
 
-            if (FindAnyObjectByType<EventSystem>() == null)
-            {
-                var esGO = new GameObject("EventSystem");
-                esGO.AddComponent<EventSystem>();
-                esGO.AddComponent<InputSystemUIInputModule>();
-            }
-
             Transform root = canvasGO.transform;
 
-            CreatePanel(root, "BG", Vector2.zero, new Vector2(800, 700),
-                new Color(0.08f, 0.08f, 0.12f, 0.9f));
+            // === TOP-LEFT: My HP Bar (sprite) ===
+            BuildMyHpBar(root);
 
-            phaseText = CreateText(root, "PhaseText",
-                new Vector2(0, 300), new Vector2(400, 50), "WAITING", 36);
+            // === TOP-RIGHT: Clock + Timer ===
+            BuildClockTimer(root);
 
-            roundText = CreateText(root, "RoundText",
-                new Vector2(0, 260), new Vector2(300, 35), "Round 0", 22);
-            roundText.color = new Color(0.7f, 0.7f, 0.7f);
+            // === TOP-CENTER: Phase + Score ===
+            _phaseText = CreateText(root, "PhaseText",
+                new Vector2(0, -30), new Vector2(400, 50), "WAITING", 28);
+            AnchorTopCenter(_phaseText.GetComponent<RectTransform>());
 
-            timerText = CreateText(root, "TimerText",
-                new Vector2(0, 160), new Vector2(200, 100), "20", 72);
+            _scoreText = CreateText(root, "ScoreText",
+                new Vector2(0, -75), new Vector2(300, 30), "P1  0 : 0  P2", 20);
+            _scoreText.color = new Color(0.9f, 0.9f, 0.6f);
+            AnchorTopCenter(_scoreText.GetComponent<RectTransform>());
 
-            p1NameText = CreateText(root, "P1Name",
-                new Vector2(-250, 80), new Vector2(200, 30), "Player 1", 20);
-            p1TempText = CreateText(root, "P1Temp",
-                new Vector2(-250, 50), new Vector2(200, 30), "37°", 28);
-            p1BarFill = CreateBar(root, "P1Bar",
-                new Vector2(-250, 15), new Vector2(300, 25), Color.red);
+            // === RIGHT: Item Stack ===
+            BuildItemStack(root);
 
-            p2NameText = CreateText(root, "P2Name",
-                new Vector2(250, 80), new Vector2(200, 30), "Player 2", 20);
-            p2TempText = CreateText(root, "P2Temp",
-                new Vector2(250, 50), new Vector2(200, 30), "37°", 28);
-            p2BarFill = CreateBar(root, "P2Bar",
-                new Vector2(250, 15), new Vector2(300, 25), Color.blue);
+            // === BOTTOM: Status ===
+            _statusText = CreateText(root, "StatusText",
+                new Vector2(0, 30), new Vector2(600, 35), "Waiting for players...", 20);
+            _statusText.color = new Color(0.8f, 0.8f, 0.8f);
+            AnchorBottomCenter(_statusText.GetComponent<RectTransform>());
 
-            resultText = CreateText(root, "ResultText",
-                new Vector2(0, -40), new Vector2(600, 60), "", 20);
-            resultText.color = new Color(1f, 0.9f, 0.5f);
+            _gameOverPanel = new GameObject("GameOverPanel");
+            _gameOverPanel.transform.SetParent(root, false);
+            var goRect = _gameOverPanel.AddComponent<RectTransform>();
+            goRect.anchoredPosition = new Vector2(0, -10);
+            goRect.sizeDelta = new Vector2(500, 150);
 
-            actionPanel = new GameObject("ActionPanel");
-            actionPanel.transform.SetParent(root, false);
-            var apRect = actionPanel.AddComponent<RectTransform>();
-            apRect.anchoredPosition = new Vector2(0, -150);
-            apRect.sizeDelta = new Vector2(600, 70);
+            CreatePanel(_gameOverPanel.transform, "GOBg", Vector2.zero,
+                new Vector2(500, 150), new Color(0.05f, 0.05f, 0.1f, 0.95f));
 
-            attackBtn = CreateButton(actionPanel.transform, "AttackBtn",
-                new Vector2(-200, 0), new Vector2(160, 60), "ATTACK",
-                new Color(0.8f, 0.2f, 0.2f));
-            attackBtn.onClick.AddListener(OnAttackClicked);
+            _gameOverText = CreateText(_gameOverPanel.transform, "GOText",
+                new Vector2(0, 25), new Vector2(400, 60), "", 42);
 
-            defendBtn = CreateButton(actionPanel.transform, "DefendBtn",
-                new Vector2(0, 0), new Vector2(160, 60), "DEFEND",
-                new Color(0.2f, 0.5f, 0.8f));
-            defendBtn.onClick.AddListener(OnDefendClicked);
-
-            chargeBtn = CreateButton(actionPanel.transform, "ChargeBtn",
-                new Vector2(200, 0), new Vector2(160, 60), "CHARGE",
-                new Color(0.2f, 0.7f, 0.3f));
-            chargeBtn.onClick.AddListener(OnChargeClicked);
-
-            statusText = CreateText(root, "StatusText",
-                new Vector2(0, -230), new Vector2(500, 35), "Waiting...", 20);
-            statusText.color = new Color(0.8f, 0.8f, 0.8f);
-
-            gameOverPanel = new GameObject("GameOverPanel");
-            gameOverPanel.transform.SetParent(root, false);
-            var goRect = gameOverPanel.AddComponent<RectTransform>();
-            goRect.anchoredPosition = new Vector2(0, -150);
-            goRect.sizeDelta = new Vector2(400, 60);
-
-            var playAgainBtn = CreateButton(gameOverPanel.transform, "PlayAgainBtn",
-                new Vector2(-100, 0), new Vector2(170, 55), "PLAY AGAIN",
-                new Color(0.2f, 0.6f, 0.3f));
-            playAgainBtn.onClick.AddListener(OnPlayAgainClicked);
-
-            var lobbyBtn = CreateButton(gameOverPanel.transform, "LobbyBtn",
-                new Vector2(100, 0), new Vector2(170, 55), "BACK TO LOBBY",
+            var lobbyBtn = CreateButton(_gameOverPanel.transform, "LobbyBtn",
+                new Vector2(0, -40), new Vector2(200, 45), "BACK TO LOBBY",
                 new Color(0.5f, 0.3f, 0.3f));
             lobbyBtn.onClick.AddListener(OnBackToLobbyClicked);
 
-            actionPanel.SetActive(false);
-            gameOverPanel.SetActive(false);
+            _gameOverPanel.SetActive(false);
+
+            BuildResultPanel(root);
         }
 
-        private static TextMeshProUGUI CreateText(Transform parent, string name,
+        void BuildMyHpBar(Transform root)
+        {
+            var container = new GameObject("MyHpBar");
+            container.transform.SetParent(root, false);
+            var cRect = container.AddComponent<RectTransform>();
+            cRect.anchoredPosition = new Vector2(20, -20);
+            cRect.sizeDelta = new Vector2(260, 60);
+            AnchorTopLeft(cRect);
+
+            var bg = new GameObject("BarBg");
+            bg.transform.SetParent(container.transform, false);
+            var bgRect = bg.AddComponent<RectTransform>();
+            bgRect.anchoredPosition = Vector2.zero;
+            bgRect.sizeDelta = new Vector2(240, 24);
+            var bgImg = bg.AddComponent<Image>();
+            bgImg.color = new Color(0.1f, 0.1f, 0.1f, 0.9f);
+
+            var fillGO = new GameObject("BarFill");
+            fillGO.transform.SetParent(bg.transform, false);
+            var fillRect = fillGO.AddComponent<RectTransform>();
+            fillRect.anchorMin = Vector2.zero;
+            fillRect.anchorMax = Vector2.one;
+            fillRect.offsetMin = new Vector2(2, 2);
+            fillRect.offsetMax = new Vector2(-2, -2);
+            _myBarFill = fillGO.AddComponent<Image>();
+            _myBarFill.type = Image.Type.Filled;
+            _myBarFill.fillMethod = Image.FillMethod.Horizontal;
+            _myBarFill.fillAmount = 1f;
+            _myBarFill.color = new Color(0.9f, 0.2f, 0.15f);
+
+            _myTempText = CreateText(container.transform, "MyTemp",
+                new Vector2(0, -22), new Vector2(240, 24), "37°", 20);
+            _myTempText.alignment = TextAlignmentOptions.Left;
+        }
+
+        void BuildClockTimer(Transform root)
+        {
+            var container = new GameObject("ClockTimer");
+            container.transform.SetParent(root, false);
+            var cRect = container.AddComponent<RectTransform>();
+            cRect.anchoredPosition = new Vector2(-20, -20);
+            cRect.sizeDelta = new Vector2(120, 120);
+            AnchorTopRight(cRect);
+
+            var clockSprite = GameSprites.Get(GameSprites.CLOCK);
+            if (clockSprite != null)
+            {
+                var clockGO = new GameObject("ClockIcon");
+                clockGO.transform.SetParent(container.transform, false);
+                var clRect = clockGO.AddComponent<RectTransform>();
+                clRect.anchoredPosition = Vector2.zero;
+                clRect.sizeDelta = new Vector2(100, 100);
+                _clockImage = clockGO.AddComponent<Image>();
+                _clockImage.sprite = clockSprite;
+                _clockImage.preserveAspect = true;
+            }
+
+            _timerText = CreateText(container.transform, "TimerText",
+                new Vector2(0, -5), new Vector2(100, 60), "", 40);
+            _timerText.color = Color.white;
+            _timerText.fontStyle = FontStyles.Bold;
+        }
+
+        void BuildOppBarWorldUI()
+        {
+            var canvasGO = new GameObject("OppBarWorldCanvas");
+            _oppBarCanvas = canvasGO.AddComponent<Canvas>();
+            _oppBarCanvas.renderMode = RenderMode.WorldSpace;
+
+            var rt = canvasGO.GetComponent<RectTransform>();
+            rt.sizeDelta = new Vector2(400, 80);
+            canvasGO.transform.localScale = Vector3.one * WORLD_CANVAS_SCALE;
+            canvasGO.transform.position = OPP_BAR_OFFSET;
+
+            var bg = new GameObject("OppBarBg");
+            bg.transform.SetParent(canvasGO.transform, false);
+            var bgRect = bg.AddComponent<RectTransform>();
+            bgRect.anchoredPosition = Vector2.zero;
+            bgRect.sizeDelta = new Vector2(300, 30);
+            var bgImg = bg.AddComponent<Image>();
+            bgImg.color = new Color(0.1f, 0.1f, 0.1f, 0.9f);
+
+            var fillGO = new GameObject("OppBarFill");
+            fillGO.transform.SetParent(bg.transform, false);
+            var fillRect = fillGO.AddComponent<RectTransform>();
+            fillRect.anchorMin = Vector2.zero;
+            fillRect.anchorMax = Vector2.one;
+            fillRect.offsetMin = new Vector2(2, 2);
+            fillRect.offsetMax = new Vector2(-2, -2);
+            _oppBarFill = fillGO.AddComponent<Image>();
+            _oppBarFill.type = Image.Type.Filled;
+            _oppBarFill.fillMethod = Image.FillMethod.Horizontal;
+            _oppBarFill.fillAmount = 1f;
+            _oppBarFill.color = new Color(0.9f, 0.2f, 0.15f);
+
+            _oppTempText = CreateText(canvasGO.transform, "OppTemp",
+                new Vector2(0, -40), new Vector2(360, 28), "37°", 22);
+        }
+
+        void BuildReadyWorldUI()
+        {
+            var canvasGO = new GameObject("ReadyWorldCanvas");
+            _readyCanvas = canvasGO.AddComponent<Canvas>();
+            _readyCanvas.renderMode = RenderMode.WorldSpace;
+
+            var rt = canvasGO.GetComponent<RectTransform>();
+            rt.sizeDelta = new Vector2(300, 180);
+            canvasGO.transform.localScale = Vector3.one * WORLD_CANVAS_SCALE;
+            canvasGO.transform.position = READY_BTN_POS;
+            canvasGO.transform.rotation = Quaternion.Euler(60f, 0f, 0f);
+
+            canvasGO.AddComponent<GraphicRaycaster>();
+
+            var readySprite = GameSprites.Get(GameSprites.READY_TEXT);
+            var btnGO = new GameObject("ReadyBtn");
+            btnGO.transform.SetParent(canvasGO.transform, false);
+            var btnRect = btnGO.AddComponent<RectTransform>();
+            btnRect.anchoredPosition = Vector2.zero;
+            btnRect.sizeDelta = new Vector2(280, 160);
+
+            var btnImg = btnGO.AddComponent<Image>();
+            if (readySprite != null)
+            {
+                btnImg.sprite = readySprite;
+                btnImg.preserveAspect = true;
+            }
+            else
+            {
+                btnImg.color = new Color(0.5f, 0.5f, 0.2f);
+            }
+
+            _readyButton = btnGO.AddComponent<Button>();
+            _readyButton.targetGraphic = btnImg;
+            _readyButton.onClick.AddListener(OnReadyClicked);
+            _readyCanvas.gameObject.SetActive(false);
+        }
+
+        void BuildItemStack(Transform root)
+        {
+            var container = new GameObject("ItemStack");
+            container.transform.SetParent(root, false);
+            var cRect = container.AddComponent<RectTransform>();
+            cRect.anchoredPosition = new Vector2(-20, -150);
+            cRect.sizeDelta = new Vector2(200, 200);
+            AnchorTopRight(cRect);
+
+            var bg = CreatePanel(container.transform, "StackBg",
+                Vector2.zero, new Vector2(200, 200),
+                new Color(0.05f, 0.05f, 0.1f, 0.7f));
+
+            var title = CreateText(container.transform, "StackTitle",
+                new Vector2(0, 85), new Vector2(180, 24), "ACTION", 16);
+            title.fontStyle = FontStyles.Bold;
+            title.color = new Color(0.8f, 0.8f, 0.6f);
+
+            _stackText = CreateText(container.transform, "StackContent",
+                new Vector2(0, 10), new Vector2(180, 140), "", 16);
+            _stackText.alignment = TextAlignmentOptions.TopLeft;
+            _stackText.color = new Color(0.9f, 0.9f, 0.9f);
+        }
+
+        void UpdateStackDisplay()
+        {
+            if (_stackText == null) return;
+
+            string text = "";
+            if (_selectedMainName != null)
+                text += $"Main: {_selectedMainName}\n";
+            if (_selectedSubName != null)
+                text += $"Sub: {_selectedSubName}\n";
+            if (text == "")
+                text = "—";
+
+            _stackText.text = text;
+        }
+
+        void BuildResultPanel(Transform root)
+        {
+            _resultPanel = new GameObject("ResultPanel");
+            _resultPanel.transform.SetParent(root, false);
+            var rect = _resultPanel.AddComponent<RectTransform>();
+            rect.anchoredPosition = Vector2.zero;
+            rect.sizeDelta = new Vector2(500, 280);
+
+            CreatePanel(_resultPanel.transform, "ResultBg",
+                Vector2.zero, new Vector2(500, 280),
+                new Color(0.05f, 0.05f, 0.1f, 0.9f));
+
+            var title = CreateText(_resultPanel.transform, "ResultTitle",
+                new Vector2(0, 115), new Vector2(460, 36), "턴 결과", 26);
+            title.fontStyle = FontStyles.Bold;
+            title.color = new Color(1f, 0.9f, 0.5f);
+
+            _resultText = CreateText(_resultPanel.transform, "ResultBody",
+                new Vector2(0, -15), new Vector2(460, 200), "", 18);
+            _resultText.alignment = TextAlignmentOptions.TopLeft;
+            _resultText.color = new Color(0.95f, 0.95f, 0.95f);
+
+            _resultPanel.SetActive(false);
+        }
+
+        void OnCombatResultReceived(CombatResultData data)
+        {
+            if (_resultPanel == null || _resultText == null) return;
+
+            string GetItemName(short itemId)
+            {
+                if (itemId < 0) return "—";
+                var item = ItemManager.Instance?.GetItemData(itemId);
+                return item != null ? item.ItemName : "—";
+            }
+
+            string p1Main = "—";
+            string p2Main = "—";
+            for (int i = 0; i < data.EventCount; i++)
+            {
+                byte src = i == 0 ? data.Event0Source : data.Event1Source;
+                short itemId = i == 0 ? data.Event0ItemId : data.Event1ItemId;
+                if (src == 0) p1Main = GetItemName(itemId);
+                else p2Main = GetItemName(itemId);
+            }
+
+            string p1Sub = GetItemName(data.P1SubItemId);
+            string p2Sub = GetItemName(data.P2SubItemId);
+
+            float p1TickDelta = data.P1TempBeforeCombat - data.P1TempAtTurnStart;
+            float p2TickDelta = data.P2TempBeforeCombat - data.P2TempAtTurnStart;
+            float p1ItemDelta = data.P1TempAfterCombat - data.P1TempBeforeCombat;
+            float p2ItemDelta = data.P2TempAfterCombat - data.P2TempBeforeCombat;
+
+            string FormatDelta(float d) => d >= 0 ? $"+{d:F1}°" : $"{d:F1}°";
+
+            string text = $"P1:\n" +
+                          $"  Main: {p1Main}  |  Sub: {p1Sub}\n" +
+                          $"  Tick: {FormatDelta(p1TickDelta)}  |  Item: {FormatDelta(p1ItemDelta)}\n\n" +
+                          $"P2:\n" +
+                          $"  Main: {p2Main}  |  Sub: {p2Sub}\n" +
+                          $"  Tick: {FormatDelta(p2TickDelta)}  |  Item: {FormatDelta(p2ItemDelta)}";
+
+            _resultText.text = text;
+            _resultPanel.SetActive(true);
+
+            if (_resultHideCoroutine != null)
+                StopCoroutine(_resultHideCoroutine);
+            _resultHideCoroutine = StartCoroutine(HideResultAfterDelay(4f));
+        }
+
+        IEnumerator HideResultAfterDelay(float delay)
+        {
+            yield return new WaitForSeconds(delay);
+            if (_resultPanel != null)
+                _resultPanel.SetActive(false);
+        }
+
+        static void AnchorTopCenter(RectTransform rt)
+        {
+            rt.anchorMin = new Vector2(0.5f, 1f);
+            rt.anchorMax = new Vector2(0.5f, 1f);
+            rt.pivot = new Vector2(0.5f, 1f);
+        }
+
+        static void AnchorTopLeft(RectTransform rt)
+        {
+            rt.anchorMin = new Vector2(0f, 1f);
+            rt.anchorMax = new Vector2(0f, 1f);
+            rt.pivot = new Vector2(0f, 1f);
+        }
+
+        static void AnchorTopRight(RectTransform rt)
+        {
+            rt.anchorMin = new Vector2(1f, 1f);
+            rt.anchorMax = new Vector2(1f, 1f);
+            rt.pivot = new Vector2(1f, 1f);
+        }
+
+        static void AnchorBottomLeft(RectTransform rt)
+        {
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.zero;
+            rt.pivot = Vector2.zero;
+        }
+
+        static void AnchorBottomCenter(RectTransform rt)
+        {
+            rt.anchorMin = new Vector2(0.5f, 0f);
+            rt.anchorMax = new Vector2(0.5f, 0f);
+            rt.pivot = new Vector2(0.5f, 0f);
+        }
+
+        static Image CreateBarFill(Transform parent, string name, Color fillColor)
+        {
+            var fillGO = new GameObject(name);
+            fillGO.transform.SetParent(parent, false);
+            var fillRect = fillGO.AddComponent<RectTransform>();
+            fillRect.anchorMin = Vector2.zero;
+            fillRect.anchorMax = Vector2.one;
+            fillRect.offsetMin = Vector2.zero;
+            fillRect.offsetMax = Vector2.zero;
+            var fillImg = fillGO.AddComponent<Image>();
+            fillImg.color = fillColor;
+            fillImg.type = Image.Type.Filled;
+            fillImg.fillMethod = Image.FillMethod.Horizontal;
+            fillImg.fillAmount = 1f;
+            return fillImg;
+        }
+
+        static TextMeshProUGUI CreateText(Transform parent, string name,
             Vector2 pos, Vector2 size, string text, int fontSize)
         {
             var go = new GameObject(name);
@@ -358,7 +786,7 @@ namespace AbsoluteZero.UI.Game
             return tmp;
         }
 
-        private static Image CreatePanel(Transform parent, string name,
+        static Image CreatePanel(Transform parent, string name,
             Vector2 pos, Vector2 size, Color color)
         {
             var go = new GameObject(name);
@@ -371,34 +799,7 @@ namespace AbsoluteZero.UI.Game
             return img;
         }
 
-        private static Image CreateBar(Transform parent, string name,
-            Vector2 pos, Vector2 size, Color fillColor)
-        {
-            var bgGO = new GameObject(name + "_BG");
-            bgGO.transform.SetParent(parent, false);
-            var bgRect = bgGO.AddComponent<RectTransform>();
-            bgRect.anchoredPosition = pos;
-            bgRect.sizeDelta = size;
-            var bgImg = bgGO.AddComponent<Image>();
-            bgImg.color = new Color(0.15f, 0.15f, 0.15f, 0.9f);
-
-            var fillGO = new GameObject(name + "_Fill");
-            fillGO.transform.SetParent(bgGO.transform, false);
-            var fillRect = fillGO.AddComponent<RectTransform>();
-            fillRect.anchorMin = Vector2.zero;
-            fillRect.anchorMax = Vector2.one;
-            fillRect.offsetMin = Vector2.zero;
-            fillRect.offsetMax = Vector2.zero;
-            var fillImg = fillGO.AddComponent<Image>();
-            fillImg.color = fillColor;
-            fillImg.type = Image.Type.Filled;
-            fillImg.fillMethod = Image.FillMethod.Horizontal;
-            fillImg.fillAmount = 1f;
-
-            return fillImg;
-        }
-
-        private static Button CreateButton(Transform parent, string name,
+        static Button CreateButton(Transform parent, string name,
             Vector2 pos, Vector2 size, string label, Color bgColor)
         {
             var go = new GameObject(name);
@@ -426,7 +827,7 @@ namespace AbsoluteZero.UI.Game
             labelRect.offsetMax = Vector2.zero;
             var tmp = labelGO.AddComponent<TextMeshProUGUI>();
             tmp.text = label;
-            tmp.fontSize = 22;
+            tmp.fontSize = 18;
             tmp.alignment = TextAlignmentOptions.Center;
             tmp.color = Color.white;
 
