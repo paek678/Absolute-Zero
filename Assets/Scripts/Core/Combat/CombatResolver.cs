@@ -2,6 +2,7 @@ using AbsoluteZero.Core.Buff;
 using AbsoluteZero.Core.Item;
 using AbsoluteZero.Core.Item.Data;
 using AbsoluteZero.Core.Player;
+using UnityEngine;
 
 namespace AbsoluteZero.Core.Combat
 {
@@ -16,9 +17,16 @@ namespace AbsoluteZero.Core.Combat
         {
             var result = new CombatResult();
 
+            string p1Action = p1Queue.selectedAction.HasValue ? p1Queue.selectedAction.Value.ItemData.ItemName : "NONE";
+            string p2Action = p2Queue.selectedAction.HasValue ? p2Queue.selectedAction.Value.ItemData.ItemName : "NONE";
+            Debug.Log($"[COMBAT] ===== CombatResolver.Resolve START =====");
+            Debug.Log($"[COMBAT] P0 selected: {p1Action} | P1 selected: {p2Action}");
+            Debug.Log($"[COMBAT] P0 temp: {p1.Temperature.Value:F1}° | P1 temp: {p2.Temperature.Value:F1}°");
+
             int firstIdx = DetermineOrder(p1Queue, p2Queue, p1, p2);
             int secondIdx = 1 - firstIdx;
             result.FirstPlayerIndex = firstIdx;
+            Debug.Log($"[COMBAT] Turn order: P{firstIdx} goes first, P{secondIdx} goes second");
 
             ApplyDefense(p1Queue, modifiers, 0, p1);
             ApplyDefense(p2Queue, modifiers, 1, p2);
@@ -32,9 +40,17 @@ namespace AbsoluteZero.Core.Combat
                 && !modifiers[firstIdx].ActionNeutralized
                 && firstQueue.selectedAction.Value.ItemData is not DefenseItemDataSO)
             {
+                Debug.Log($"[COMBAT] Executing FIRST player P{firstIdx} main: {firstQueue.selectedAction.Value.ItemData.ItemName}");
                 result.Events.Add(ExecuteMain(
                     firstQueue.selectedAction.Value, firstPlayer, secondPlayer,
                     firstIdx, secondIdx, modifiers, tempSystem, buffSystem));
+            }
+            else
+            {
+                string reason = !firstQueue.selectedAction.HasValue ? "no action selected"
+                    : modifiers[firstIdx].ActionNeutralized ? "action NEUTRALIZED"
+                    : "defense item (handled separately)";
+                Debug.Log($"[COMBAT] FIRST player P{firstIdx} skipped: {reason}");
             }
 
             if (tempSystem.IsDead(secondPlayer))
@@ -52,9 +68,17 @@ namespace AbsoluteZero.Core.Combat
                 && !modifiers[secondIdx].ActionNeutralized
                 && secondQueue.selectedAction.Value.ItemData is not DefenseItemDataSO)
             {
+                Debug.Log($"[COMBAT] Executing SECOND player P{secondIdx} main: {secondQueue.selectedAction.Value.ItemData.ItemName}");
                 result.Events.Add(ExecuteMain(
                     secondQueue.selectedAction.Value, secondPlayer, firstPlayer,
                     secondIdx, firstIdx, modifiers, tempSystem, buffSystem));
+            }
+            else
+            {
+                string reason = !secondQueue.selectedAction.HasValue ? "no action selected"
+                    : modifiers[secondIdx].ActionNeutralized ? "action NEUTRALIZED"
+                    : "defense item (handled separately)";
+                Debug.Log($"[COMBAT] SECOND player P{secondIdx} skipped: {reason}");
             }
 
             if (tempSystem.IsDead(firstPlayer))
@@ -84,6 +108,12 @@ namespace AbsoluteZero.Core.Combat
         {
             short capturedItemId = user.GetInventory().SlotStates[action.SlotIndex].ItemId;
 
+            float userTempBefore = user.Temperature.Value;
+            float targetTempBefore = target.Temperature.Value;
+
+            Debug.Log($"[COMBAT] ExecuteMain: P{userIdx} uses '{action.ItemData.ItemName}' (slot={action.SlotIndex}, id={capturedItemId}) → P{targetIdx}");
+            Debug.Log($"[COMBAT] ExecuteMain BEFORE: P{userIdx}={userTempBefore:F1}° P{targetIdx}={targetTempBefore:F1}°");
+
             var ctx = new ItemContext
             {
                 User = user,
@@ -102,6 +132,8 @@ namespace AbsoluteZero.Core.Combat
             action.ItemData.ExecuteEffect(ctx);
             user.GetInventory().ConsumeItem(action.SlotIndex);
 
+            Debug.Log($"[COMBAT] ExecuteMain AFTER: P{userIdx}={user.Temperature.Value:F1}° P{targetIdx}={target.Temperature.Value:F1}°");
+
             return new CombatEvent
             {
                 Type = CombatEventType.MainEffect,
@@ -117,12 +149,17 @@ namespace AbsoluteZero.Core.Combat
         {
             if (queue.selectedAction.HasValue && queue.selectedAction.Value.ItemData is DefenseItemDataSO defItem)
             {
+                Debug.Log($"[COMBAT] ApplyDefense: P{playerIdx} activated '{defItem.ItemName}' — filter={defItem.Filter}, block={defItem.BlockAmount}");
                 modifiers[playerIdx].ActiveDefense = new DefenseInfo
                 {
                     Filter = defItem.Filter,
                     BlockAmount = defItem.BlockAmount
                 };
                 player.GetInventory().ConsumeItem(queue.selectedAction.Value.SlotIndex);
+            }
+            else
+            {
+                Debug.Log($"[COMBAT] ApplyDefense: P{playerIdx} — no defense item selected");
             }
         }
     }

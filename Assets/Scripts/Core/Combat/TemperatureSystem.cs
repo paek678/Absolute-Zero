@@ -52,6 +52,7 @@ namespace AbsoluteZero.Core.Combat
         public float ApplyDamage(PlayerState target, float rawDamage, DamageFilter attackFilter,
                                   DefenseInfo? activeDefense)
         {
+            float beforeTemp = target.Temperature.Value;
             float actualDamage = rawDamage;
 
             if (activeDefense.HasValue)
@@ -60,16 +61,28 @@ namespace AbsoluteZero.Core.Combat
                 if (defense.Filter == attackFilter || defense.Filter == DamageFilter.All)
                 {
                     actualDamage = Mathf.Max(0f, rawDamage - defense.BlockAmount);
+                    Debug.Log($"[COMBAT] ApplyDamage: defense BLOCKED — filter={defense.Filter}, block={defense.BlockAmount}, raw={rawDamage} → actual={actualDamage}");
                 }
+                else
+                {
+                    Debug.Log($"[COMBAT] ApplyDamage: defense MISS — defFilter={defense.Filter} vs atkFilter={attackFilter}, no reduction");
+                }
+            }
+            else
+            {
+                Debug.Log($"[COMBAT] ApplyDamage: NO defense active");
             }
 
             target.Temperature.Value = Mathf.Max(MIN_TEMP, target.Temperature.Value - actualDamage);
+            Debug.Log($"[COMBAT] ApplyDamage: P{target.PlayerIndex} temp {beforeTemp:F1} → {target.Temperature.Value:F1} (raw={rawDamage}, actual={actualDamage}, filter={attackFilter})");
             return actualDamage;
         }
 
         public void ApplyHeal(PlayerState target, float amount)
         {
+            float beforeTemp = target.Temperature.Value;
             target.Temperature.Value = Mathf.Min(MAX_TEMP, target.Temperature.Value + amount);
+            Debug.Log($"[COMBAT] ApplyHeal: P{target.PlayerIndex} temp {beforeTemp:F1} → {target.Temperature.Value:F1} (heal={amount})");
         }
 
         public bool IsDead(PlayerState player) => player.Temperature.Value <= MIN_TEMP;

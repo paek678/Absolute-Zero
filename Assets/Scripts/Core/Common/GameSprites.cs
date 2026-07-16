@@ -18,11 +18,11 @@ namespace AbsoluteZero.Core.Common
         public const string PLAYER = "objtest1_3";
 
         // Basic Items (have dedicated sprites)
-        public const string ITEM_FAN = "objtest1_8";
+        public const string ITEM_FAN = "objtest1_12";
         public const string ITEM_CAT = "objtest1_10";
-        public const string ITEM_COOLER = "objtest1_12";
+        public const string ITEM_WINDBREAKER = "objtest1_11";
         public const string ITEM_TEA = "objtest1_13";
-        public const string ITEM_BROOM = "objtest1_11";
+        public const string ITEM_BROOM = "objtest1_8";
 
         // Collection sprites
         public const string ITEM_SET = "objtest1_4";
@@ -49,10 +49,15 @@ namespace AbsoluteZero.Core.Common
                 "Fan" => Get(ITEM_FAN),
                 "Hand Fan" => Get(ITEM_BROOM),
                 "Cat" => Get(ITEM_CAT),
-                "Windbreaker" => Get(ITEM_COOLER),
+                "Windbreaker" => Get(ITEM_WINDBREAKER),
                 "Warm Tea" => Get(ITEM_TEA),
                 _ => Get(ITEM_SET)
             };
+        }
+
+        public static Sprite GetStayItemSprite()
+        {
+            return Get("objtest1_8");
         }
     }
 }

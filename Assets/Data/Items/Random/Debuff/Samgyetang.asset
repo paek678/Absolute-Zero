@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5452257b59f18f84abbda3e4e2bce4bb, type: 3}
+  m_Name: Samgyetang
+  m_EditorClassIdentifier: Assembly-CSharp::AbsoluteZero.Core.Item.Data.DebuffItemDataSO
+  ItemName: Samgyetang
+  Description: Warm soup now, cold crash later
+  Icon: {fileID: 0}
+  Category: 4
+  Persistence: 2
+  SlotType: 0
+  MaxUses: 1
+  DropWeight: 8
+  RequiresMiniGame: 0
+  MiniGameType: 0
+  MiniGameTimeLimit: 0
+  ImmediateTempDelta: 3
+  DelayedTempDelta: -7
+  DelayTurns: 1
+  AttackFilter: 1

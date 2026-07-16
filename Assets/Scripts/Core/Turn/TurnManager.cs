@@ -229,19 +229,39 @@ namespace AbsoluteZero.Core.Turn
             CurrentPhase.Value = TurnPhase.AttackPhase;
             OnPhaseChangedClientRpc(TurnPhase.AttackPhase, TurnNumber.Value);
 
+            Debug.Log($"[COMBAT] ========== TURN {TurnNumber.Value} ATTACK PHASE START ==========");
+            Debug.Log($"[COMBAT] P0 temp={_p1.Temperature.Value:F1}° | P1 temp={_p2.Temperature.Value:F1}°");
+
+            Debug.Log($"[COMBAT] --- Processing delayed buffs/debuffs ---");
             _buffSystem.ProcessTurnStart(_p1, _p2);
+            Debug.Log($"[COMBAT] After buffs: P0={_p1.Temperature.Value:F1}° | P1={_p2.Temperature.Value:F1}°");
 
             var q1 = _p1.GetActionQueue();
             var q2 = _p2.GetActionQueue();
+
+            string p1MainName = q1.selectedAction.HasValue ? q1.selectedAction.Value.ItemData.ItemName : "NONE";
+            string p2MainName = q2.selectedAction.HasValue ? q2.selectedAction.Value.ItemData.ItemName : "NONE";
+            string p1SubName = q1.subAction.HasValue ? q1.subAction.Value.ItemData.ItemName : "NONE";
+            string p2SubName = q2.subAction.HasValue ? q2.subAction.Value.ItemData.ItemName : "NONE";
+            Debug.Log($"[COMBAT] P0: main={p1MainName}, sub={p1SubName} | P1: main={p2MainName}, sub={p2SubName}");
+
             short p1SubId = q1.subAction.HasValue
                 ? _p1.GetInventory().SlotStates[q1.subAction.Value.SlotIndex].ItemId
                 : (short)-1;
             short p2SubId = q2.subAction.HasValue
                 ? _p2.GetInventory().SlotStates[q2.subAction.Value.SlotIndex].ItemId
                 : (short)-1;
+            short p1MainId = q1.selectedAction.HasValue
+                ? _p1.GetInventory().SlotStates[q1.selectedAction.Value.SlotIndex].ItemId
+                : (short)-1;
+            short p2MainId = q2.selectedAction.HasValue
+                ? _p2.GetInventory().SlotStates[q2.selectedAction.Value.SlotIndex].ItemId
+                : (short)-1;
 
+            Debug.Log($"[COMBAT] --- Executing sub items ---");
             ExecuteSubItems(_p1, 0);
             ExecuteSubItems(_p2, 1);
+            Debug.Log($"[COMBAT] After subs: P0={_p1.Temperature.Value:F1}° | P1={_p2.Temperature.Value:F1}°");
 
             float p1TempBeforeCombat = _p1.Temperature.Value;
             float p2TempBeforeCombat = _p2.Temperature.Value;
@@ -249,6 +269,7 @@ namespace AbsoluteZero.Core.Turn
             yield return _waitOne;
             if (!IsSpawned) yield break;
 
+            Debug.Log($"[COMBAT] --- Resolving main combat ---");
             var result = _combatResolver.Resolve(q1, q2, _modifiers, _p1, _p2, _tempSystem, _buffSystem);
 
             result.P1TempAtTurnStart = _p1TempAtTurnStart;
@@ -259,6 +280,15 @@ namespace AbsoluteZero.Core.Turn
             result.P2TempAfterCombat = _p2.Temperature.Value;
             result.P1SubItemId = p1SubId;
             result.P2SubItemId = p2SubId;
+            result.P1MainItemId = p1MainId;
+            result.P2MainItemId = p2MainId;
+
+            string winText = result.WinnerIndex >= 0 ? $"P{result.WinnerIndex} WINS" : "no death";
+            Debug.Log($"[COMBAT] ===== COMBAT RESULT: {winText} =====");
+            Debug.Log($"[COMBAT] Final temps: P0={_p1.Temperature.Value:F1}° | P1={_p2.Temperature.Value:F1}°");
+
+            string summary = $"Turn{TurnNumber.Value} | P0: {p1MainName}(sub:{p1SubName}) P1: {p2MainName}(sub:{p2SubName}) | P0: {_p1TempAtTurnStart:F1}→{_p1.Temperature.Value:F1}° P1: {_p2TempAtTurnStart:F1}→{_p2.Temperature.Value:F1}° | {winText}";
+            CombatDebugLogRpc(summary);
 
             OnCombatResultClientRpc(result.ToNetData());
 
@@ -344,11 +374,21 @@ namespace AbsoluteZero.Core.Turn
         void ExecuteSubItems(PlayerState player, int playerIndex)
         {
             var queue = player.GetActionQueue();
-            if (!queue.subAction.HasValue) return;
+            if (!queue.subAction.HasValue)
+            {
+                Debug.Log($"[COMBAT] ExecuteSubItems: P{playerIndex} — no sub item");
+                return;
+            }
 
             var action = queue.subAction.Value;
             var inventory = player.GetInventory();
             var opponent = playerIndex == 0 ? _p2 : _p1;
+
+            float userTempBefore = player.Temperature.Value;
+            float opponentTempBefore = opponent.Temperature.Value;
+
+            Debug.Log($"[COMBAT] ExecuteSubItems: P{playerIndex} using '{action.ItemData.ItemName}' (slot={action.SlotIndex})");
+            Debug.Log($"[COMBAT] ExecuteSubItems BEFORE: P{playerIndex}={userTempBefore:F1}° Opp={opponentTempBefore:F1}°");
 
             var ctx = new Item.Data.ItemContext
             {
@@ -369,7 +409,7 @@ namespace AbsoluteZero.Core.Turn
             action.ItemData.ExecuteEffect(ctx);
             inventory.ConsumeItem(action.SlotIndex);
 
-            Debug.Log($"[TurnManager] Sub item executed: P{playerIndex} used {action.ItemData.ItemName}");
+            Debug.Log($"[COMBAT] ExecuteSubItems AFTER: P{playerIndex}={player.Temperature.Value:F1}° Opp={opponent.Temperature.Value:F1}°");
         }
 
         [Rpc(SendTo.Everyone)]
@@ -380,6 +420,12 @@ namespace AbsoluteZero.Core.Turn
         [Rpc(SendTo.Everyone)]
         public void OnItemUsedClientRpc(byte playerIndex, byte slotIndex, byte category, bool isInstant)
         {
+        }
+
+        [Rpc(SendTo.Everyone)]
+        void CombatDebugLogRpc(string message)
+        {
+            Debug.Log($"[COMBAT-SYNC] {message}");
         }
 
         [Rpc(SendTo.Everyone)]

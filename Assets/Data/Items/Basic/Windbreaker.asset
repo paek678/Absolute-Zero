@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d75ec5e9ed84291419614838fad8e5a5, type: 3}
+  m_Name: Windbreaker
+  m_EditorClassIdentifier: Assembly-CSharp::AbsoluteZero.Core.Item.Data.DefenseItemDataSO
+  ItemName: Windbreaker
+  Description: Block incoming cold damage
+  Icon: {fileID: 0}
+  Category: 1
+  Persistence: 0
+  SlotType: 0
+  MaxUses: 0
+  DropWeight: 0
+  RequiresMiniGame: 0
+  MiniGameType: 0
+  MiniGameTimeLimit: 0
+  BlockAmount: 4
+  Filter: 0

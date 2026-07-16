@@ -21,21 +21,31 @@ namespace AbsoluteZero.Core.Item.Data
 
         public override void ExecuteEffect(ItemContext ctx)
         {
+            Debug.Log($"[COMBAT] SpecialItem '{ItemName}': P{ctx.UserIndex}, effect={SpecialEffect}, value={EffectValue}, targetsSelf={TargetsSelf}");
+
             switch (SpecialEffect)
             {
                 case SpecialEffectType.FanSpeedChange:
                     int targetIdx = TargetsSelf ? ctx.UserIndex : ctx.TargetIndex;
                     if (DelayTurns > 0)
+                    {
+                        Debug.Log($"[COMBAT] SpecialItem '{ItemName}': scheduled FanSpeed={EffectValue} on P{targetIdx} in {DelayTurns}t");
                         ctx.BuffSystem.Schedule(targetIdx, EffectType.FanSpeedChange, EffectValue, DelayTurns);
+                    }
                     else
+                    {
+                        Debug.Log($"[COMBAT] SpecialItem '{ItemName}': immediate FanSpeed={EffectValue} on P{targetIdx}");
                         (TargetsSelf ? ctx.User : ctx.Target).FanSpeed.Value = EffectValue;
+                    }
                     break;
 
                 case SpecialEffectType.ExtraAction:
+                    Debug.Log($"[COMBAT] SpecialItem '{ItemName}': P{ctx.UserIndex} granted ExtraAction");
                     ctx.UserModifiers.HasExtraAction = true;
                     break;
 
                 case SpecialEffectType.RevealOpponent:
+                    Debug.Log($"[COMBAT] SpecialItem '{ItemName}': P{ctx.UserIndex} revealed opponent");
                     ctx.UserModifiers.OpponentRevealed = true;
                     break;
             }

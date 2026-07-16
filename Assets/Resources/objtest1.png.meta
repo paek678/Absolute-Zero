@@ -209,8 +209,8 @@ TextureImporter:
         y: 439
         width: 193
         height: 324
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+      alignment: 9
+      pivot: {x: 0.5, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -253,8 +253,8 @@ TextureImporter:
         y: 461
         width: 109
         height: 245
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+      alignment: 9
+      pivot: {x: 0.5, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -271,12 +271,12 @@ TextureImporter:
       name: objtest1_10
       rect:
         serializedVersion: 2
-        x: 1317
+        x: 1315
         y: 347
         width: 140
         height: 134
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+      alignment: 9
+      pivot: {x: 0.5, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -293,12 +293,12 @@ TextureImporter:
       name: objtest1_11
       rect:
         serializedVersion: 2
-        x: 1030
-        y: 351
+        x: 1032
+        y: 353
         width: 94
         height: 87
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+      alignment: 9
+      pivot: {x: 0.5, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -315,12 +315,12 @@ TextureImporter:
       name: objtest1_12
       rect:
         serializedVersion: 2
-        x: 1124
-        y: 351
+        x: 1129
+        y: 353
         width: 91
         height: 106
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+      alignment: 9
+      pivot: {x: 0.5, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -341,8 +341,8 @@ TextureImporter:
         y: 363
         width: 73
         height: 138
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+      alignment: 9
+      pivot: {x: 0.5, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -404,7 +404,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 1186
-        y: 69
+        y: 71
         width: 692
         height: 224
       alignment: 0

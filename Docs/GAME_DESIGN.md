@@ -111,42 +111,75 @@ Both clients see mirrored view (my items = bottom, opponent = top)
 
 ### Basic Items (Always Available)
 
-| Item | Cat | Value | Effect |
-|------|-----|-------|--------|
-| Fan (부채) | ATK | 3° | Opponent temp −3° |
-| Windbreaker (바람막이) | DEF | 4° | Partial block: absorbs up to 4° of temp attack damage (6dmg − 4block = 2dmg through) |
-| Warm Tea (따뜻한 차) | REC | 7° | Self temp +7° (consumable) |
-| Cat (고양이) | SAB | — | Reroll ALL opponent random items (consumable) |
+| Item | Cat | Persistence | Value | Effect |
+|------|-----|-------------|-------|--------|
+| Fan (부채) | ATK | Permanent | 3° | Opponent temp −3° |
+| Windbreaker (바람막이) | DEF | Permanent | 4° | Partial block: absorbs up to 4° of temp attack damage |
+| Warm Tea (따뜻한 차) | REC | Consumable | 7° | Self temp +7° |
+| Cat (고양이) | SAB | Consumable | — | Reroll ALL opponent random items |
 
-### Random Items (Threshold Drops — One-Time Use)
+### Random Items (Threshold Drops)
 
-| Item | Cat | Value | Drop | Mini-game |
-|------|-----|-------|------|-----------|
+| Item | Cat | Value | Drop% | Mini-game |
+|------|-----|-------|-------|-----------|
 | Hand Fan (손풍기) | ATK | 4° | 12% | — |
 | Ice Cream (아이스크림) | ATK | 5° | 10% | — |
 | Iced Americano (아.아) | ATK | 5° | 10% | — |
 | Water Gun (물총) | ATK | 7° | 6% | 5s: hit 3 moving targets |
-| Hug T-shirt (안아줘요) | ATK | =my temp | 4% | 10s: hug approaching character |
+| Hug T-shirt (안아줘요 티셔츠) | ATK | =my temp | 4% | 10s: hug approaching character |
 | Hot Americano (뜨.아) | REC | 5° | 10% | — |
 | Smartphone (스마트폰) | REC | 3→5→7° | 6% | 5s: pattern unlock |
-| Hot Pack (핫팩) | REC | 10° | 4% | 10s: tap 30× to heat up |
-| Mask (마스크) | DEF | 100% | 8% | — |
-| Samgyetang (삼계탕) | DBF | +3/−7° | 8% | — |
-| Soda (탄산음료) | BUF | −5/+15° | 6% | 5s: gauge-match soda shake |
+| Hot Pack (핫팩) | REC | 10° | 4% | **TBD: 시간/횟수 불일치** |
+| Mask (마스크) | DEF | 100% food block | 8% | — |
+| Samgyetang (삼계탕) | DBF | opp +3 now / opp −7 next | 8% | — |
+| Soda (탄산음료) | BUF | self −5 now / self +15 next | 6% | — |
 | Buldak Noodles (불닭볶음면) | BUF | +17° | 2% | 10s: tap to boil water |
-| Screwdriver (십자드라이버) | SPC | 2°/s fan | 4% | 5s: tighten 3 screws |
-| Tarot Card (속마음 타로카드) | SPC | — | 2% | 5s: pick 1 of 3 cards (1 correct → use proceeds, wrong/timeout → item destroyed) |
+| Screwdriver (십자드라이버) | SPC | 2×fan | 4% | 7s: tighten 3 screws |
+| Tarot Card (속마음 타로카드) | SPC | — | 2% | — |
 | Claw Machine (집게손) | SAB | — | 4% | 7s: timing claw grab |
 | Blue Tape (청테이프) | SAB | — | 4% | 5s: timing tape cut |
-| Red Card (레드카드) | SAB | — | 2% | 5s: tap red card |
+| Red Card (레드카드) | SAB | — | 2% | 5s: tap red card among yellows |
 
-> **Drop rates sum to 102%** — treated as **weighted pool** (e.g. 손풍기 12/102 ≈ 11.8%). Duplicate drops allowed, but **max 3 copies** of same item. Already-owned items can drop again up to the cap.
-> **11 items require mini-games**, 6 do not.
+> **Drop rates sum to 102%** — treated as **weighted pool** (e.g. 손풍기 12/102 ≈ 11.8%). Duplicate drops allowed, but **max 3 copies** of same item.
+> **9 items require mini-games**, 8 do not.
 
 ```
 Category key: ATK=Attack  DEF=Defense  REC=Recovery
               BUF=Buff    DBF=Debuff   SAB=Sabotage  SPC=Special
 ```
+
+---
+
+## Mini-Game System
+
+Mini-games trigger during PrepPhase when selecting certain items. The PrepPhase timer keeps running.
+
+### Flow
+
+```
+Item click → Mini-game starts (PrepPhase timer continues)
+  ├─ SUCCESS → item queued for use
+  ├─ FAIL    → selection cancelled, return to item selection
+  └─ PREP TIME EXPIRES → mini-game force-cancelled, no effect
+```
+
+- Failure = immediate selection cancel (one chance only)
+- To retry, must re-select the item and play the mini-game again
+- Success = item enters the action queue
+
+### Mini-Game Details
+
+| Item | Time | Input | Description | Success | Fail |
+|------|------|-------|-------------|---------|------|
+| Screwdriver (십자드라이버) | 7s | Circular drag | 3 screws appear. Drag clockwise (3 rotations each) to tighten | All 3 screws tightened in time | Time out or incomplete |
+| Claw Machine (집게손) | 7s | Timing tap | Claw moves left-right above target item. Tap when aligned | Claw grabs item at correct timing | Missed timing or time out |
+| Water Gun (물총) | 5s | Tap | 3 targets move irregularly. Tap to shoot | Hit all 3 targets in time | Missed targets or time out |
+| Hot Pack (핫팩) | **TBD** | Rapid tap | Hot Pack image turns red as tapped, gauge rises | Reach tap count in time | Count not reached |
+| Blue Tape (청테이프) | 5s | Timing tap | Tape stretches with timing bar. Tap in green zone | Tap in green zone | Tap outside green or time out |
+| Smartphone (스마트폰) | 5s | Drag | 3×3 dot grid, trace shown pattern (ㄱ, ㄴ, Z, etc.) | Pattern matched | Wrong pattern or time out |
+| Buldak Noodles (불닭볶음면) | 10s | Rapid tap | Pot + gauge. Tapping boils water, gauge rises | Gauge reaches 100% | Gauge incomplete |
+| Red Card (레드카드) | 5s | Tap | Yellow + red cards appear mixed. Find and tap red card | Tap red card correctly | Tap yellow or time out |
+| Hug T-shirt (안아줘요 티셔츠) | 10s | Timing tap (both sides) | Character approaches center. Tap left+right (arms) simultaneously when in hug zone | Timed correctly | Mistimed or time out |
 
 ---
 
@@ -169,26 +202,28 @@ Appears at **2nd prep phase** of each round. Random. Resets per round.
 ## Item Selection Flow
 
 ```
-[1] Click item on floor → [2] Zoom-in + description overlay → [3] "사용하기" confirm
-                                                                    │
-                                                      (mini-game required?)
-                                                      YES → play mini-game
-                                                            pass → item committed
-                                                            fail → item destroyed, select another
-                                                      NO  → item committed
-                                                                    │
-                                                      (Sub item? e.g. Cat, Tarot Card)
-                                                      YES → queued, turn continues (can still pick Main)
-                                                            → executes at Attack Phase START
-                                                      NO  → Main item queued for Attack Phase
-                                                                    │
-[4] Press "준비 끝" → fan OFF, recovery starts → TURN END
+[1] Click item on floor
+        │
+  (mini-game required?)
+  YES → mini-game starts (PrepPhase timer keeps running)
+        ├─ SUCCESS → item queued
+        ├─ FAIL    → selection cancelled, back to [1]
+        └─ PREP TIME OUT → mini-game cancelled, no effect
+  NO  → item queued immediately
+        │
+  (Sub item?)
+  YES → queued, turn continues (can still pick Main)
+        → executes at Attack Phase START
+  NO  → Main item queued for Attack Phase
+        │
+[2] Press "준비 끝" → fan OFF, recovery starts → TURN END
     (action cannot be changed after "준비 끝")
 
 Alternative: Press "준비 끝" without selecting → no action this turn
 ```
 
-> **Main/Sub system:** 1 Main + 1 Sub per turn. Main items auto-ready on selection. Sub items (Cat, Tarot Card, Claw Machine, Blue Tape, Red Card) queue during prep and execute at attack phase start before Main resolution.
+> **Main/Sub system:** 1 Main + 1 Sub per turn. Sub items execute at Attack Phase start before Main resolution.
+> **TBD:** Which items are Sub? (See Open Questions)
 
 ---
 
@@ -247,3 +282,70 @@ UI updates from callbacks          (temp, phase, timer)
 ```
 
 All mutations server-side: damage, healing, time, win/loss, item use, buff/debuff, mini-game validation.
+
+---
+
+## Open Questions (기획 확인 필요)
+
+### Resolved
+
+| # | Question | Answer |
+|---|----------|--------|
+| Q4 | **삼계탕 "+3, -7" 효과 방향** | ✅ 즉시 상대 온도 +3° (올림) → 다음 턴 상대 온도 -7° (내림). 둘 다 상대에게 적용 |
+| Q5 | **탄산음료 "-5, +15" 효과 방향** | ✅ 즉시 내 온도 -5° (자해 비용) → 다음 턴 내 온도 +15° (이득). 둘 다 자신에게 적용 |
+| Q11 | **미니게임 판정 권한** | ✅ 클라이언트 판정 + 서버 타임아웃 강제 실패. 상세 아래 참조 |
+| Q12 | **미니게임 실패 시 아이템 소모** | ✅ 소모 안 됨. 실패해도 아이템 유지, 다시 선택하여 재도전 가능 |
+| Q13 | **공격턴 아이템 사용 연출** | ✅ 전용 애니메이션/이펙트 예정, 아트 확정 후 결정 |
+| Q14 | **선풍기 월드 표시** | ✅ StayItem 위치에 해당 오브젝트 스폰만 하면 됨. 연출은 추후 추가 |
+| Q15 | **상대방 아이템 보유 목록** | ✅ EnemyItem 위치에 서버가 내려주는 목록 표시. 소모 시 시각적 제거, 재획득 시 다시 표시. 서버 권위 |
+| Q17 | **환경 시스템** | ✅ 데모에는 미포함, 이후 추가 |
+
+### Resolved: Mini-Game Judgment Model (Q11)
+
+```
+미니게임 중 성공/실패 → 클라이언트에서 판정 → 결과만 ServerRpc로 전송
+PrepPhase 타이머 만료 → 서버가 턴 종료 판정 → 클라이언트도 미니게임 강제 실패 처리
+
+핵심: 서버 타이머가 마스터. 클라/서버 핑 차이로 꼬여도
+      서버의 "턴 종료" 판정이 최종 → 클라는 무조건 실패로 전환.
+```
+
+### Pending — Item Details
+
+| # | Question | Context |
+|---|----------|---------|
+| Q1 | **핫팩 미니게임 수치 불일치** — 아이템표 "10초/30번 연타" vs 미니게임표 "7초/15번 연타". 어느 쪽? | 시간과 횟수 둘 다 다름 |
+| Q2 | **따뜻한 차 사용 횟수** — 기본/소모인데 몇 회? | 현재 코드: 2회 |
+| Q3 | **고양이 사용 횟수** — 기본/소모인데 몇 회? | 현재 코드: 1회 |
+| Q7 | **드롭 확률 합계 102%** — 가중치 풀? 100% 조정? | 합계: 102 |
+
+### Pending — Slot Type (Main/Sub)
+
+| # | Question | Context |
+|---|----------|---------|
+| Q9 | **타로카드 "추가 사용" 타이밍** — Sub로 먼저 발동? 추가 선택은 언제? | 현재 코드: Sub |
+
+### Resolved via Design Spec (질문지 제외 — 기획서에 직접 명시 예정)
+
+| # | Item | Status |
+|---|------|--------|
+| Q6 | **마스크 "음식 아이템" 범위** — 아이템 기획서에 음식 태그 직접 명시 예정 | ⏳ 기획서 대기 |
+| Q8 | **각 아이템 Main/Sub 구분** — 아이템 기획서에 슬롯 구분 직접 명시 예정 | ⏳ 기획서 대기 |
+
+### Pending — Mini-Game
+
+| # | Question | Context |
+|---|----------|---------|
+| Q10 | **미니게임 중 상대방 화면** — 상대에게 표시가 보이는지? | 각자 독립 PrepPhase 진행 |
+
+### Pending — Visual / System
+
+| # | Question | Context |
+|---|----------|---------|
+| Q16 | **아이템 슬롯 UI 레이아웃** — 기본 4 + 랜덤 8 배치 방식? 빈 슬롯 표시? | 현재: 4칸만 |
+| Q18 | **스마트폰 3→5→7° vs 1회용** — RandomConsumable(1회용)인데 3단계 회복량. 3회 사용? 1회에 3° 고정? | 코드: HealPerUse[] 다회 지원, 아이템 타입: 1회용 |
+| Q19 | **안아줘요 티셔츠 역효과** — 내 온도 > 상대 온도면 상대를 회복시킴. 의도된 리스크? 효과 없음 처리? | 코드: diff ≤ 0이면 ApplyHeal(상대) |
+| Q20 | **라운드 간 리셋 범위** — 랜덤 아이템/버프/지급 이력 등 어디까지 초기화? | 코드: 전부 초기화(임의) |
+| Q21 | **버프/디버프 중첩** — 같은 효과 다중 적용 가능? 삼계탕 2연속 = -14°? | 코드: 무제한 중첩 |
+| Q22 | **이번 턴 선택 아이템 상대 공개** — 보유 목록은 공개(Q15)지만, 뭘 골랐는지는? | 코드: 비공개 |
+| Q23 | **지연 효과 발동 시 방어 가능 여부** — 삼계탕 -7° 발동 턴에 방어 아이템으로 차단? | 코드: 방어 무시 |

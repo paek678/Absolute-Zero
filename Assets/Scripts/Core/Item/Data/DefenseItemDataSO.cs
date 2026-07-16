@@ -12,6 +12,7 @@ namespace AbsoluteZero.Core.Item.Data
 
         public override void ExecuteEffect(ItemContext ctx)
         {
+            Debug.Log($"[COMBAT] DefenseItem '{ItemName}': P{ctx.UserIndex} activated defense — filter={Filter}, block={BlockAmount}");
             ctx.UserModifiers.ActiveDefense = new DefenseInfo
             {
                 Filter = this.Filter,

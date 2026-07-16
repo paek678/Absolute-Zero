@@ -19,6 +19,8 @@ namespace AbsoluteZero.Core.Combat
         public float P2TempAfterCombat;
         public short P1SubItemId = -1;
         public short P2SubItemId = -1;
+        public short P1MainItemId = -1;
+        public short P2MainItemId = -1;
 
         public CombatResultData ToNetData()
         {
@@ -34,7 +36,9 @@ namespace AbsoluteZero.Core.Combat
                 P1TempAfterCombat = P1TempAfterCombat,
                 P2TempAfterCombat = P2TempAfterCombat,
                 P1SubItemId = P1SubItemId,
-                P2SubItemId = P2SubItemId
+                P2SubItemId = P2SubItemId,
+                P1MainItemId = P1MainItemId,
+                P2MainItemId = P2MainItemId
             };
 
             if (Events.Count > 0)
@@ -99,6 +103,8 @@ namespace AbsoluteZero.Core.Combat
         public float P2TempAfterCombat;
         public short P1SubItemId;
         public short P2SubItemId;
+        public short P1MainItemId;
+        public short P2MainItemId;
 
         public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
         {
@@ -128,6 +134,8 @@ namespace AbsoluteZero.Core.Combat
             serializer.SerializeValue(ref P2TempAfterCombat);
             serializer.SerializeValue(ref P1SubItemId);
             serializer.SerializeValue(ref P2SubItemId);
+            serializer.SerializeValue(ref P1MainItemId);
+            serializer.SerializeValue(ref P2MainItemId);
         }
     }
 }

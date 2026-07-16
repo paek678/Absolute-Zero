@@ -26,8 +26,11 @@ namespace AbsoluteZero.Core.Player
             _itemRegistry = registry;
         }
 
+        public bool IsRegistryReady => _itemRegistry != null && _itemRegistry.Length > 0;
+
         public ItemDataSO GetItemData(int slotIndex)
         {
+            if (_itemRegistry == null) return null;
             var slot = SlotStates[slotIndex];
             if (slot.IsEmpty || slot.ItemId < 0 || slot.ItemId >= _itemRegistry.Length)
                 return null;

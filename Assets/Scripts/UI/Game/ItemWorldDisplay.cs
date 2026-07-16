@@ -48,6 +48,10 @@ namespace AbsoluteZero.UI.Game
             if (inv == null || inv.SlotStates == null || inv.SlotStates.Count == 0) return;
             if (ItemManager.Instance == null) return;
 
+            if (!inv.IsRegistryReady)
+                ItemManager.Instance.InitializeClientRegistry(inv);
+            if (!inv.IsRegistryReady) return;
+
             _localPlayer = ps;
             _inventory = inv;
 

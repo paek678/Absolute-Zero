@@ -46,6 +46,8 @@ namespace AbsoluteZero.Core.Item
             col.size = new Vector3(0.75f, 1.2f, 0.5f);
             col.center = Vector3.zero;
 
+            transform.localScale = new Vector3(0.7f, 0.7f, 0.7f);
+
             gameObject.layer = LayerMask.NameToLayer("Interactable");
 
             Hover = gameObject.AddComponent<HoverEffect>();

@@ -73,6 +73,32 @@ namespace AbsoluteZero.UI.Game
                 worldDisplayGO.transform.position = spawnRoot.transform.position;
             _worldDisplay = worldDisplayGO.AddComponent<ItemWorldDisplay>();
             _worldDisplay.OnWorldItemClicked += OnItemClicked;
+
+            SpawnStayItemFans();
+        }
+
+        void SpawnStayItemFans()
+        {
+            var fanSprite = GameSprites.GetStayItemSprite();
+            if (fanSprite == null) return;
+
+            var litMat = Resources.Load<Material>("sprite3DMat");
+            string[] markerNames = { "PlayerStayItem", "EnemyStayItem" };
+
+            foreach (var name in markerNames)
+            {
+                var marker = GameObject.Find(name);
+                if (marker == null) continue;
+
+                var go = new GameObject($"{name}_Fan");
+                go.transform.SetParent(marker.transform, false);
+                go.transform.localPosition = Vector3.zero;
+
+                var sr = go.AddComponent<SpriteRenderer>();
+                sr.sprite = fanSprite;
+                sr.sortingOrder = 3;
+                if (litMat != null) sr.material = litMat;
+            }
         }
 
         void Update()
@@ -676,16 +702,8 @@ namespace AbsoluteZero.UI.Game
                 return item != null ? item.ItemName : "—";
             }
 
-            string p1Main = "—";
-            string p2Main = "—";
-            for (int i = 0; i < data.EventCount; i++)
-            {
-                byte src = i == 0 ? data.Event0Source : data.Event1Source;
-                short itemId = i == 0 ? data.Event0ItemId : data.Event1ItemId;
-                if (src == 0) p1Main = GetItemName(itemId);
-                else p2Main = GetItemName(itemId);
-            }
-
+            string p1Main = GetItemName(data.P1MainItemId);
+            string p2Main = GetItemName(data.P2MainItemId);
             string p1Sub = GetItemName(data.P1SubItemId);
             string p2Sub = GetItemName(data.P2SubItemId);
 

@@ -12,6 +12,7 @@ namespace AbsoluteZero.Core.Item.Data
         {
             int useIndex = MaxUses > 0 ? MaxUses - ctx.UserSlot.RemainingUses : 0;
             float heal = HealPerUse[Mathf.Clamp(useIndex, 0, HealPerUse.Length - 1)];
+            Debug.Log($"[COMBAT] RecoveryItem '{ItemName}': P{ctx.UserIndex} heal={heal}, useIndex={useIndex}, remaining={ctx.UserSlot.RemainingUses}/{MaxUses}");
             ctx.TempSystem.ApplyHeal(ctx.User, heal);
         }
     }
