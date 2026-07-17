@@ -18,7 +18,10 @@ namespace AbsoluteZero.Core.Network
         [Header("Lobby Settings")]
         [SerializeField] private int maxPlayers = 2;
         [SerializeField] private float heartbeatInterval = 15f;
-        [SerializeField] private float lobbyPollInterval = 0.5f;
+        [SerializeField] private float lobbyPollInterval = 1.5f;
+
+        // Unity Lobby GetLobby 레이트 리밋 = 초당 1회 — 이보다 짧게 폴링하면 429("Something went wrong") 발생
+        const float MIN_POLL_INTERVAL = 1.1f;
 
         private Lobby currentLobby;
         private float heartbeatTimer;
@@ -56,6 +59,9 @@ namespace AbsoluteZero.Core.Network
             {
                 Destroy(gameObject);
             }
+
+            // 씬에 직렬화된 옛 값(0.5 등)이 남아 있어도 레이트 리밋 아래로 내려가지 않게 클램프
+            lobbyPollInterval = Mathf.Max(lobbyPollInterval, MIN_POLL_INTERVAL);
         }
 
         private async void Start()
@@ -507,9 +513,15 @@ namespace AbsoluteZero.Core.Network
                     isHost = false;
                     OnLobbyLeft?.Invoke();
                 }
+                else if (e.Reason == LobbyExceptionReason.RateLimited)
+                {
+                    // 레이트 리밋 — 다음 폴링을 한 박자 늦춰 회복 (경고 스팸 방지)
+                    pollTimer = Mathf.Max(pollTimer, MIN_POLL_INTERVAL);
+                    Debug.Log("[LobbyManager] Lobby poll rate-limited — backing off");
+                }
                 else
                 {
-                    Debug.LogWarning($"[LobbyManager] Lobby polling failed: {e.Message}");
+                    Debug.LogWarning($"[LobbyManager] Lobby polling failed: {e.Reason} — {e.Message}");
                 }
             }
             catch (Exception e)

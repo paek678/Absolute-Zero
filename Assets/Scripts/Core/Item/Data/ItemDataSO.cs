@@ -26,6 +26,7 @@ namespace AbsoluteZero.Core.Item.Data
         public bool RequiresMiniGame;
         public MiniGameType MiniGameType;
         public float MiniGameTimeLimit;
+        public int MiniGameGoal = 1;   // 게임별 목표치 (연타 횟수 / 게이지 채움 탭 수 / 나사당 회전 수)
 
         public abstract void ExecuteEffect(ItemContext ctx);
 

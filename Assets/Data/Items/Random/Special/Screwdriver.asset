@@ -22,8 +22,9 @@ MonoBehaviour:
   DropWeight: 4
   RequiresMiniGame: 1
   MiniGameType: 7
-  MiniGameTimeLimit: 5
+  MiniGameTimeLimit: 7
+  MiniGameGoal: 1
   SpecialEffect: 0
   EffectValue: 2
   TargetsSelf: 0
-  DelayTurns: 1
+  DelayTurns: 0

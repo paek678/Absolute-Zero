@@ -100,7 +100,8 @@ namespace AbsoluteZero.Core.Turn
             while (true)
             {
                 var players = FindObjectsByType<PlayerState>(FindObjectsSortMode.None);
-                if (players.Length >= 2)
+                // IsSpawned 필수 — spawn 전 NetworkList/NV 조작은 유실되어 기본 아이템이 빈 슬롯으로 남는다
+                if (players.Length >= 2 && players[0].IsSpawned && players[1].IsSpawned)
                 {
                     if (players[0].OwnerClientId <= players[1].OwnerClientId)
                     {
@@ -350,6 +351,9 @@ namespace AbsoluteZero.Core.Turn
         {
             _p1.Temperature.Value = TemperatureSystem.MAX_TEMP;
             _p2.Temperature.Value = TemperatureSystem.MAX_TEMP;
+            // Q20 확정: 라운드 리셋 시 강화 수치는 기본으로 초기화 (드라이버 강풍 해제)
+            _p1.FanSpeed.Value = TemperatureSystem.DEFAULT_FAN_SPEED;
+            _p2.FanSpeed.Value = TemperatureSystem.DEFAULT_FAN_SPEED;
             _p1.IsReady.Value = false;
             _p2.IsReady.Value = false;
             _p1.IsFanActive.Value = false;
@@ -357,6 +361,9 @@ namespace AbsoluteZero.Core.Turn
 
             _p1.GetInventory().ResetForNewRound();
             _p2.GetInventory().ResetForNewRound();
+            // 기획 확정(Q20): 라운드 리셋 시 랜덤 4개 재지급
+            _p1.GetInventory().GrantRandomItems(ItemManager.InitialRandomGrant, GetDropTable());
+            _p2.GetInventory().GrantRandomItems(ItemManager.InitialRandomGrant, GetDropTable());
 
             _buffSystem.ClearAll();
             TurnNumber.Value = 0;

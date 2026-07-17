@@ -45,7 +45,8 @@ namespace AbsoluteZero.UI.Game
             if (ps == null) return;
 
             var inv = ps.GetInventory();
-            if (inv == null || inv.SlotStates == null || inv.SlotStates.Count == 0) return;
+            // 12칸 전체 복제 완료까지 대기 — 일부만 복제된 시점에 뷰를 만들면 나머지 슬롯이 영영 안 생김 (클라 레이스)
+            if (inv == null || inv.SlotStates == null || inv.SlotStates.Count < ItemSlotLayout.TOTAL_SLOTS) return;
             if (ItemManager.Instance == null) return;
 
             if (!inv.IsRegistryReady)
@@ -68,6 +69,8 @@ namespace AbsoluteZero.UI.Game
         {
             int count = _inventory.SlotStates.Count;
             _views = new ItemWorldView[count];
+            // 기본 4칸 = 마커, 랜덤 8칸 = 아이스박스 옆 4×2 그리드 (PLAN_009 — 마커 기반 런타임 파생)
+            var layout = ItemSlotLayout.Build("PlayerItem");
 
             for (int i = 0; i < count; i++)
             {
@@ -77,14 +80,21 @@ namespace AbsoluteZero.UI.Game
                 var go = new GameObject();
                 go.transform.SetParent(transform, false);
 
-                var marker = GameObject.Find($"PlayerItem{i + 1}");
-                if (marker != null)
-                    go.transform.position = marker.transform.position;
+                if (layout.Valid && i < layout.Slots.Length)
+                {
+                    go.transform.position = layout.Slots[i];
+                }
                 else
                 {
-                    float totalWidth = (count - 1) * FALLBACK_SPACING;
-                    go.transform.localPosition = new Vector3(
-                        -totalWidth / 2f + i * FALLBACK_SPACING, FALLBACK_Y, 0f);
+                    var marker = GameObject.Find($"PlayerItem{i + 1}");
+                    if (marker != null)
+                        go.transform.position = marker.transform.position;
+                    else
+                    {
+                        float totalWidth = (count - 1) * FALLBACK_SPACING;
+                        go.transform.localPosition = new Vector3(
+                            -totalWidth / 2f + i * FALLBACK_SPACING, FALLBACK_Y, 0f);
+                    }
                 }
 
                 var view = go.AddComponent<ItemWorldView>();

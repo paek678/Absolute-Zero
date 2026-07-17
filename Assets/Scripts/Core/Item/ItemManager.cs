@@ -18,6 +18,9 @@ namespace AbsoluteZero.Core.Item
         [SerializeField] short warmTeaItemId = 2;
         [SerializeField] short catItemId = 3;
 
+        // 기획 확정(2026-07-15, Q20): 게임 시작·라운드 리셋 시 랜덤 아이템 4개 기본 지급
+        public const int InitialRandomGrant = 4;
+
         ItemDropTable _dropTable;
 
         public override void OnNetworkSpawn()
@@ -49,6 +52,7 @@ namespace AbsoluteZero.Core.Item
 
             inventory.Initialize(allItems);
             inventory.InitializeBasicItems(fanItemId, windbreakerItemId, warmTeaItemId, catItemId);
+            inventory.GrantRandomItems(InitialRandomGrant, _dropTable);   // 시작 랜덤 4개 (Q20)
         }
 
         public void InitializeClientRegistry(PlayerInventory inventory)

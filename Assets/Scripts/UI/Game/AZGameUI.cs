@@ -5,6 +5,8 @@ using AbsoluteZero.Core.Item;
 using AbsoluteZero.Core.Match;
 using AbsoluteZero.Core.Player;
 using AbsoluteZero.Core.Turn;
+using AbsoluteZero.UI.Common;
+using AbsoluteZero.UI.MiniGame;
 using TMPro;
 using Unity.Netcode;
 using UnityEngine;
@@ -23,7 +25,9 @@ namespace AbsoluteZero.UI.Game
         PlayerState _p2Cached;
 
         Canvas _overlayCanvas;
-        TextMeshProUGUI _phaseText;
+        TextMeshProUGUI _bannerText;          // 페이즈 시작 배너 (잠깐 표시 후 페이드)
+        CanvasGroup _bannerGroup;
+        Coroutine _bannerCoroutine;
         TextMeshProUGUI _timerText;
         TextMeshProUGUI _statusText;
         TextMeshProUGUI _scoreText;
@@ -54,17 +58,21 @@ namespace AbsoluteZero.UI.Game
         Coroutine _resultHideCoroutine;
 
         bool _uiBuilt;
+        ItemSlotLayout.SideLayout _myLayout;
 
         static readonly Vector3 OPP_BAR_OFFSET = new(0f, 2f, 0f);
         static readonly Vector3 READY_BTN_POS = new(0f, 0.05f, 1.2f);
         const float WORLD_CANVAS_SCALE = 0.005f;
+        static readonly WaitForSeconds _bannerHold = new(1.1f);
 
         void Start()
         {
             EnsureEventSystem();
+            _myLayout = ItemSlotLayout.Build("PlayerItem");   // 마커 기반 슬롯/준비끝/아이스박스 배치
             BuildOverlayUI();
             BuildOppBarWorldUI();
             BuildReadyWorldUI();
+            BuildFloorDecor();
             _uiBuilt = true;
 
             var worldDisplayGO = new GameObject("ItemWorldDisplay");
@@ -74,7 +82,29 @@ namespace AbsoluteZero.UI.Game
             _worldDisplay = worldDisplayGO.AddComponent<ItemWorldDisplay>();
             _worldDisplay.OnWorldItemClicked += OnItemClicked;
 
+            // 미니게임 허브 (서버 시작 승인 수신 → 그레이박스 게임 → 결과 제출)
+            var miniGameHubGO = new GameObject("MiniGameHub");
+            miniGameHubGO.AddComponent<MiniGameHub>();
+            MiniGameHub.OnFinishedLocal += OnMiniGameFinishedLocal;
+
+            // 개발용 아이템 지급 치트 (에디터/개발 빌드에서만 동작 — F1핫팩/F2불닭/F3드라이버/F4랜덤)
+            var debugGranterGO = new GameObject("DebugItemGranter");
+            debugGranterGO.AddComponent<Core.Game.DebugItemGranter>();
+
             SpawnStayItemFans();
+        }
+
+        /// <summary>슬롯 패드(빈 랜덤 칸 상시 표시 — Q16) + 아이스박스 그레이박스 (클라 로컬 연출)</summary>
+        void BuildFloorDecor()
+        {
+            var decorRoot = new GameObject("ItemFloorDecor").transform;
+
+            ItemSlotLayout.SpawnSlotPads(_myLayout, decorRoot);
+            if (_myLayout.Valid)
+                ItemSlotLayout.SpawnIceBox(_myLayout.IceBoxPos, decorRoot);   // 아이스박스는 내 쪽만 (목업)
+
+            var enemyLayout = ItemSlotLayout.Build("EnemyItem");
+            ItemSlotLayout.SpawnSlotPads(enemyLayout, decorRoot);
         }
 
         void SpawnStayItemFans()
@@ -131,6 +161,7 @@ namespace AbsoluteZero.UI.Game
         void OnDestroy()
         {
             TurnManager.OnCombatResult -= OnCombatResultReceived;
+            MiniGameHub.OnFinishedLocal -= OnMiniGameFinishedLocal;
             if (_tm != null)
             {
                 _tm.CurrentPhase.OnValueChanged -= OnPhaseChanged;
@@ -208,15 +239,12 @@ namespace AbsoluteZero.UI.Game
 
         void OnPhaseChanged(TurnPhase oldPhase, TurnPhase newPhase)
         {
-            _phaseText.text = newPhase switch
+            // 상시 텍스트 대신 페이즈 시작 배너 (잠깐 표시 후 페이드 — 기획 지시)
+            switch (newPhase)
             {
-                TurnPhase.WaitingForPlayers => "WAITING",
-                TurnPhase.PrepPhase => "PREP PHASE",
-                TurnPhase.AttackPhase => "ATTACK",
-                TurnPhase.ResolutionPhase => "RESOLUTION",
-                TurnPhase.RoundOver => "ROUND OVER",
-                _ => ""
-            };
+                case TurnPhase.PrepPhase: ShowPhaseBanner("준비 시간"); break;
+                case TurnPhase.AttackPhase: ShowPhaseBanner("공격 시간"); break;
+            }
 
             if (_readyCanvas != null)
                 _readyCanvas.gameObject.SetActive(newPhase == TurnPhase.PrepPhase);
@@ -315,8 +343,41 @@ namespace AbsoluteZero.UI.Game
 
         void UpdateScoreDisplay()
         {
-            if (_mm == null) return;
-            _scoreText.text = $"P1  {_mm.P1RoundWins.Value} : {_mm.P2RoundWins.Value}  P2";
+            if (_mm == null || _scoreText == null) return;
+
+            // 로컬 시점 기준 나 | 상대 (기획 목업)
+            int myIdx = _localPlayer != null ? _localPlayer.SyncedPlayerIndex.Value : 0;
+            int myWins = myIdx == 0 ? _mm.P1RoundWins.Value : _mm.P2RoundWins.Value;
+            int oppWins = myIdx == 0 ? _mm.P2RoundWins.Value : _mm.P1RoundWins.Value;
+            _scoreText.text = $"<size=22>나   |   상대</size>\n<size=44>{myWins}  :  {oppWins}</size>";
+        }
+
+        void ShowPhaseBanner(string text)
+        {
+            if (_bannerText == null) return;
+            if (_bannerCoroutine != null) StopCoroutine(_bannerCoroutine);
+            _bannerCoroutine = StartCoroutine(PhaseBannerRoutine(text));
+        }
+
+        IEnumerator PhaseBannerRoutine(string text)
+        {
+            _bannerText.text = text;
+            _bannerGroup.alpha = 1f;
+            _bannerGroup.gameObject.SetActive(true);
+
+            yield return _bannerHold;
+
+            const float fadeDuration = 0.6f;
+            float t = 0f;
+            while (t < fadeDuration)
+            {
+                t += Time.deltaTime;
+                _bannerGroup.alpha = 1f - t / fadeDuration;
+                yield return null;
+            }
+
+            _bannerGroup.gameObject.SetActive(false);
+            _bannerCoroutine = null;
         }
 
         void UpdateOppBarTransform()
@@ -338,6 +399,7 @@ namespace AbsoluteZero.UI.Game
         {
             if (_localPlayer == null) return;
             if (_localPlayer.IsReady.Value) return;
+            if (MiniGameHub.IsRunning) return;   // 미니게임 진행 중 — 다른 아이템 클릭 차단 (모달)
 
             var inv = _localPlayer.GetInventory();
             if (inv == null || slotIndex >= inv.SlotStates.Count) return;
@@ -349,6 +411,14 @@ namespace AbsoluteZero.UI.Game
                 return;
 
             _localPlayer.SelectItemServerRpc((byte)slotIndex);
+
+            // 미니게임 아이템은 아직 확정 아님 — 성공 시 OnMiniGameFinishedLocal에서 확정 표시
+            if (itemData.RequiresMiniGame)
+            {
+                _statusText.text = $"Mini-game: {itemData.ItemName}!";
+                return;
+            }
+
             _worldDisplay?.NotifyItemConfirmed(slotIndex);
 
             if (itemData.SlotType == ItemSlotType.Sub)
@@ -363,9 +433,36 @@ namespace AbsoluteZero.UI.Game
                 : $"Selected: {itemData.ItemName}";
         }
 
+        void OnMiniGameFinishedLocal(byte slotIndex, bool success)
+        {
+            if (_localPlayer == null) return;
+
+            var inv = _localPlayer.GetInventory();
+            var itemData = inv != null && slotIndex < inv.SlotStates.Count ? inv.GetItemData(slotIndex) : null;
+            string itemName = itemData != null ? itemData.ItemName : "Item";
+
+            if (!success)
+            {
+                // 실패 = 선택 취소, 아이템 미소모 — 재선택으로 재도전 가능 (Q12)
+                _statusText.text = $"{itemName} failed! Try again";
+                return;
+            }
+
+            _worldDisplay?.NotifyItemConfirmed(slotIndex);
+
+            if (itemData != null && itemData.SlotType == ItemSlotType.Sub)
+                _selectedSubName = itemName;
+            else
+                _selectedMainName = itemName;
+
+            UpdateStackDisplay();
+            _statusText.text = $"Selected: {itemName}";
+        }
+
         void OnReadyClicked()
         {
             if (_localPlayer == null) return;
+            if (MiniGameHub.IsRunning) return;   // 미니게임 중 준비 끝 잠금
 
             _localPlayer.PressReadyServerRpc();
             _statusText.text = _localPlayer.HasSelectedItem.Value
@@ -394,7 +491,8 @@ namespace AbsoluteZero.UI.Game
             if (opp == null) return;
 
             var inv = opp.GetInventory();
-            if (inv == null || inv.SlotStates == null || inv.SlotStates.Count == 0) return;
+            // 12칸 전체 복제 완료까지 대기 (클라 레이스 — ItemWorldDisplay와 동일)
+            if (inv == null || inv.SlotStates == null || inv.SlotStates.Count < ItemSlotLayout.TOTAL_SLOTS) return;
             if (ItemManager.Instance == null) return;
 
             ItemManager.Instance.InitializeClientRegistry(inv);
@@ -402,17 +500,27 @@ namespace AbsoluteZero.UI.Game
             int count = inv.SlotStates.Count;
             _oppItemObjects = new GameObject[count];
             var litMat = Resources.Load<Material>("sprite3DMat");
+            var enemyLayout = ItemSlotLayout.Build("EnemyItem");   // 랜덤 8칸 포함 12칸 배치 (기획 4×2)
 
             for (int i = 0; i < count; i++)
             {
-                var marker = GameObject.Find($"EnemyItem{i + 1}");
-                if (marker == null) continue;
+                Vector3 pos;
+                if (enemyLayout.Valid && i < enemyLayout.Slots.Length)
+                {
+                    pos = enemyLayout.Slots[i];
+                }
+                else
+                {
+                    var marker = GameObject.Find($"EnemyItem{i + 1}");
+                    if (marker == null) continue;
+                    pos = marker.transform.position;
+                }
 
                 var itemData = inv.GetItemData(i);
                 string itemName = itemData != null ? itemData.ItemName : "Empty";
 
                 var go = new GameObject($"OppItem_{i}_{itemName}");
-                go.transform.position = marker.transform.position;
+                go.transform.position = pos;
 
                 var sr = go.AddComponent<SpriteRenderer>();
                 sr.sprite = GameSprites.GetItemSprite(itemName);
@@ -449,15 +557,36 @@ namespace AbsoluteZero.UI.Game
             // === TOP-RIGHT: Clock + Timer ===
             BuildClockTimer(root);
 
-            // === TOP-CENTER: Phase + Score ===
-            _phaseText = CreateText(root, "PhaseText",
-                new Vector2(0, -30), new Vector2(400, 50), "WAITING", 28);
-            AnchorTopCenter(_phaseText.GetComponent<RectTransform>());
+            // === TOP-CENTER: Round Score Panel (나 | 상대 — 확대 + 패널) ===
+            var scorePanelGO = new GameObject("ScorePanel");
+            scorePanelGO.transform.SetParent(root, false);
+            var spRect = scorePanelGO.AddComponent<RectTransform>();
+            spRect.anchoredPosition = new Vector2(0, -12);
+            spRect.sizeDelta = new Vector2(260, 100);
+            AnchorTopCenter(spRect);
 
-            _scoreText = CreateText(root, "ScoreText",
-                new Vector2(0, -75), new Vector2(300, 30), "P1  0 : 0  P2", 20);
-            _scoreText.color = new Color(0.9f, 0.9f, 0.6f);
-            AnchorTopCenter(_scoreText.GetComponent<RectTransform>());
+            CreatePanel(scorePanelGO.transform, "ScoreBg", Vector2.zero,
+                new Vector2(260, 100), new Color(1f, 0.72f, 0.12f, 0.95f));
+
+            _scoreText = CreateText(scorePanelGO.transform, "ScoreText",
+                Vector2.zero, new Vector2(250, 94), "", 20);
+            _scoreText.color = new Color(0.16f, 0.1f, 0.02f);
+            _scoreText.fontStyle = FontStyles.Bold;
+
+            // === CENTER: Phase Banner (페이즈 시작 시 잠깐 표시 후 페이드) ===
+            var bannerGO = new GameObject("PhaseBanner");
+            bannerGO.transform.SetParent(root, false);
+            var bRect = bannerGO.AddComponent<RectTransform>();
+            bRect.anchoredPosition = new Vector2(0, 130);
+            bRect.sizeDelta = new Vector2(900, 120);
+            _bannerGroup = bannerGO.AddComponent<CanvasGroup>();
+            _bannerGroup.blocksRaycasts = false;
+            _bannerGroup.interactable = false;
+            _bannerText = CreateText(bannerGO.transform, "BannerText",
+                Vector2.zero, new Vector2(900, 120), "", 72);
+            _bannerText.fontStyle = FontStyles.Bold;
+            _bannerText.color = new Color(1f, 0.95f, 0.75f);
+            bannerGO.SetActive(false);
 
             // === RIGHT: Item Stack ===
             BuildItemStack(root);
@@ -531,7 +660,7 @@ namespace AbsoluteZero.UI.Game
             container.transform.SetParent(root, false);
             var cRect = container.AddComponent<RectTransform>();
             cRect.anchoredPosition = new Vector2(-20, -20);
-            cRect.sizeDelta = new Vector2(120, 120);
+            cRect.sizeDelta = new Vector2(180, 180);   // 타이머 확대 (기획 지시)
             AnchorTopRight(cRect);
 
             var clockSprite = GameSprites.Get(GameSprites.CLOCK);
@@ -541,14 +670,14 @@ namespace AbsoluteZero.UI.Game
                 clockGO.transform.SetParent(container.transform, false);
                 var clRect = clockGO.AddComponent<RectTransform>();
                 clRect.anchoredPosition = Vector2.zero;
-                clRect.sizeDelta = new Vector2(100, 100);
+                clRect.sizeDelta = new Vector2(160, 160);
                 _clockImage = clockGO.AddComponent<Image>();
                 _clockImage.sprite = clockSprite;
                 _clockImage.preserveAspect = true;
             }
 
             _timerText = CreateText(container.transform, "TimerText",
-                new Vector2(0, -5), new Vector2(100, 60), "", 40);
+                new Vector2(0, -8), new Vector2(150, 90), "", 62);
             _timerText.color = Color.white;
             _timerText.fontStyle = FontStyles.Bold;
         }
@@ -598,7 +727,8 @@ namespace AbsoluteZero.UI.Game
             var rt = canvasGO.GetComponent<RectTransform>();
             rt.sizeDelta = new Vector2(300, 180);
             canvasGO.transform.localScale = Vector3.one * WORLD_CANVAS_SCALE;
-            canvasGO.transform.position = READY_BTN_POS;
+            // 아이템 행과 같은 z축, 그리드와 기본칸 사이 공백 중앙 (기획 지시 — 마커 기반 파생)
+            canvasGO.transform.position = _myLayout.Valid ? _myLayout.ReadyButtonPos : READY_BTN_POS;
             canvasGO.transform.rotation = Quaternion.Euler(60f, 0f, 0f);
 
             canvasGO.AddComponent<GraphicRaycaster>();
@@ -797,6 +927,7 @@ namespace AbsoluteZero.UI.Game
             rect.anchoredPosition = pos;
             rect.sizeDelta = size;
             var tmp = go.AddComponent<TextMeshProUGUI>();
+            UiFont.Apply(tmp);   // 한글 텍스트("턴 결과" 등) □ 깨짐 방지
             tmp.text = text;
             tmp.fontSize = fontSize;
             tmp.alignment = TextAlignmentOptions.Center;

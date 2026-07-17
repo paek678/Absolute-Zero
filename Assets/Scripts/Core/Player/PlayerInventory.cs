@@ -87,6 +87,19 @@ namespace AbsoluteZero.Core.Player
             }
         }
 
+        /// <summary>특정 아이템을 빈 랜덤 슬롯에 지급 (서버 전용 — 디버그/기획 지급용)</summary>
+        public bool GrantSpecificItem(short itemId)
+        {
+            if (!IsServer) return false;
+            if (_itemRegistry == null || itemId < 0 || itemId >= _itemRegistry.Length) return false;
+
+            int emptySlot = FindEmptyRandomSlot();
+            if (emptySlot < 0) return false;
+
+            SlotStates[emptySlot] = MakeSlot(itemId, _itemRegistry[itemId]);
+            return true;
+        }
+
         public void RerollAllRandom(ItemDropTable dropTable)
         {
             if (!IsServer) return;
