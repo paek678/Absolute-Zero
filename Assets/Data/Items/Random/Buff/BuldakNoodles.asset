@@ -23,6 +23,7 @@ MonoBehaviour:
   RequiresMiniGame: 1
   MiniGameType: 6
   MiniGameTimeLimit: 10
+  MiniGameGoal: 25
   ImmediateTempDelta: 0
   DelayedTempDelta: 17
   DelayTurns: 1

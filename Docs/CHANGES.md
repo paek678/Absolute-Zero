@@ -5,6 +5,8 @@
 
 ---
 
+[2026-07-17] [Claude] [Gameplay] — Mini-game system greybox (branch `feature/minigame-greybox`, PLAN_008). Hot Pack (5s/10 taps) / Buldak (10s gauge) / Screwdriver (7s, 3 screws × 3 turns): server judges start+end only (pending slot + deadline validation in PlayerState RPCs), client-side UI greybox gameplay (MiniGameHub + 3 games), fail keeps item (Q12), prep timer is master (Q11). Designer Q1~Q23 batch answers recorded in DESIGN_QUESTIONS.md/GAME_DESIGN.md.
+
 [2026-07-13] [Claude] [UI] — Lobby UI integration. AZLobbyUI (runtime-built, no Inspector wiring) with create/join/start/leave flow. TMP Essential Resources imported. NetworkManager UnityTransport wired.
 
 [2026-07-13] [Claude] [Gameplay] — Turn system greybox demo. AbsoluteZeroTurnManager (NetworkBehaviour state machine), AZGameUI (runtime-built UI with temp bars, timer, action buttons), AZPlayerVisual (temp-based capsule coloring). LobbyScene + GameScene created via MCP with all objects wired. Player prefab + NetworkPrefabsList configured.

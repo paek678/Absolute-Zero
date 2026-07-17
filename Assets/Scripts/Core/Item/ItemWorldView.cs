@@ -65,6 +65,13 @@ namespace AbsoluteZero.Core.Item
             if (_label != null)
                 _label.text = $"{itemName}\n{usesText}";
 
+            // 지급/리롤/소모로 슬롯 내용물이 바뀌면 스프라이트도 갱신 (라벨만 갱신하던 버그 수정)
+            if (_mainSprite != null)
+            {
+                var sprite = GameSprites.GetItemSprite(itemName);
+                _mainSprite.sprite = sprite != null ? sprite : CreateFallbackSprite();
+            }
+
             SetInteractable(usable);
         }
 

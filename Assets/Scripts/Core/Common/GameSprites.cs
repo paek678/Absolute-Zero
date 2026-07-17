@@ -51,8 +51,30 @@ namespace AbsoluteZero.Core.Common
                 "Cat" => Get(ITEM_CAT),
                 "Windbreaker" => Get(ITEM_WINDBREAKER),
                 "Warm Tea" => Get(ITEM_TEA),
-                _ => Get(ITEM_SET)
+                // 랜덤 아이템 개별 아트는 아직 없음 — 회색 사각형 플레이스홀더 (2026-07-18 합의)
+                _ => Placeholder()
             };
+        }
+
+        static Sprite _placeholder;
+
+        /// <summary>아트 없는 아이템용 회색 사각형 (1×1 유닛, 기존 아이템과 동일한 바닥 피벗)</summary>
+        static Sprite Placeholder()
+        {
+            if (_placeholder == null)
+            {
+                const int size = 4;
+                var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+                var gray = new Color(0.62f, 0.62f, 0.66f, 1f);
+                var pixels = new Color[size * size];
+                for (int i = 0; i < pixels.Length; i++) pixels[i] = gray;
+                tex.SetPixels(pixels);
+                tex.Apply();
+                tex.filterMode = FilterMode.Point;
+                _placeholder = Sprite.Create(tex, new Rect(0, 0, size, size),
+                    new Vector2(0.5f, 0f), size);   // PPU=size → 월드 1×1
+            }
+            return _placeholder;
         }
 
         public static Sprite GetStayItemSprite()

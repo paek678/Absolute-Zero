@@ -22,6 +22,7 @@ MonoBehaviour:
   DropWeight: 4
   RequiresMiniGame: 1
   MiniGameType: 4
-  MiniGameTimeLimit: 10
+  MiniGameTimeLimit: 5
+  MiniGameGoal: 10
   HealPerUse:
   - 10
