@@ -18,7 +18,7 @@ namespace AbsoluteZero.Core.Network
         [Header("Lobby Settings")]
         [SerializeField] private int maxPlayers = 2;
         [SerializeField] private float heartbeatInterval = 15f;
-        [SerializeField] private float lobbyPollInterval = 0.5f;
+        [SerializeField] private float lobbyPollInterval = 2f;
 
         private Lobby currentLobby;
         private float heartbeatTimer;

@@ -624,6 +624,7 @@ namespace AbsoluteZero.Core.Turn
             removedSlot.ItemId = -1;
             removedSlot.RemainingUses = 0;
             inventory.SlotStates[targetSlot] = removedSlot;
+            inventory.CompactSlots();
 
             Debug.Log($"[ENV] Kids: removed '{itemName}' from slot {targetSlot}");
         }

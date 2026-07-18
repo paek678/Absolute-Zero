@@ -43,7 +43,16 @@ namespace AbsoluteZero.Core.Network
                 if (networkManager == null)
                     throw new Exception("NetworkManager.Singleton not found.");
 
-                Allocation allocation = await RelayService.Instance.CreateAllocationAsync(maxConnections);
+                Allocation allocation;
+                try
+                {
+                    allocation = await RelayService.Instance.CreateAllocationAsync(maxConnections);
+                }
+                catch (RelayServiceException)
+                {
+                    Debug.LogWarning("[RelayManager] Default region failed, retrying with asia-southeast1...");
+                    allocation = await RelayService.Instance.CreateAllocationAsync(maxConnections, "asia-southeast1");
+                }
                 CurrentJoinCode = await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
                 Debug.Log($"[RelayManager] Relay Join Code: {CurrentJoinCode}");
 
