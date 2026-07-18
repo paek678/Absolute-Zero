@@ -49,6 +49,9 @@ namespace AbsoluteZero.Core.Item
 
             inventory.Initialize(allItems);
             inventory.InitializeBasicItems(fanItemId, windbreakerItemId, warmTeaItemId, catItemId);
+
+            if (_dropTable != null)
+                inventory.GrantRandomItems(4, _dropTable);
         }
 
         public void InitializeClientRegistry(PlayerInventory inventory)

@@ -1,8 +1,10 @@
 using System.Collections;
+using System.Collections.Generic;
 using AbsoluteZero.Core.Buff;
 using AbsoluteZero.Core.Combat;
 using AbsoluteZero.Core.Common;
 using AbsoluteZero.Core.Item;
+using AbsoluteZero.Core.Item.Data;
 using AbsoluteZero.Core.Match;
 using AbsoluteZero.Core.Player;
 using Unity.Netcode;
@@ -17,6 +19,9 @@ namespace AbsoluteZero.Core.Turn
         [Header("Settings")]
         [SerializeField] float prepDuration = 20f;
         [SerializeField] float roundEndDelay = 3f;
+
+        static bool _debugPaused;
+        public static bool DebugPaused => _debugPaused;
 
         public readonly NetworkVariable<TurnPhase> CurrentPhase = new(
             TurnPhase.WaitingForPlayers, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
@@ -36,7 +41,11 @@ namespace AbsoluteZero.Core.Turn
         public readonly NetworkVariable<int> LastRoundWinner = new(
             -1, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
+        public readonly NetworkVariable<EnvironmentType> ActiveEnvironment = new(
+            EnvironmentType.None, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
         public static event System.Action<CombatResultData> OnCombatResult;
+        public static event System.Action<EnvironmentType> OnEnvironmentAnnounced;
 
         PlayerState _p1;
         PlayerState _p2;
@@ -54,6 +63,7 @@ namespace AbsoluteZero.Core.Turn
         static readonly WaitForSeconds _waitOne = new(1f);
         static readonly WaitForSeconds _waitTwo = new(2f);
         static readonly WaitForSeconds _waitThree = new(3f);
+        static readonly WaitForSeconds _waitFour = new(4f);
 
         public PlayerState GetPlayer(int index) => index == 0 ? _p1 : _p2;
         public PlayerModifiers[] GetModifiers() => _modifiers;
@@ -89,8 +99,48 @@ namespace AbsoluteZero.Core.Turn
         {
             StopAllCoroutines();
             OnCombatResult = null;
+            OnEnvironmentAnnounced = null;
             if (Instance == this) Instance = null;
+            _debugPaused = false;
+            Time.timeScale = 1f;
             base.OnNetworkDespawn();
+        }
+
+        void Update()
+        {
+            if (UnityEngine.InputSystem.Keyboard.current != null
+                && UnityEngine.InputSystem.Keyboard.current.f5Key.wasPressedThisFrame)
+            {
+                if (IsServer)
+                {
+                    SetDebugPause(!_debugPaused);
+                    SyncDebugPauseClientRpc(_debugPaused);
+                }
+                else
+                {
+                    RequestDebugPauseServerRpc();
+                }
+            }
+        }
+
+        [Rpc(SendTo.Server)]
+        void RequestDebugPauseServerRpc(RpcParams rpcParams = default)
+        {
+            SetDebugPause(!_debugPaused);
+            SyncDebugPauseClientRpc(_debugPaused);
+        }
+
+        [Rpc(SendTo.NotServer)]
+        void SyncDebugPauseClientRpc(bool paused)
+        {
+            SetDebugPause(paused);
+        }
+
+        void SetDebugPause(bool paused)
+        {
+            _debugPaused = paused;
+            Time.timeScale = paused ? 0f : 1f;
+            Debug.Log($"[DEBUG] Game {(paused ? "PAUSED" : "RESUMED")} (timeScale={Time.timeScale})");
         }
 
         IEnumerator WaitForPlayersRoutine()
@@ -153,7 +203,52 @@ namespace AbsoluteZero.Core.Turn
             _p1.IsFanActive.Value = true;
             _p2.IsFanActive.Value = true;
 
+            if (ActiveEnvironment.Value != EnvironmentType.None)
+            {
+                Debug.Log($"[ENV] ===== Turn {TurnNumber.Value} — active: {ActiveEnvironment.Value} ({GetEnvironmentName(ActiveEnvironment.Value)}) =====");
+                if (ActiveEnvironment.Value == EnvironmentType.SunnyDay)
+                    Debug.Log("[ENV] SunnyDay: recovery rate 1 → 2°/sec (fan-off recovery doubled)");
+                else if (ActiveEnvironment.Value == EnvironmentType.CoolBreeze)
+                    Debug.Log("[ENV] CoolBreeze: recovery rate 1 → 0°/sec (no fan-off recovery)");
+                else if (ActiveEnvironment.Value == EnvironmentType.CicadaSong)
+                    Debug.Log("[ENV] CicadaSong: audio/visual distraction (no gameplay effect yet)");
+                else if (ActiveEnvironment.Value == EnvironmentType.HeatWaveWarning)
+                    Debug.Log("[ENV] HeatWave: lower-temp player acts first this turn");
+            }
+
             float currentPrepDuration = prepDuration;
+            if (ActiveEnvironment.Value == EnvironmentType.SummerVacation)
+            {
+                currentPrepDuration = 10f;
+                Debug.Log($"[ENV] SummerVacation: prep duration {prepDuration}s → {currentPrepDuration}s");
+            }
+
+            if (ActiveEnvironment.Value == EnvironmentType.Kids && TurnNumber.Value >= 2)
+            {
+                Debug.Log("[ENV] Kids: removing 1 random item from each player");
+                RemoveRandomUnusedItem(_p1.GetInventory());
+                RemoveRandomUnusedItem(_p2.GetInventory());
+            }
+
+            if (ActiveEnvironment.Value == EnvironmentType.Ambulance && TurnNumber.Value == 4)
+            {
+                Debug.Log($"[ENV] Ambulance: Turn 4 triggered — P0={_p1.Temperature.Value:F1}° P1={_p2.Temperature.Value:F1}°");
+                if (_p1.Temperature.Value < _p2.Temperature.Value)
+                {
+                    _tempSystem.ApplyHeal(_p1, 10f);
+                    Debug.Log($"[ENV] Ambulance: P0 healed +10° → {_p1.Temperature.Value:F1}° (lower temp)");
+                }
+                else if (_p2.Temperature.Value < _p1.Temperature.Value)
+                {
+                    _tempSystem.ApplyHeal(_p2, 10f);
+                    Debug.Log($"[ENV] Ambulance: P1 healed +10° → {_p2.Temperature.Value:F1}° (lower temp)");
+                }
+                else
+                {
+                    Debug.Log("[ENV] Ambulance: same temp — no heal applied");
+                }
+            }
+
             PrepStartServerTime.Value = NetworkManager.ServerTime.Time;
             PrepDuration.Value = currentPrepDuration;
 
@@ -179,12 +274,21 @@ namespace AbsoluteZero.Core.Turn
                     RemainingTime.Value = Mathf.Max(0, newRemaining);
 
                 float recoveryRate = TemperatureSystem.DEFAULT_RECOVERY_RATE;
+                if (ActiveEnvironment.Value == EnvironmentType.SunnyDay)
+                    recoveryRate = 2f;
+                else if (ActiveEnvironment.Value == EnvironmentType.CoolBreeze)
+                    recoveryRate = 0f;
+
                 while (_tempSystem.ConsumeTick())
                 {
                     _tempSystem.ApplyFanTick(_p1);
                     _tempSystem.ApplyFanTick(_p2);
                     _tempSystem.ApplyRecoveryTick(_p1, recoveryRate);
                     _tempSystem.ApplyRecoveryTick(_p2, recoveryRate);
+
+                    var dropTable = GetDropTable();
+                    _tempSystem.CheckThresholds(_p1, _p1.GetInventory(), _p1.GetInventory().GetThresholdGranted(), dropTable);
+                    _tempSystem.CheckThresholds(_p2, _p2.GetInventory(), _p2.GetInventory().GetThresholdGranted(), dropTable);
                 }
 
                 if (_tempSystem.IsDead(_p1) || _tempSystem.IsDead(_p2))
@@ -203,6 +307,9 @@ namespace AbsoluteZero.Core.Turn
 
             if (!_p1.IsReady.Value) ForceReady(_p1);
             if (!_p2.IsReady.Value) ForceReady(_p2);
+
+            RevertFanUpgrade(_p1);
+            RevertFanUpgrade(_p2);
 
             yield return StartCoroutine(AttackPhaseRoutine());
         }
@@ -223,6 +330,14 @@ namespace AbsoluteZero.Core.Turn
             player.GetActionQueue().SetReady(Time.time);
         }
 
+        void RevertFanUpgrade(PlayerState player)
+        {
+            if (!player.IsFanUpgraded.Value) return;
+            Debug.Log($"[COMBAT] FanSpeed revert: P{player.PlayerIndex} {player.FanSpeed.Value} → {TemperatureSystem.DEFAULT_FAN_SPEED}");
+            player.FanSpeed.Value = TemperatureSystem.DEFAULT_FAN_SPEED;
+            player.IsFanUpgraded.Value = false;
+        }
+
         IEnumerator AttackPhaseRoutine()
         {
             if (!IsSpawned) yield break;
@@ -231,6 +346,9 @@ namespace AbsoluteZero.Core.Turn
 
             Debug.Log($"[COMBAT] ========== TURN {TurnNumber.Value} ATTACK PHASE START ==========");
             Debug.Log($"[COMBAT] P0 temp={_p1.Temperature.Value:F1}° | P1 temp={_p2.Temperature.Value:F1}°");
+
+            _p1.IsBasicBlocked.Value = false;
+            _p2.IsBasicBlocked.Value = false;
 
             Debug.Log($"[COMBAT] --- Processing delayed buffs/debuffs ---");
             _buffSystem.ProcessTurnStart(_p1, _p2);
@@ -270,7 +388,7 @@ namespace AbsoluteZero.Core.Turn
             if (!IsSpawned) yield break;
 
             Debug.Log($"[COMBAT] --- Resolving main combat ---");
-            var result = _combatResolver.Resolve(q1, q2, _modifiers, _p1, _p2, _tempSystem, _buffSystem);
+            var result = _combatResolver.Resolve(q1, q2, _modifiers, _p1, _p2, _tempSystem, _buffSystem, ActiveEnvironment.Value);
 
             result.P1TempAtTurnStart = _p1TempAtTurnStart;
             result.P2TempAtTurnStart = _p2TempAtTurnStart;
@@ -311,11 +429,18 @@ namespace AbsoluteZero.Core.Turn
 
             var inv1 = _p1.GetInventory();
             var inv2 = _p2.GetInventory();
-            _tempSystem.CheckThresholds(_p1, inv1, inv1.GetThresholdGranted(), GetDropTable());
-            _tempSystem.CheckThresholds(_p2, inv2, inv2.GetThresholdGranted(), GetDropTable());
+
+            inv1.CompactSlots();
+            inv2.CompactSlots();
 
             yield return _waitOne;
             if (!IsSpawned) yield break;
+
+            if (TurnNumber.Value == 1 && ActiveEnvironment.Value == EnvironmentType.None)
+            {
+                yield return StartCoroutine(EnvironmentAnnouncementRoutine());
+                if (!IsSpawned) yield break;
+            }
 
             yield return StartCoroutine(PrepPhaseRoutine());
         }
@@ -354,11 +479,23 @@ namespace AbsoluteZero.Core.Turn
             _p2.IsReady.Value = false;
             _p1.IsFanActive.Value = false;
             _p2.IsFanActive.Value = false;
+            _p1.FanSpeed.Value = TemperatureSystem.DEFAULT_FAN_SPEED;
+            _p2.FanSpeed.Value = TemperatureSystem.DEFAULT_FAN_SPEED;
+            _p1.IsFanUpgraded.Value = false;
+            _p2.IsFanUpgraded.Value = false;
 
             _p1.GetInventory().ResetForNewRound();
             _p2.GetInventory().ResetForNewRound();
 
+            var dropTable = GetDropTable();
+            if (dropTable != null)
+            {
+                _p1.GetInventory().GrantRandomItems(4, dropTable);
+                _p2.GetInventory().GrantRandomItems(4, dropTable);
+            }
+
             _buffSystem.ClearAll();
+            ActiveEnvironment.Value = EnvironmentType.None;
             TurnNumber.Value = 0;
 
             if (!isDraw && _matchManager != null)
@@ -412,6 +549,100 @@ namespace AbsoluteZero.Core.Turn
             Debug.Log($"[COMBAT] ExecuteSubItems AFTER: P{playerIndex}={player.Temperature.Value:F1}° Opp={opponent.Temperature.Value:F1}°");
         }
 
+        IEnumerator EnvironmentAnnouncementRoutine()
+        {
+            var values = (EnvironmentType[])System.Enum.GetValues(typeof(EnvironmentType));
+            int randomIndex = Random.Range(1, values.Length);
+            ActiveEnvironment.Value = values[randomIndex];
+
+            Debug.Log($"[ENV] Environment selected: {ActiveEnvironment.Value} ({GetEnvironmentName(ActiveEnvironment.Value)})");
+
+            AnnounceEnvironmentClientRpc(ActiveEnvironment.Value);
+
+            yield return _waitFour;
+        }
+
+        [Rpc(SendTo.Everyone)]
+        void AnnounceEnvironmentClientRpc(EnvironmentType env)
+        {
+            OnEnvironmentAnnounced?.Invoke(env);
+            StartCoroutine(EnvironmentCameraRoutine());
+        }
+
+        IEnumerator EnvironmentCameraRoutine()
+        {
+            var cam = Camera.main;
+            if (cam == null) yield break;
+
+            Quaternion startRot = cam.transform.rotation;
+            Quaternion targetRot = startRot * Quaternion.Euler(0, -25f, 0);
+
+            const float panDuration = 0.6f;
+            float t = 0f;
+            while (t < panDuration)
+            {
+                t += Time.deltaTime;
+                cam.transform.rotation = Quaternion.Slerp(startRot, targetRot, t / panDuration);
+                yield return null;
+            }
+            cam.transform.rotation = targetRot;
+
+            yield return _waitTwo;
+
+            t = 0f;
+            while (t < panDuration)
+            {
+                t += Time.deltaTime;
+                cam.transform.rotation = Quaternion.Slerp(targetRot, startRot, t / panDuration);
+                yield return null;
+            }
+            cam.transform.rotation = startRot;
+        }
+
+        void RemoveRandomUnusedItem(PlayerInventory inventory)
+        {
+            if (!IsServer) return;
+
+            var candidates = new List<int>();
+            for (int i = 0; i < inventory.SlotStates.Count; i++)
+            {
+                var slot = inventory.SlotStates[i];
+                if (slot.IsEmpty) continue;
+                var itemData = inventory.GetItemData(i);
+                if (itemData == null) continue;
+                if (itemData.Persistence != ItemPersistence.RandomConsumable) continue;
+                candidates.Add(i);
+            }
+
+            if (candidates.Count == 0) return;
+
+            int targetSlot = candidates[Random.Range(0, candidates.Count)];
+            var targetItem = inventory.GetItemData(targetSlot);
+            string itemName = targetItem != null ? targetItem.ItemName : "?";
+
+            var removedSlot = inventory.SlotStates[targetSlot];
+            removedSlot.ItemId = -1;
+            removedSlot.RemainingUses = 0;
+            inventory.SlotStates[targetSlot] = removedSlot;
+
+            Debug.Log($"[ENV] Kids: removed '{itemName}' from slot {targetSlot}");
+        }
+
+        static string GetEnvironmentName(EnvironmentType env)
+        {
+            return env switch
+            {
+                EnvironmentType.SunnyDay => "햇살쨍쨍",
+                EnvironmentType.CoolBreeze => "바람선선",
+                EnvironmentType.CicadaSong => "매미울음",
+                EnvironmentType.Kids => "잼민이들",
+                EnvironmentType.Ambulance => "앰뷸런스",
+                EnvironmentType.SummerVacation => "여름방학",
+                EnvironmentType.HeatWaveWarning => "폭염경보",
+                _ => ""
+            };
+        }
+
         [Rpc(SendTo.Everyone)]
         void OnPhaseChangedClientRpc(TurnPhase phase, int turnNumber)
         {
@@ -420,6 +651,14 @@ namespace AbsoluteZero.Core.Turn
         [Rpc(SendTo.Everyone)]
         public void OnItemUsedClientRpc(byte playerIndex, byte slotIndex, byte category, bool isInstant)
         {
+        }
+
+        public static event System.Action<byte, short> OnOpponentRevealed;
+
+        [Rpc(SendTo.Everyone)]
+        public void RevealOpponentItemClientRpc(byte forPlayerIndex, short opponentItemId)
+        {
+            OnOpponentRevealed?.Invoke(forPlayerIndex, opponentItemId);
         }
 
         [Rpc(SendTo.Everyone)]

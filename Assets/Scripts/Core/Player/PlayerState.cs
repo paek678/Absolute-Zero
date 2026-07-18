@@ -26,6 +26,12 @@ namespace AbsoluteZero.Core.Player
         public readonly NetworkVariable<bool> HasSelectedItem = new(
             false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
+        public readonly NetworkVariable<bool> IsFanUpgraded = new(
+            false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+        public readonly NetworkVariable<bool> IsBasicBlocked = new(
+            false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
         readonly ActionQueue _actionQueue = new();
         PlayerInventory _inventory;
 
@@ -100,6 +106,14 @@ namespace AbsoluteZero.Core.Player
 
             if (itemData.SlotType == ItemSlotType.Sub)
             {
+                if (itemData.IsFreeAction)
+                {
+                    ExecuteFreeAction(slotIndex, itemData, ctx);
+                    Turn.TurnManager.Instance.OnItemUsedClientRpc(
+                        (byte)SyncedPlayerIndex.Value, slotIndex, (byte)itemData.Category, true);
+                    return;
+                }
+
                 if (_actionQueue.hasUsedSub)
                 {
                     Debug.Log($"[PlayerState P{SyncedPlayerIndex.Value}] SelectItem rejected: already used sub this turn");
@@ -128,6 +142,30 @@ namespace AbsoluteZero.Core.Player
 
                 Turn.TurnManager.Instance.OnItemUsedClientRpc(
                     (byte)SyncedPlayerIndex.Value, slotIndex, (byte)itemData.Category, false);
+            }
+        }
+
+        void ExecuteFreeAction(byte slotIndex, ItemDataSO itemData, ItemContext ctx)
+        {
+            itemData.ExecuteEffect(ctx);
+            _inventory.ConsumeItem(slotIndex);
+
+            Debug.Log($"[PlayerState P{SyncedPlayerIndex.Value}] Free action executed: {itemData.ItemName}");
+
+            if (ctx.UserModifiers.OpponentRevealed)
+            {
+                var opponent = ctx.Target;
+                var oppQueue = opponent.GetActionQueue();
+                short oppItemId = -1;
+                if (oppQueue.selectedAction.HasValue)
+                {
+                    var oppInv = opponent.GetInventory();
+                    byte oppSlot = oppQueue.selectedAction.Value.SlotIndex;
+                    if (oppSlot < oppInv.SlotStates.Count)
+                        oppItemId = oppInv.SlotStates[oppSlot].ItemId;
+                }
+                Turn.TurnManager.Instance.RevealOpponentItemClientRpc(
+                    (byte)SyncedPlayerIndex.Value, oppItemId);
             }
         }
 

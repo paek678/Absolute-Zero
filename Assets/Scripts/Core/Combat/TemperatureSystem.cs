@@ -37,16 +37,20 @@ namespace AbsoluteZero.Core.Combat
         public void ApplyFanTick(PlayerState player)
         {
             if (!player.IsFanActive.Value) return;
-            float newTemp = Mathf.Max(MIN_TEMP, player.Temperature.Value - player.FanSpeed.Value);
+            float before = player.Temperature.Value;
+            float newTemp = Mathf.Max(MIN_TEMP, before - player.FanSpeed.Value);
             player.Temperature.Value = newTemp;
+            Debug.Log($"[TEMP] FanTick: P{player.PlayerIndex} {before:F1}→{newTemp:F1}° (speed={player.FanSpeed.Value})");
         }
 
         public void ApplyRecoveryTick(PlayerState player, float recoveryRate)
         {
             if (player.IsFanActive.Value) return;
             if (!player.IsReady.Value) return;
-            float newTemp = Mathf.Min(MAX_TEMP, player.Temperature.Value + recoveryRate);
+            float before = player.Temperature.Value;
+            float newTemp = Mathf.Min(MAX_TEMP, before + recoveryRate);
             player.Temperature.Value = newTemp;
+            Debug.Log($"[TEMP] RecoveryTick: P{player.PlayerIndex} {before:F1}→{newTemp:F1}° (rate={recoveryRate})");
         }
 
         public float ApplyDamage(PlayerState target, float rawDamage, DamageFilter attackFilter,
@@ -98,6 +102,7 @@ namespace AbsoluteZero.Core.Combat
                 if (!thresholdGranted[i] && player.Temperature.Value <= THRESHOLDS[i])
                 {
                     thresholdGranted[i] = true;
+                    Debug.Log($"[TEMP] Threshold: P{player.PlayerIndex} temp={player.Temperature.Value:F1}° ≤ {THRESHOLDS[i]}° → granting {GRANTS[i]} random item(s)");
                     inventory.GrantRandomItems(GRANTS[i], dropTable);
                 }
             }

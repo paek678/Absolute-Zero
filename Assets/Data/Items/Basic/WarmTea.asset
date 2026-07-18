@@ -18,7 +18,7 @@ MonoBehaviour:
   Category: 2
   Persistence: 1
   SlotType: 0
-  MaxUses: 2
+  MaxUses: 1
   DropWeight: 0
   RequiresMiniGame: 0
   MiniGameType: 0

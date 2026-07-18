@@ -21,6 +21,7 @@
 13. **Invoke `unity-*` skills when modifying Unity C# code** — 22 Unity reference skills are installed (lifecycle, state-machines, async-patterns, npc-behavior, procedural-gen, etc.). Before writing or refactoring Unity systems, invoke the matching skill to check correct patterns and avoid common mistakes.
 15. **Prefer MCP automation over manual instructions** — when Unity Editor settings, scene config, or component setup needs changing, use MCP tools (`execute_code`, `manage_components`, `manage_gameobject`, etc.) to do it directly. Only give manual instructions for things that genuinely cannot be automated (e.g., Unity Cloud Dashboard web UI).
 16. **Namespace final segment must not collide with imported type names** — `AbsoluteZero.UI.Lobby` conflicts with `Unity.Services.Lobbies.Models.Lobby`, causing CS0118. Suffix with category instead (e.g., `LobbyUI`, `PlayerVisuals`).
+18. **Design-first development** — before implementing or modifying gameplay systems (items, combat, temperature, turn flow, mini-games), read `Docs/GAME_DESIGN.md` and verify target values/behavior match the design spec. Implementation must not diverge from design without explicit user approval.
 17. **End-of-phase harness verification** — after completing each work phase:
     - `Docs/Plans/PLAN_NNN_*.md` — all completed tasks marked `[x]`
     - `Docs/RECENT_CHANGES.md` — change list recorded at top
@@ -39,6 +40,7 @@
 | **Session resume** | **ACTIVE_CONTEXT.md** | **`Docs/ACTIVE_CONTEXT.md`** |
 | Recent code changes | RECENT_CHANGES.md | `Docs/RECENT_CHANGES.md` |
 | Plan history | Plans/ | `Docs/Plans/PLAN_NNN_*.md` |
+| **Before gameplay changes** | **GAME_DESIGN.md** | **`Docs/GAME_DESIGN.md`** |
 | Game design & rules | GAME_DESIGN.md | `Docs/GAME_DESIGN.md` |
 | Game systems | GAME_SYSTEMS.md | `Docs/GAME_SYSTEMS.md` |
 | Network architecture | NETWORK_ARCHITECTURE.md | `Docs/NETWORK_ARCHITECTURE.md` |

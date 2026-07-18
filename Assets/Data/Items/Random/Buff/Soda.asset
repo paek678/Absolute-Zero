@@ -20,7 +20,8 @@ MonoBehaviour:
   SlotType: 0
   MaxUses: 1
   DropWeight: 6
-  RequiresMiniGame: 1
+  IsFreeAction: 0
+  RequiresMiniGame: 0
   MiniGameType: 5
   MiniGameTimeLimit: 5
   ImmediateTempDelta: -5

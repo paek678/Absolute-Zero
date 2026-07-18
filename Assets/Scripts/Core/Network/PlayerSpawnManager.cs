@@ -11,6 +11,7 @@ namespace AbsoluteZero.Core.Network
 
         [Header("=== Player Prefab ===")]
         [SerializeField] private GameObject playerPrefab;
+        [SerializeField] private bool spawnPlayerCharacter = true;
 
         [Header("=== Spawn Points ===")]
         [SerializeField] private Transform[] spawnPoints;
@@ -186,6 +187,8 @@ namespace AbsoluteZero.Core.Network
 
         private void SpawnPlayerForClient(ulong clientId)
         {
+            if (!spawnPlayerCharacter) return;
+
             if (playerPrefab == null)
             {
                 Debug.LogError("[PlayerSpawnManager] Player prefab is not assigned.");

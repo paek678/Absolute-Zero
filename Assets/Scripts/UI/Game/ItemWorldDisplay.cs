@@ -19,8 +19,9 @@ namespace AbsoluteZero.UI.Game
         ItemWorldView[] _views;
         bool _initialized;
         int _confirmedSlotIndex = -1;
+        bool _needsRebuild;
 
-        const float FALLBACK_SPACING = 1.5f;
+        const float FALLBACK_SPACING = 0.9f;
         const float FALLBACK_Y = 0.5f;
 
         void Update()
@@ -32,6 +33,15 @@ namespace AbsoluteZero.UI.Game
             }
 
             HandleClick();
+        }
+
+        void LateUpdate()
+        {
+            if (_needsRebuild && _initialized)
+            {
+                _needsRebuild = false;
+                RebuildViews();
+            }
         }
 
         void TryInitialize()
@@ -69,15 +79,33 @@ namespace AbsoluteZero.UI.Game
             int count = _inventory.SlotStates.Count;
             _views = new ItemWorldView[count];
 
+            int randomMarker = 0;
+            int basicMarker = 0;
+
             for (int i = 0; i < count; i++)
             {
+                var slot = _inventory.SlotStates[i];
+                if (slot.IsEmpty) continue;
+
                 var itemData = _inventory.GetItemData(i);
-                string itemName = itemData != null ? itemData.ItemName : "Empty";
+                if (itemData == null) continue;
+
+                string markerName;
+                if (itemData.Persistence == ItemPersistence.RandomConsumable)
+                {
+                    markerName = $"PlayerItem{randomMarker + 1}";
+                    randomMarker++;
+                }
+                else
+                {
+                    markerName = $"PlayerItem{9 + basicMarker}";
+                    basicMarker++;
+                }
 
                 var go = new GameObject();
                 go.transform.SetParent(transform, false);
 
-                var marker = GameObject.Find($"PlayerItem{i + 1}");
+                var marker = GameObject.Find(markerName);
                 if (marker != null)
                     go.transform.position = marker.transform.position;
                 else
@@ -88,9 +116,28 @@ namespace AbsoluteZero.UI.Game
                 }
 
                 var view = go.AddComponent<ItemWorldView>();
-                view.Initialize(i, itemName, Color.white);
+                view.Initialize(i, itemData.ItemName, Color.white);
+
+                string uses = slot.IsUnlimited ? "∞" : $"{slot.RemainingUses}";
+                view.UpdateDisplay(itemData.ItemName, uses, slot.IsUsable);
+
                 _views[i] = view;
             }
+        }
+
+        void RebuildViews()
+        {
+            if (_views != null)
+            {
+                foreach (var v in _views)
+                {
+                    if (v != null) Destroy(v.gameObject);
+                }
+            }
+
+            _confirmedSlotIndex = -1;
+            SpawnItemViews();
+            UpdateSelectionVisuals();
         }
 
         void HandleClick()
@@ -136,6 +183,17 @@ namespace AbsoluteZero.UI.Game
         void OnSlotStatesChanged(NetworkListEvent<ItemSlotNetData> changeEvent)
         {
             if (_views == null || _inventory == null) return;
+
+            if (changeEvent.Type == NetworkListEvent<ItemSlotNetData>.EventType.Add
+                || changeEvent.Type == NetworkListEvent<ItemSlotNetData>.EventType.Remove
+                || changeEvent.Type == NetworkListEvent<ItemSlotNetData>.EventType.RemoveAt
+                || changeEvent.Type == NetworkListEvent<ItemSlotNetData>.EventType.Insert
+                || changeEvent.Type == NetworkListEvent<ItemSlotNetData>.EventType.Clear
+                || changeEvent.Type == NetworkListEvent<ItemSlotNetData>.EventType.Full)
+            {
+                _needsRebuild = true;
+                return;
+            }
 
             int idx = changeEvent.Index;
             if (idx < 0 || idx >= _views.Length || _views[idx] == null) return;

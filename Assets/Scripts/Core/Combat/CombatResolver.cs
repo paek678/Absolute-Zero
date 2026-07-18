@@ -2,6 +2,7 @@ using AbsoluteZero.Core.Buff;
 using AbsoluteZero.Core.Item;
 using AbsoluteZero.Core.Item.Data;
 using AbsoluteZero.Core.Player;
+using AbsoluteZero.Core.Turn;
 using UnityEngine;
 
 namespace AbsoluteZero.Core.Combat
@@ -13,7 +14,8 @@ namespace AbsoluteZero.Core.Combat
             PlayerModifiers[] modifiers,
             PlayerState p1, PlayerState p2,
             TemperatureSystem tempSystem,
-            BuffDebuffSystem buffSystem)
+            BuffDebuffSystem buffSystem,
+            EnvironmentType environment = EnvironmentType.None)
         {
             var result = new CombatResult();
 
@@ -23,7 +25,7 @@ namespace AbsoluteZero.Core.Combat
             Debug.Log($"[COMBAT] P0 selected: {p1Action} | P1 selected: {p2Action}");
             Debug.Log($"[COMBAT] P0 temp: {p1.Temperature.Value:F1}° | P1 temp: {p2.Temperature.Value:F1}°");
 
-            int firstIdx = DetermineOrder(p1Queue, p2Queue, p1, p2);
+            int firstIdx = DetermineOrder(p1Queue, p2Queue, p1, p2, environment);
             int secondIdx = 1 - firstIdx;
             result.FirstPlayerIndex = firstIdx;
             Debug.Log($"[COMBAT] Turn order: P{firstIdx} goes first, P{secondIdx} goes second");
@@ -89,8 +91,24 @@ namespace AbsoluteZero.Core.Combat
             return result;
         }
 
-        int DetermineOrder(ActionQueue p1, ActionQueue p2, PlayerState p1State, PlayerState p2State)
+        int DetermineOrder(ActionQueue p1, ActionQueue p2, PlayerState p1State, PlayerState p2State,
+            EnvironmentType environment)
         {
+            if (environment == EnvironmentType.HeatWaveWarning)
+            {
+                if (p1State.Temperature.Value < p2State.Temperature.Value)
+                {
+                    Debug.Log($"[ENV] HeatWave order: P0 acts first (P0={p1State.Temperature.Value:F1}° < P1={p2State.Temperature.Value:F1}°)");
+                    return 0;
+                }
+                if (p2State.Temperature.Value < p1State.Temperature.Value)
+                {
+                    Debug.Log($"[ENV] HeatWave order: P1 acts first (P1={p2State.Temperature.Value:F1}° < P0={p1State.Temperature.Value:F1}°)");
+                    return 1;
+                }
+                Debug.Log($"[ENV] HeatWave: same temp ({p1State.Temperature.Value:F1}°) — falling back to ready order");
+            }
+
             if (p1.readyTimestamp < p2.readyTimestamp) return 0;
             if (p2.readyTimestamp < p1.readyTimestamp) return 1;
 
@@ -125,6 +143,7 @@ namespace AbsoluteZero.Core.Combat
                 AllModifiers = modifiers,
                 TempSystem = tempSystem,
                 BuffSystem = buffSystem,
+                DropTable = TurnManager.Instance?.GetDropTable(),
                 SlotIndex = action.SlotIndex,
                 UserSlot = user.GetInventory().SlotStates[action.SlotIndex],
             };

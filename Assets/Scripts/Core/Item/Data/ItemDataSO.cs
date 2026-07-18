@@ -22,6 +22,9 @@ namespace AbsoluteZero.Core.Item.Data
         [Header("Drop")]
         public float DropWeight;
 
+        [Header("Special Behavior")]
+        public bool IsFreeAction;
+
         [Header("Mini-Game")]
         public bool RequiresMiniGame;
         public MiniGameType MiniGameType;
@@ -31,7 +34,7 @@ namespace AbsoluteZero.Core.Item.Data
 
         public virtual bool CanUse(ItemContext ctx)
         {
-            if (ctx.UserModifiers.BasicItemsBlocked && Persistence != ItemPersistence.RandomConsumable)
+            if (ctx.User.IsBasicBlocked.Value && Persistence != ItemPersistence.RandomConsumable)
                 return false;
             return true;
         }

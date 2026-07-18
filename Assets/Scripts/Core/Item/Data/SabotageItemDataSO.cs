@@ -19,12 +19,12 @@ namespace AbsoluteZero.Core.Item.Data
                     Debug.Log($"[COMBAT] SabotageItem '{ItemName}': P{ctx.TargetIndex} random items rerolled");
                     break;
                 case SabotageType.Steal:
-                    ctx.TargetInventory.StealRandomItem(ctx.UserInventory);
+                    ctx.UserInventory.StealRandomItem(ctx.TargetInventory);
                     Debug.Log($"[COMBAT] SabotageItem '{ItemName}': P{ctx.UserIndex} stole from P{ctx.TargetIndex}");
                     break;
                 case SabotageType.BlockBasic:
-                    ctx.TargetModifiers.BasicItemsBlocked = true;
-                    Debug.Log($"[COMBAT] SabotageItem '{ItemName}': P{ctx.TargetIndex} basic items blocked");
+                    ctx.Target.IsBasicBlocked.Value = true;
+                    Debug.Log($"[COMBAT] SabotageItem '{ItemName}': P{ctx.TargetIndex} basic items BLOCKED next turn");
                     break;
                 case SabotageType.Neutralize:
                     ctx.TargetModifiers.ActionNeutralized = true;

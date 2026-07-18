@@ -53,11 +53,19 @@ namespace AbsoluteZero.UI.Game
         TextMeshProUGUI _resultText;
         Coroutine _resultHideCoroutine;
 
+        GameObject _envPanel;
+        TextMeshProUGUI _envText;
+
+        bool _oppBarAttached;
+
         bool _uiBuilt;
 
-        static readonly Vector3 OPP_BAR_OFFSET = new(0f, 2f, 0f);
+        static readonly WaitForSeconds _waitEnvHide = new(3.5f);
+
+        static readonly Vector3 OPP_BAR_LOCAL_OFFSET = new(0f, 2.2f, 0f);
         static readonly Vector3 READY_BTN_POS = new(0f, 0.05f, 1.2f);
         const float WORLD_CANVAS_SCALE = 0.005f;
+        const float OPP_BAR_SCALE = 0.012f;
 
         void Start()
         {
@@ -131,6 +139,8 @@ namespace AbsoluteZero.UI.Game
         void OnDestroy()
         {
             TurnManager.OnCombatResult -= OnCombatResultReceived;
+            TurnManager.OnOpponentRevealed -= OnOpponentRevealed;
+            TurnManager.OnEnvironmentAnnounced -= OnEnvironmentAnnounced;
             if (_tm != null)
             {
                 _tm.CurrentPhase.OnValueChanged -= OnPhaseChanged;
@@ -203,6 +213,8 @@ namespace AbsoluteZero.UI.Game
             _tm.CurrentPhase.OnValueChanged += OnPhaseChanged;
             _tm.LastRoundWinner.OnValueChanged += OnWinnerChanged;
             TurnManager.OnCombatResult += OnCombatResultReceived;
+            TurnManager.OnOpponentRevealed += OnOpponentRevealed;
+            TurnManager.OnEnvironmentAnnounced += OnEnvironmentAnnounced;
             OnPhaseChanged(TurnPhase.WaitingForPlayers, _tm.CurrentPhase.Value);
         }
 
@@ -323,15 +335,22 @@ namespace AbsoluteZero.UI.Game
         {
             if (_oppBarCanvas == null) return;
 
+            if (!_oppBarAttached)
+            {
+                var enemyGO = GameObject.Find("EnemyPlayer");
+                if (enemyGO != null)
+                {
+                    _oppBarCanvas.transform.SetParent(enemyGO.transform, false);
+                    _oppBarCanvas.transform.localPosition = OPP_BAR_LOCAL_OFFSET;
+                    _oppBarAttached = true;
+                }
+            }
+
             var cam = Camera.main;
             if (cam == null) return;
 
             _oppBarCanvas.worldCamera = cam;
             _oppBarCanvas.transform.rotation = cam.transform.rotation;
-
-            var opp = GetOpponentPlayer();
-            if (opp != null)
-                _oppBarCanvas.transform.position = opp.transform.position + OPP_BAR_OFFSET;
         }
 
         void OnItemClicked(int slotIndex)
@@ -405,11 +424,13 @@ namespace AbsoluteZero.UI.Game
 
             for (int i = 0; i < count; i++)
             {
+                var itemData = inv.GetItemData(i);
+                if (itemData == null) continue;
+
                 var marker = GameObject.Find($"EnemyItem{i + 1}");
                 if (marker == null) continue;
 
-                var itemData = inv.GetItemData(i);
-                string itemName = itemData != null ? itemData.ItemName : "Empty";
+                string itemName = itemData.ItemName;
 
                 var go = new GameObject($"OppItem_{i}_{itemName}");
                 go.transform.position = marker.transform.position;
@@ -488,6 +509,7 @@ namespace AbsoluteZero.UI.Game
             _gameOverPanel.SetActive(false);
 
             BuildResultPanel(root);
+            BuildEnvironmentPanel(root);
         }
 
         void BuildMyHpBar(Transform root)
@@ -560,15 +582,14 @@ namespace AbsoluteZero.UI.Game
             _oppBarCanvas.renderMode = RenderMode.WorldSpace;
 
             var rt = canvasGO.GetComponent<RectTransform>();
-            rt.sizeDelta = new Vector2(400, 80);
-            canvasGO.transform.localScale = Vector3.one * WORLD_CANVAS_SCALE;
-            canvasGO.transform.position = OPP_BAR_OFFSET;
+            rt.sizeDelta = new Vector2(400, 100);
+            canvasGO.transform.localScale = Vector3.one * OPP_BAR_SCALE;
 
             var bg = new GameObject("OppBarBg");
             bg.transform.SetParent(canvasGO.transform, false);
             var bgRect = bg.AddComponent<RectTransform>();
             bgRect.anchoredPosition = Vector2.zero;
-            bgRect.sizeDelta = new Vector2(300, 30);
+            bgRect.sizeDelta = new Vector2(360, 36);
             var bgImg = bg.AddComponent<Image>();
             bgImg.color = new Color(0.1f, 0.1f, 0.1f, 0.9f);
 
@@ -586,7 +607,7 @@ namespace AbsoluteZero.UI.Game
             _oppBarFill.color = new Color(0.9f, 0.2f, 0.15f);
 
             _oppTempText = CreateText(canvasGO.transform, "OppTemp",
-                new Vector2(0, -40), new Vector2(360, 28), "37°", 22);
+                new Vector2(0, -45), new Vector2(360, 32), "37°", 26);
         }
 
         void BuildReadyWorldUI()
@@ -691,6 +712,55 @@ namespace AbsoluteZero.UI.Game
             _resultPanel.SetActive(false);
         }
 
+        void BuildEnvironmentPanel(Transform root)
+        {
+            _envPanel = new GameObject("EnvPanel");
+            _envPanel.transform.SetParent(root, false);
+            var rect = _envPanel.AddComponent<RectTransform>();
+            rect.anchoredPosition = new Vector2(0, -140);
+            rect.sizeDelta = new Vector2(600, 80);
+            AnchorTopCenter(rect);
+
+            CreatePanel(_envPanel.transform, "EnvBg",
+                Vector2.zero, new Vector2(600, 80),
+                new Color(0.1f, 0.05f, 0.2f, 0.9f));
+
+            _envText = CreateText(_envPanel.transform, "EnvText",
+                Vector2.zero, new Vector2(560, 60), "", 32);
+            _envText.fontStyle = FontStyles.Bold;
+            _envText.color = new Color(1f, 0.85f, 0.3f);
+
+            _envPanel.SetActive(false);
+        }
+
+        void OnEnvironmentAnnounced(EnvironmentType env)
+        {
+            if (_envPanel == null || _envText == null) return;
+
+            string name = env switch
+            {
+                EnvironmentType.SunnyDay => "[ 햇살쨍쨍 ]",
+                EnvironmentType.CoolBreeze => "[ 바람선선 ]",
+                EnvironmentType.CicadaSong => "[ 매미울음 ]",
+                EnvironmentType.Kids => "[ 잼민이들 ]",
+                EnvironmentType.Ambulance => "[ 앰뷸런스 ]",
+                EnvironmentType.SummerVacation => "[ 여름방학 ]",
+                EnvironmentType.HeatWaveWarning => "[ 폭염경보 ]",
+                _ => ""
+            };
+
+            _envText.text = name;
+            _envPanel.SetActive(true);
+            StartCoroutine(HideEnvPanelAfterDelay());
+        }
+
+        IEnumerator HideEnvPanelAfterDelay()
+        {
+            yield return _waitEnvHide;
+            if (_envPanel != null)
+                _envPanel.SetActive(false);
+        }
+
         void OnCombatResultReceived(CombatResultData data)
         {
             if (_resultPanel == null || _resultText == null) return;
@@ -734,6 +804,21 @@ namespace AbsoluteZero.UI.Game
             yield return new WaitForSeconds(delay);
             if (_resultPanel != null)
                 _resultPanel.SetActive(false);
+        }
+
+        void OnOpponentRevealed(byte forPlayerIndex, short opponentItemId)
+        {
+            if (_localPlayer == null) return;
+            if (_localPlayer.SyncedPlayerIndex.Value != forPlayerIndex) return;
+
+            string itemName = opponentItemId >= 0
+                ? (ItemManager.Instance?.GetItemData(opponentItemId)?.ItemName ?? "???")
+                : "Not Selected";
+
+            if (_statusText != null)
+                _statusText.text = $"Revealed: {itemName}";
+
+            Debug.Log($"[UI] Tarot reveal: opponent selected '{itemName}' (id={opponentItemId})");
         }
 
         static void AnchorTopCenter(RectTransform rt)

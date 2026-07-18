@@ -51,7 +51,7 @@ namespace AbsoluteZero.Core.Common
                 "Cat" => Get(ITEM_CAT),
                 "Windbreaker" => Get(ITEM_WINDBREAKER),
                 "Warm Tea" => Get(ITEM_TEA),
-                _ => Get(ITEM_SET)
+                _ => Get(ITEM_FAN)
             };
         }
 

@@ -20,10 +20,11 @@ MonoBehaviour:
   SlotType: 0
   MaxUses: 1
   DropWeight: 4
+  IsFreeAction: 0
   RequiresMiniGame: 1
   MiniGameType: 7
-  MiniGameTimeLimit: 5
+  MiniGameTimeLimit: 7
   SpecialEffect: 0
   EffectValue: 2
   TargetsSelf: 0
-  DelayTurns: 1
+  DelayTurns: 0

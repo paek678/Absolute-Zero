@@ -1,7 +1,7 @@
 # Safety Rules — Absolute Zero
 
 > Living document. Update immediately when errors are found or lessons learned.
-> Last updated: 2026-07-13
+> Last updated: 2026-07-18
 
 ---
 
@@ -103,6 +103,17 @@ Retired (❌ Disproven) → Delete or revise and re-register
 - **Evidence:** Unity engine lifecycle — destroyed MonoBehaviours with lingering event subscriptions cause MissingReferenceException
 - **Ported from:** AbyssNode RULE-014 (universal Unity constraint)
 - **Added:** 2026-07-13
+
+### RULE-012: Design spec verification required before gameplay code changes
+- **Status:** ✅ Verified
+- **Category:** Workflow
+- **Reason:** Item SO field values (damage, heal, drop weight, minigame settings) and system behavior (turn flow, temperature, combat) drifted from design spec without detection. Discovered 3 SO mismatches in 2026-07-18 audit
+- **Correct pattern:** Before modifying gameplay code or SO assets:
+  1. Read `Docs/GAME_DESIGN.md` item tables and system rules
+  2. Verify target values match design spec
+  3. If design and code diverge, ask user which is correct before changing either
+- **Evidence:** Soda had RequiresMiniGame=True (design: False), TarotCard had RequiresMiniGame=True (design: False), Screwdriver had MiniGameTimeLimit=5 (design: 7)
+- **Added:** 2026-07-18
 
 ### RULE-011: Null check required in entity iteration loops
 - **Status:** ✅ Verified (universal Unity pattern)

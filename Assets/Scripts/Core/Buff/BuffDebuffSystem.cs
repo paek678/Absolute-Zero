@@ -64,9 +64,15 @@ namespace AbsoluteZero.Core.Buff
                     Debug.Log($"[COMBAT] BuffSystem.ApplyEffect: P{eff.TargetPlayerIndex} TempChange {beforeTemp:F1} → {target.Temperature.Value:F1} (delta={eff.Value})");
                     break;
                 case EffectType.FanSpeedChange:
+                    if (target.IsFanUpgraded.Value)
+                    {
+                        Debug.Log($"[COMBAT] BuffSystem.ApplyEffect: P{eff.TargetPlayerIndex} FanSpeed ALREADY upgraded — skipping");
+                        break;
+                    }
                     float beforeFan = target.FanSpeed.Value;
                     target.FanSpeed.Value = eff.Value;
-                    Debug.Log($"[COMBAT] BuffSystem.ApplyEffect: P{eff.TargetPlayerIndex} FanSpeed {beforeFan} → {eff.Value}");
+                    target.IsFanUpgraded.Value = true;
+                    Debug.Log($"[COMBAT] BuffSystem.ApplyEffect: P{eff.TargetPlayerIndex} FanSpeed {beforeFan} → {eff.Value} (upgraded)");
                     break;
             }
         }
