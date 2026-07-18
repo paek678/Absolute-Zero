@@ -20,8 +20,10 @@ MonoBehaviour:
   SlotType: 0
   MaxUses: 1
   DropWeight: 4
+  IsFreeAction: 0
   RequiresMiniGame: 1
   MiniGameType: 4
-  MiniGameTimeLimit: 10
+  MiniGameTimeLimit: 7
+  MiniGameGoal: 15
   HealPerUse:
   - 10

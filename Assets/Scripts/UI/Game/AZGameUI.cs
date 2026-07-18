@@ -5,6 +5,7 @@ using AbsoluteZero.Core.Item;
 using AbsoluteZero.Core.Match;
 using AbsoluteZero.Core.Player;
 using AbsoluteZero.Core.Turn;
+using AbsoluteZero.UI.MiniGame;
 using TMPro;
 using Unity.Netcode;
 using UnityEngine;
@@ -82,6 +83,10 @@ namespace AbsoluteZero.UI.Game
             _worldDisplay = worldDisplayGO.AddComponent<ItemWorldDisplay>();
             _worldDisplay.OnWorldItemClicked += OnItemClicked;
 
+            var hubGO = new GameObject("MiniGameHub");
+            hubGO.AddComponent<MiniGameHub>();
+            MiniGameHub.OnFinishedLocal += OnMiniGameFinished;
+
             SpawnStayItemFans();
         }
 
@@ -148,6 +153,7 @@ namespace AbsoluteZero.UI.Game
             }
             if (_localPlayer != null)
                 _localPlayer.HasSelectedItem.OnValueChanged -= OnHasSelectedItemChanged;
+            MiniGameHub.OnFinishedLocal -= OnMiniGameFinished;
             if (_worldDisplay != null)
                 _worldDisplay.OnWorldItemClicked -= OnItemClicked;
             if (_oppItemObjects != null)
@@ -353,10 +359,17 @@ namespace AbsoluteZero.UI.Game
             _oppBarCanvas.transform.rotation = cam.transform.rotation;
         }
 
+        void OnMiniGameFinished(byte slotIndex, bool success)
+        {
+            if (_statusText != null)
+                _statusText.text = success ? "Mini-game clear!" : "Mini-game failed...";
+        }
+
         void OnItemClicked(int slotIndex)
         {
             if (_localPlayer == null) return;
             if (_localPlayer.IsReady.Value) return;
+            if (MiniGameHub.IsRunning) return;
 
             var inv = _localPlayer.GetInventory();
             if (inv == null || slotIndex >= inv.SlotStates.Count) return;
@@ -385,6 +398,7 @@ namespace AbsoluteZero.UI.Game
         void OnReadyClicked()
         {
             if (_localPlayer == null) return;
+            if (MiniGameHub.IsRunning) return;
 
             _localPlayer.PressReadyServerRpc();
             _statusText.text = _localPlayer.HasSelectedItem.Value

@@ -29,6 +29,7 @@ namespace AbsoluteZero.Core.Item.Data
         public bool RequiresMiniGame;
         public MiniGameType MiniGameType;
         public float MiniGameTimeLimit;
+        public int MiniGameGoal = 1;
 
         public abstract void ExecuteEffect(ItemContext ctx);
 

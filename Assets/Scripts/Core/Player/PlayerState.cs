@@ -35,6 +35,12 @@ namespace AbsoluteZero.Core.Player
         readonly ActionQueue _actionQueue = new();
         PlayerInventory _inventory;
 
+        const float MINIGAME_GRACE_SEC = 0.5f;
+        int _pendingMiniGameSlot = -1;
+        double _pendingMiniGameDeadline;
+
+        public event System.Action<byte, MiniGameType, float, int> OnMiniGameStart;
+
         public int PlayerIndex => SyncedPlayerIndex.Value;
         public ActionQueue GetActionQueue() => _actionQueue;
 
@@ -55,6 +61,7 @@ namespace AbsoluteZero.Core.Player
         {
             HasSelectedItem.Value = false;
             _actionQueue.Clear();
+            _pendingMiniGameSlot = -1;
         }
 
         ItemContext BuildContext()
@@ -83,6 +90,11 @@ namespace AbsoluteZero.Core.Player
             if (!IsServer) return;
             if (Turn.TurnManager.Instance.CurrentPhase.Value != TurnPhase.PrepPhase) return;
             if (IsReady.Value) return;
+            if (_pendingMiniGameSlot >= 0)
+            {
+                Debug.Log($"[PlayerState P{SyncedPlayerIndex.Value}] SelectItem rejected: mini-game in progress");
+                return;
+            }
             if (slotIndex >= _inventory.SlotStates.Count) return;
 
             var slot = _inventory.SlotStates[slotIndex];
@@ -104,6 +116,33 @@ namespace AbsoluteZero.Core.Player
                 return;
             }
 
+            if (itemData.SlotType == ItemSlotType.Sub && _actionQueue.hasUsedSub)
+            {
+                Debug.Log($"[PlayerState P{SyncedPlayerIndex.Value}] SelectItem rejected: already used sub this turn");
+                return;
+            }
+            if (itemData.SlotType != ItemSlotType.Sub && HasSelectedItem.Value)
+            {
+                Debug.Log($"[PlayerState P{SyncedPlayerIndex.Value}] SelectItem rejected: already selected an item this turn");
+                return;
+            }
+
+            if (itemData.RequiresMiniGame)
+            {
+                var tm = Turn.TurnManager.Instance;
+                double now = NetworkManager.ServerTime.Time;
+                double prepEnd = tm.PrepStartServerTime.Value + tm.PrepDuration.Value;
+                _pendingMiniGameSlot = slotIndex;
+                _pendingMiniGameDeadline = System.Math.Min(now + itemData.MiniGameTimeLimit, prepEnd) + MINIGAME_GRACE_SEC;
+
+                Debug.Log($"[PlayerState P{SyncedPlayerIndex.Value}] Mini-game START: {itemData.ItemName} " +
+                          $"({itemData.MiniGameType}, {itemData.MiniGameTimeLimit}s, goal={itemData.MiniGameGoal})");
+
+                StartMiniGameClientRpc(slotIndex, (byte)itemData.MiniGameType,
+                                       itemData.MiniGameTimeLimit, itemData.MiniGameGoal);
+                return;
+            }
+
             if (itemData.SlotType == ItemSlotType.Sub)
             {
                 if (itemData.IsFreeAction)
@@ -114,9 +153,21 @@ namespace AbsoluteZero.Core.Player
                     return;
                 }
 
+                ServerQueueItem(slotIndex, itemData);
+            }
+            else
+            {
+                ServerQueueItem(slotIndex, itemData);
+            }
+        }
+
+        void ServerQueueItem(byte slotIndex, ItemDataSO itemData)
+        {
+            if (itemData.SlotType == ItemSlotType.Sub)
+            {
                 if (_actionQueue.hasUsedSub)
                 {
-                    Debug.Log($"[PlayerState P{SyncedPlayerIndex.Value}] SelectItem rejected: already used sub this turn");
+                    Debug.Log($"[PlayerState P{SyncedPlayerIndex.Value}] Queue rejected: already used sub this turn");
                     return;
                 }
 
@@ -131,7 +182,7 @@ namespace AbsoluteZero.Core.Player
             {
                 if (HasSelectedItem.Value)
                 {
-                    Debug.Log($"[PlayerState P{SyncedPlayerIndex.Value}] SelectItem rejected: already selected an item this turn");
+                    Debug.Log($"[PlayerState P{SyncedPlayerIndex.Value}] Queue rejected: already selected an item this turn");
                     return;
                 }
 
@@ -143,6 +194,59 @@ namespace AbsoluteZero.Core.Player
                 Turn.TurnManager.Instance.OnItemUsedClientRpc(
                     (byte)SyncedPlayerIndex.Value, slotIndex, (byte)itemData.Category, false);
             }
+        }
+
+        [Rpc(SendTo.Owner)]
+        void StartMiniGameClientRpc(byte slotIndex, byte miniGameType, float timeLimit, int goal)
+        {
+            OnMiniGameStart?.Invoke(slotIndex, (MiniGameType)miniGameType, timeLimit, goal);
+        }
+
+        [Rpc(SendTo.Server)]
+        public void SubmitMiniGameResultServerRpc(byte slotIndex, bool success, RpcParams rpcParams = default)
+        {
+            if (!IsServer) return;
+            if (_pendingMiniGameSlot != slotIndex)
+            {
+                Debug.Log($"[PlayerState P{SyncedPlayerIndex.Value}] Mini-game result rejected: no pending game for slot {slotIndex}");
+                return;
+            }
+            _pendingMiniGameSlot = -1;
+
+            if (Turn.TurnManager.Instance.CurrentPhase.Value != TurnPhase.PrepPhase)
+            {
+                Debug.Log($"[PlayerState P{SyncedPlayerIndex.Value}] Mini-game result rejected: prep phase already over");
+                return;
+            }
+            if (IsReady.Value) return;
+            if (NetworkManager.ServerTime.Time > _pendingMiniGameDeadline)
+            {
+                Debug.Log($"[PlayerState P{SyncedPlayerIndex.Value}] Mini-game result rejected: past deadline");
+                return;
+            }
+
+            if (!success)
+            {
+                Debug.Log($"[PlayerState P{SyncedPlayerIndex.Value}] Mini-game FAILED: slot {slotIndex} — consuming 1 use");
+                _inventory.ConsumeItem(slotIndex);
+                _inventory.CompactSlots();
+                return;
+            }
+
+            if (slotIndex >= _inventory.SlotStates.Count) return;
+            var slot = _inventory.SlotStates[slotIndex];
+            if (!slot.IsUsable) return;
+
+            var itemData = _inventory.GetItemData(slotIndex);
+            if (itemData == null) return;
+
+            var ctx = BuildContext();
+            ctx.UserSlot = slot;
+            ctx.SlotIndex = slotIndex;
+            if (!itemData.CanUse(ctx)) return;
+
+            Debug.Log($"[PlayerState P{SyncedPlayerIndex.Value}] Mini-game SUCCESS: {itemData.ItemName} → queueing");
+            ServerQueueItem(slotIndex, itemData);
         }
 
         void ExecuteFreeAction(byte slotIndex, ItemDataSO itemData, ItemContext ctx)
@@ -190,6 +294,7 @@ namespace AbsoluteZero.Core.Player
             if (Turn.TurnManager.Instance.CurrentPhase.Value != TurnPhase.PrepPhase) return;
             if (IsReady.Value) return;
 
+            _pendingMiniGameSlot = -1;
             _actionQueue.SetReady(Time.time);
             IsReady.Value = true;
             IsFanActive.Value = false;

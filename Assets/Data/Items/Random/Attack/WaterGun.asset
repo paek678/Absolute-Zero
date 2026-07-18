@@ -20,9 +20,11 @@ MonoBehaviour:
   SlotType: 0
   MaxUses: 1
   DropWeight: 6
+  IsFreeAction: 0
   RequiresMiniGame: 1
   MiniGameType: 1
   MiniGameTimeLimit: 5
+  MiniGameGoal: 3
   Damage: 7
   AttackFilter: 0
   EqualizeToUserTemp: 0

@@ -24,6 +24,7 @@ MonoBehaviour:
   RequiresMiniGame: 1
   MiniGameType: 7
   MiniGameTimeLimit: 7
+  MiniGameGoal: 3
   SpecialEffect: 0
   EffectValue: 2
   TargetsSelf: 0
