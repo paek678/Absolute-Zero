@@ -753,13 +753,13 @@ namespace AbsoluteZero.UI.Game
 
             string name = env switch
             {
-                EnvironmentType.SunnyDay => "[ 햇살쨍쨍 ]",
-                EnvironmentType.CoolBreeze => "[ 바람선선 ]",
-                EnvironmentType.CicadaSong => "[ 매미울음 ]",
-                EnvironmentType.Kids => "[ 잼민이들 ]",
-                EnvironmentType.Ambulance => "[ 앰뷸런스 ]",
-                EnvironmentType.SummerVacation => "[ 여름방학 ]",
-                EnvironmentType.HeatWaveWarning => "[ 폭염경보 ]",
+                EnvironmentType.SunnyDay => "햇살이 더 쨍쨍해집니다.",
+                EnvironmentType.CoolBreeze => "시원한 바람이 불어옵니다.",
+                EnvironmentType.CicadaSong => "매미 소리가 들려옵니다.",
+                EnvironmentType.Kids => "근처에 어린 친구들이 서성거립니다.",
+                EnvironmentType.Ambulance => "근처에 응급구조원이 대기중입니다.",
+                EnvironmentType.SummerVacation => "여름방학이 얼마 남지 않았습니다.",
+                EnvironmentType.HeatWaveWarning => "폭염경보가 발생했습니다.",
                 _ => ""
             };
 

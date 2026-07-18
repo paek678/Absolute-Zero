@@ -551,9 +551,12 @@ namespace AbsoluteZero.Core.Turn
 
         IEnumerator EnvironmentAnnouncementRoutine()
         {
-            var values = (EnvironmentType[])System.Enum.GetValues(typeof(EnvironmentType));
-            int randomIndex = Random.Range(1, values.Length);
-            ActiveEnvironment.Value = values[randomIndex];
+            var pool = new[] {
+                EnvironmentType.SunnyDay, EnvironmentType.CoolBreeze,
+                EnvironmentType.Kids, EnvironmentType.Ambulance,
+                EnvironmentType.SummerVacation, EnvironmentType.HeatWaveWarning
+            };
+            ActiveEnvironment.Value = pool[Random.Range(0, pool.Length)];
 
             Debug.Log($"[ENV] Environment selected: {ActiveEnvironment.Value} ({GetEnvironmentName(ActiveEnvironment.Value)})");
 
