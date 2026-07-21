@@ -8,8 +8,8 @@ namespace AbsoluteZero.Core.Game
 {
     /// <summary>
     /// 개발용 아이템 지급 치트 (에디터/개발 빌드 전용, 호스트에서만 동작).
-    /// F1 핫팩 / F2 불닭 / F3 드라이버 / F4 랜덤 / F5 물총 / F6 집게손 / F7 청테이프 / F8 스마트폰
-    /// — 양쪽 플레이어 모두에게 지급. 미니게임 7종을 드랍운과 무관하게 즉시 테스트하기 위한 도구.
+    /// F1 레드카드 / F2 불닭 / F3 드라이버 / F4 랜덤 / F5 물총 / F6 집게손 / F7 청테이프 / F8 스마트폰 / F9 핫팩
+    /// — 양쪽 플레이어 모두에게 지급. 미니게임을 드랍운과 무관하게 즉시 테스트하기 위한 도구.
     /// </summary>
     public class DebugItemGranter : MonoBehaviour
     {
@@ -22,7 +22,7 @@ namespace AbsoluteZero.Core.Game
             var kb = Keyboard.current;
             if (kb == null) return;
 
-            if (kb.f1Key.wasPressedThisFrame) GrantByName("Hot Pack");
+            if (kb.f1Key.wasPressedThisFrame) GrantByName("Red Card");
             if (kb.f2Key.wasPressedThisFrame) GrantByName("Buldak Noodles");
             if (kb.f3Key.wasPressedThisFrame) GrantByName("Screwdriver");
             if (kb.f4Key.wasPressedThisFrame) GrantRandom();
@@ -30,6 +30,7 @@ namespace AbsoluteZero.Core.Game
             if (kb.f6Key.wasPressedThisFrame) GrantByName("Claw Machine");
             if (kb.f7Key.wasPressedThisFrame) GrantByName("Blue Tape");
             if (kb.f8Key.wasPressedThisFrame) GrantByName("Smartphone");
+            if (kb.f9Key.wasPressedThisFrame) GrantByName("Hot Pack");
         }
 
         static void GrantByName(string itemName)
