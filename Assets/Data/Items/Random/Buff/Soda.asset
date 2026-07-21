@@ -14,16 +14,23 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AbsoluteZero.Core.Item.Data.BuffItemDataSO
   ItemName: Soda
   Description: Cold now, warm later
-  Icon: {fileID: 0}
+  Icon: {fileID: 21300000, guid: 20b3c7572a4ddf041835caeecb912380, type: 3}
   Category: 3
   Persistence: 2
   SlotType: 0
   MaxUses: 1
   DropWeight: 6
   IsFreeAction: 0
+  AnimTrigger: use
+  OpponentAnimTrigger: drink
+  AnimDuration: 0.8
+  EffectDelay: 0.5
+  EffectHitCount: 1
+  EffectInterval: 0
   RequiresMiniGame: 0
   MiniGameType: 5
   MiniGameTimeLimit: 5
+  MiniGameGoal: 1
   ImmediateTempDelta: -5
   DelayedTempDelta: 15
   DelayTurns: 1

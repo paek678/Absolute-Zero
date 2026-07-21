@@ -14,13 +14,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AbsoluteZero.Core.Item.Data.RecoveryItemDataSO
   ItemName: Hot Pack
   Description: Shake hot pack vigorously
-  Icon: {fileID: 0}
+  Icon: {fileID: 21300000, guid: dc8d16b9523226e448988ae510594283, type: 3}
   Category: 2
   Persistence: 2
   SlotType: 0
   MaxUses: 1
   DropWeight: 4
   IsFreeAction: 0
+  AnimTrigger: use
+  OpponentAnimTrigger: heal
+  AnimDuration: 0.8
+  EffectDelay: 0.5
+  EffectHitCount: 1
+  EffectInterval: 0
   RequiresMiniGame: 1
   MiniGameType: 4
   MiniGameTimeLimit: 7

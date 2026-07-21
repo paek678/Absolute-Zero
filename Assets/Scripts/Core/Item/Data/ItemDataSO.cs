@@ -25,6 +25,16 @@ namespace AbsoluteZero.Core.Item.Data
         [Header("Special Behavior")]
         public bool IsFreeAction;
 
+        [Header("Animation")]
+        public string AnimTrigger;
+        public string OpponentAnimTrigger;
+
+        [Header("Animation Timing")]
+        public float AnimDuration;
+        public float EffectDelay = 0.5f;
+        public int EffectHitCount = 1;
+        public float EffectInterval;
+
         [Header("Mini-Game")]
         public bool RequiresMiniGame;
         public MiniGameType MiniGameType;

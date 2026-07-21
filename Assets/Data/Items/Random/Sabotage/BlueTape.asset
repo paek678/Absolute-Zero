@@ -14,13 +14,21 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AbsoluteZero.Core.Item.Data.SabotageItemDataSO
   ItemName: Blue Tape
   Description: Block opponent basic items
-  Icon: {fileID: 0}
+  Icon: {fileID: 21300000, guid: 00828bd375c8564438d2ac98723491a3, type: 3}
   Category: 5
   Persistence: 2
   SlotType: 1
   MaxUses: 1
   DropWeight: 4
+  IsFreeAction: 0
+  AnimTrigger: tape
+  OpponentAnimTrigger: attack
+  AnimDuration: 0.8
+  EffectDelay: 0.5
+  EffectHitCount: 1
+  EffectInterval: 0
   RequiresMiniGame: 1
   MiniGameType: 10
   MiniGameTimeLimit: 5
+  MiniGameGoal: 1
   SabotageType: 2

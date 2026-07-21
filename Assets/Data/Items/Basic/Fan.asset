@@ -14,15 +14,23 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AbsoluteZero.Core.Item.Data.AttackItemDataSO
   ItemName: Fan
   Description: Blow cold air at opponent
-  Icon: {fileID: 0}
+  Icon: {fileID: 21300000, guid: 0ac143814519bb341b0fd3023f62910b, type: 3}
   Category: 0
   Persistence: 0
   SlotType: 0
   MaxUses: 0
   DropWeight: 0
+  IsFreeAction: 0
+  AnimTrigger: swing
+  OpponentAnimTrigger: swing
+  AnimDuration: 1
+  EffectDelay: 0.5
+  EffectHitCount: 3
+  EffectInterval: 0.2
   RequiresMiniGame: 0
   MiniGameType: 0
   MiniGameTimeLimit: 0
+  MiniGameGoal: 1
   Damage: 3
   AttackFilter: 0
   EqualizeToUserTemp: 0

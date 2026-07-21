@@ -21,6 +21,12 @@ MonoBehaviour:
   MaxUses: 1
   DropWeight: 6
   IsFreeAction: 0
+  AnimTrigger: gun
+  OpponentAnimTrigger: attack
+  AnimDuration: 1.2
+  EffectDelay: 0.5
+  EffectHitCount: 1
+  EffectInterval: 0
   RequiresMiniGame: 1
   MiniGameType: 1
   MiniGameTimeLimit: 5

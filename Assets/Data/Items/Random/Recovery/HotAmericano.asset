@@ -14,14 +14,22 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AbsoluteZero.Core.Item.Data.RecoveryItemDataSO
   ItemName: Hot Americano
   Description: Hot coffee to warm up
-  Icon: {fileID: 0}
+  Icon: {fileID: 21300000, guid: 7d418d0178f8aba419a357479b576835, type: 3}
   Category: 2
   Persistence: 2
   SlotType: 0
   MaxUses: 1
   DropWeight: 10
+  IsFreeAction: 0
+  AnimTrigger: use
+  OpponentAnimTrigger: drink
+  AnimDuration: 0.8
+  EffectDelay: 0.5
+  EffectHitCount: 1
+  EffectInterval: 0
   RequiresMiniGame: 0
   MiniGameType: 0
   MiniGameTimeLimit: 0
+  MiniGameGoal: 1
   HealPerUse:
   - 5

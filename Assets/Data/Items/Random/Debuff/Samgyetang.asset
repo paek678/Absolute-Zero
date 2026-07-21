@@ -20,9 +20,17 @@ MonoBehaviour:
   SlotType: 0
   MaxUses: 1
   DropWeight: 8
+  IsFreeAction: 0
+  AnimTrigger: feed
+  OpponentAnimTrigger: attack
+  AnimDuration: 0.8
+  EffectDelay: 0.5
+  EffectHitCount: 1
+  EffectInterval: 0
   RequiresMiniGame: 0
   MiniGameType: 0
   MiniGameTimeLimit: 0
+  MiniGameGoal: 1
   ImmediateTempDelta: 3
   DelayedTempDelta: -7
   DelayTurns: 1

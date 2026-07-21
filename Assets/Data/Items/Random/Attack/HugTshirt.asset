@@ -14,15 +14,23 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AbsoluteZero.Core.Item.Data.AttackItemDataSO
   ItemName: Hug T-shirt
   Description: Equalize opponent temp to yours
-  Icon: {fileID: 0}
+  Icon: {fileID: 21300000, guid: 2a15dd286ada7984f9beab4b10934fe8, type: 3}
   Category: 0
   Persistence: 2
   SlotType: 0
   MaxUses: 1
   DropWeight: 4
+  IsFreeAction: 0
+  AnimTrigger: hug
+  OpponentAnimTrigger: hug
+  AnimDuration: 1.2
+  EffectDelay: 0.5
+  EffectHitCount: 1
+  EffectInterval: 0
   RequiresMiniGame: 1
   MiniGameType: 2
   MiniGameTimeLimit: 10
+  MiniGameGoal: 1
   Damage: 0
   AttackFilter: 0
   EqualizeToUserTemp: 1

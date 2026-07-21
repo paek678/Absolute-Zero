@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using AbsoluteZero.Core.Common;
 using AbsoluteZero.Core.Item;
 using AbsoluteZero.Core.Item.Data;
@@ -20,6 +21,7 @@ namespace AbsoluteZero.UI.Game
         bool _initialized;
         int _confirmedSlotIndex = -1;
         bool _needsRebuild;
+        bool _fullRedistribute;
 
         const float FALLBACK_SPACING = 0.9f;
         const float FALLBACK_Y = 0.5f;
@@ -68,7 +70,9 @@ namespace AbsoluteZero.UI.Game
             if (HoverRaycaster.Instance == null)
                 gameObject.AddComponent<HoverRaycaster>();
 
+            Debug.Log($"[ItemDisplay] TryInitialize SUCCESS — {inv.SlotStates.Count} slots");
             SpawnItemViews();
+            TriggerIceboxAnimation();
             _inventory.SlotStates.OnListChanged += OnSlotStatesChanged;
             _localPlayer.HasSelectedItem.OnValueChanged += OnHasSelectedItemChanged;
             _initialized = true;
@@ -81,6 +85,7 @@ namespace AbsoluteZero.UI.Game
 
             int randomMarker = 0;
             int basicMarker = 0;
+            int spawnedCount = 0;
 
             for (int i = 0; i < count; i++)
             {
@@ -107,12 +112,16 @@ namespace AbsoluteZero.UI.Game
 
                 var marker = GameObject.Find(markerName);
                 if (marker != null)
+                {
                     go.transform.position = marker.transform.position;
+                    Debug.Log($"[ItemDisplay] SpawnView: slot{i} '{itemData.ItemName}' → {markerName} pos={marker.transform.position}");
+                }
                 else
                 {
                     float totalWidth = (count - 1) * FALLBACK_SPACING;
                     go.transform.localPosition = new Vector3(
                         -totalWidth / 2f + i * FALLBACK_SPACING, FALLBACK_Y, 0f);
+                    Debug.LogWarning($"[ItemDisplay] SpawnView: slot{i} '{itemData.ItemName}' — marker '{markerName}' NOT FOUND, using fallback");
                 }
 
                 var view = go.AddComponent<ItemWorldView>();
@@ -122,11 +131,28 @@ namespace AbsoluteZero.UI.Game
                 view.UpdateDisplay(itemData.ItemName, uses, slot.IsUsable);
 
                 _views[i] = view;
+                spawnedCount++;
             }
+            Debug.Log($"[ItemDisplay] SpawnItemViews: {spawnedCount}/{count} views created (random={randomMarker}, basic={basicMarker})");
         }
 
         void RebuildViews()
         {
+            bool animateAll = _fullRedistribute;
+            _fullRedistribute = false;
+
+            var previousSlots = new HashSet<int>();
+            if (!animateAll && _views != null)
+            {
+                for (int i = 0; i < _views.Length; i++)
+                {
+                    if (_views[i] != null)
+                        previousSlots.Add(i);
+                }
+            }
+
+            Debug.Log($"[ItemDisplay] RebuildViews: animateAll={animateAll}, previousSlots={previousSlots.Count}");
+
             if (_views != null)
             {
                 foreach (var v in _views)
@@ -137,6 +163,18 @@ namespace AbsoluteZero.UI.Game
 
             _confirmedSlotIndex = -1;
             SpawnItemViews();
+
+            if (animateAll)
+            {
+                Debug.Log("[ItemDisplay] RebuildViews → TriggerIceboxAnimation (ALL items)");
+                TriggerIceboxAnimation();
+            }
+            else
+            {
+                Debug.Log($"[ItemDisplay] RebuildViews → TriggerIceboxAnimationPartial (new items only, prev={previousSlots.Count})");
+                TriggerIceboxAnimationPartial(previousSlots);
+            }
+
             UpdateSelectionVisuals();
         }
 
@@ -158,6 +196,8 @@ namespace AbsoluteZero.UI.Game
         {
             if (_localPlayer == null) return false;
             if (_localPlayer.IsReady.Value) return false;
+
+            if (IceboxController.Instance != null && IceboxController.Instance.IsAnimating) return false;
 
             var tm = TurnManager.Instance;
             if (tm == null || tm.CurrentPhase.Value != TurnPhase.PrepPhase) return false;
@@ -184,6 +224,8 @@ namespace AbsoluteZero.UI.Game
         {
             if (_views == null || _inventory == null) return;
 
+            Debug.Log($"[ItemDisplay] OnSlotStatesChanged: type={changeEvent.Type}, index={changeEvent.Index}");
+
             if (changeEvent.Type == NetworkListEvent<ItemSlotNetData>.EventType.Add
                 || changeEvent.Type == NetworkListEvent<ItemSlotNetData>.EventType.Remove
                 || changeEvent.Type == NetworkListEvent<ItemSlotNetData>.EventType.RemoveAt
@@ -192,6 +234,12 @@ namespace AbsoluteZero.UI.Game
                 || changeEvent.Type == NetworkListEvent<ItemSlotNetData>.EventType.Full)
             {
                 _needsRebuild = true;
+                if (changeEvent.Type == NetworkListEvent<ItemSlotNetData>.EventType.Clear
+                    || changeEvent.Type == NetworkListEvent<ItemSlotNetData>.EventType.Full)
+                {
+                    _fullRedistribute = true;
+                    Debug.Log("[ItemDisplay] → fullRedistribute=true (Clear/Full)");
+                }
                 return;
             }
 
@@ -233,6 +281,60 @@ namespace AbsoluteZero.UI.Game
                     _views[i].SetInteractable(!hasSelected && usable);
                 }
             }
+        }
+
+        void TriggerIceboxAnimation()
+        {
+            var icebox = IceboxController.Instance;
+            if (icebox == null || _views == null)
+            {
+                Debug.LogWarning($"[ItemDisplay] TriggerIceboxAnimation SKIP — icebox={icebox != null}, views={_views != null}");
+                return;
+            }
+
+            int count = 0;
+            for (int i = 0; i < _views.Length; i++)
+                if (_views[i] != null) count++;
+
+            Debug.Log($"[ItemDisplay] TriggerIceboxAnimation: {count} items to animate");
+            if (count == 0) return;
+
+            var transforms = new Transform[count];
+            int idx = 0;
+            for (int i = 0; i < _views.Length; i++)
+            {
+                if (_views[i] != null)
+                    transforms[idx++] = _views[i].transform;
+            }
+
+            icebox.PlayDistribution(transforms);
+        }
+
+        void TriggerIceboxAnimationPartial(HashSet<int> previousSlots)
+        {
+            var icebox = IceboxController.Instance;
+            if (icebox == null || _views == null) return;
+
+            int count = 0;
+            for (int i = 0; i < _views.Length; i++)
+                if (_views[i] != null && !previousSlots.Contains(i)) count++;
+
+            Debug.Log($"[ItemDisplay] TriggerIceboxAnimationPartial: {count} NEW items (total views={_views.Length}, prev={previousSlots.Count})");
+            if (count == 0)
+            {
+                Debug.Log("[ItemDisplay] No new items to animate — skipping icebox");
+                return;
+            }
+
+            var transforms = new Transform[count];
+            int idx = 0;
+            for (int i = 0; i < _views.Length; i++)
+            {
+                if (_views[i] != null && !previousSlots.Contains(i))
+                    transforms[idx++] = _views[i].transform;
+            }
+
+            icebox.PlayDistribution(transforms);
         }
 
         void OnDestroy()

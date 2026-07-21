@@ -29,12 +29,19 @@ namespace AbsoluteZero.UI.Game
         TextMeshProUGUI _statusText;
         TextMeshProUGUI _scoreText;
         TextMeshProUGUI _myTempText;
-        Image _myBarFill;
-        Image _clockImage;
+        Slider _myHpSlider;
+
+        Image _timerFillImage;
+        Image _timerSliderImage;
+        RectTransform _clockHandRT;
+        GameObject _timeAlarmObj;
+        Image _timeAlarmImage;
+        bool _alarmShaking;
+        Coroutine _alarmCoroutine;
 
         Canvas _oppBarCanvas;
         TextMeshProUGUI _oppTempText;
-        Image _oppBarFill;
+        Slider _oppHpSlider;
 
         Canvas _readyCanvas;
         Button _readyButton;
@@ -57,16 +64,24 @@ namespace AbsoluteZero.UI.Game
         GameObject _envPanel;
         TextMeshProUGUI _envText;
 
+        RectTransform _timerContainerRT;
+        Vector2 _timerContainerBasePos;
+        bool _summerVacShaking;
+        Coroutine _summerVacShakeCoroutine;
+
         bool _oppBarAttached;
 
         bool _uiBuilt;
 
         static readonly WaitForSeconds _waitEnvHide = new(3.5f);
+        static readonly WaitForSeconds _waitAlarmShake = new(0.05f);
+        static readonly WaitForSeconds _waitSummerShake = new(0.016f);
 
         static readonly Vector3 OPP_BAR_LOCAL_OFFSET = new(0f, 2.2f, 0f);
         static readonly Vector3 READY_BTN_POS = new(0f, 0.05f, 1.2f);
         const float WORLD_CANVAS_SCALE = 0.005f;
-        const float OPP_BAR_SCALE = 0.012f;
+        const float OPP_BAR_SCALE = 0.007f;
+        const int ALARM_TIME_THRESHOLD = 5;
 
         void Start()
         {
@@ -86,6 +101,11 @@ namespace AbsoluteZero.UI.Game
             var hubGO = new GameObject("MiniGameHub");
             hubGO.AddComponent<MiniGameHub>();
             MiniGameHub.OnFinishedLocal += OnMiniGameFinished;
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            var debugGranterGO = new GameObject("DebugItemGranter");
+            debugGranterGO.AddComponent<Core.Game.DebugItemGranter>();
+#endif
 
             SpawnStayItemFans();
         }
@@ -154,6 +174,7 @@ namespace AbsoluteZero.UI.Game
             if (_localPlayer != null)
                 _localPlayer.HasSelectedItem.OnValueChanged -= OnHasSelectedItemChanged;
             MiniGameHub.OnFinishedLocal -= OnMiniGameFinished;
+            StopSummerVacShake();
             if (_worldDisplay != null)
                 _worldDisplay.OnWorldItemClicked -= OnItemClicked;
             if (_oppItemObjects != null)
@@ -305,10 +326,64 @@ namespace AbsoluteZero.UI.Game
             if (_tm == null || _tm.CurrentPhase.Value != TurnPhase.PrepPhase)
             {
                 _timerText.text = "";
+                if (_timerFillImage != null) _timerFillImage.fillAmount = 1f;
+                if (_timerSliderImage != null) _timerSliderImage.fillAmount = 0f;
+                if (_clockHandRT != null) _clockHandRT.localRotation = Quaternion.identity;
+                SetAlarmActive(false);
                 return;
             }
 
-            _timerText.text = $"{_tm.RemainingTime.Value}";
+            int remaining = _tm.RemainingTime.Value;
+            float total = _tm.PrepDuration.Value;
+            float ratio = total > 0f ? Mathf.Clamp01(remaining / total) : 1f;
+
+            _timerText.text = $"{remaining}";
+
+            if (_timerFillImage != null)
+                _timerFillImage.fillAmount = ratio;
+            if (_timerSliderImage != null)
+                _timerSliderImage.fillAmount = 1f - ratio;
+            if (_clockHandRT != null)
+                _clockHandRT.localRotation = Quaternion.Euler(0f, 0f, ratio * 360f);
+
+            bool shouldAlarm = remaining > 0 && remaining <= ALARM_TIME_THRESHOLD;
+            SetAlarmActive(shouldAlarm);
+
+            if (remaining <= ALARM_TIME_THRESHOLD)
+                _timerText.color = Color.red;
+            else
+                _timerText.color = Color.white;
+        }
+
+        void SetAlarmActive(bool active)
+        {
+            if (_timeAlarmObj == null) return;
+            if (active && !_alarmShaking)
+            {
+                _timeAlarmObj.SetActive(true);
+                _alarmShaking = true;
+                _alarmCoroutine = StartCoroutine(AlarmShakeRoutine());
+            }
+            else if (!active && _alarmShaking)
+            {
+                _alarmShaking = false;
+                if (_alarmCoroutine != null) StopCoroutine(_alarmCoroutine);
+                _timeAlarmObj.SetActive(false);
+            }
+        }
+
+        IEnumerator AlarmShakeRoutine()
+        {
+            var rt = _timeAlarmObj.GetComponent<RectTransform>();
+            var basePos = rt.anchoredPosition;
+            while (_alarmShaking)
+            {
+                float ox = Random.Range(-8f, 8f);
+                float oy = Random.Range(-4f, 4f);
+                rt.anchoredPosition = basePos + new Vector2(ox, oy);
+                yield return _waitAlarmShake;
+            }
+            rt.anchoredPosition = basePos;
         }
 
         void UpdateTempDisplay()
@@ -317,8 +392,8 @@ namespace AbsoluteZero.UI.Game
             {
                 float myT = _localPlayer.Temperature.Value;
                 _myTempText.text = $"{myT:F0}°";
-                _myBarFill.fillAmount = Mathf.Clamp01(myT / 37f);
-                _myBarFill.color = TempToColor(myT / 37f);
+                if (_myHpSlider != null)
+                    _myHpSlider.value = Mathf.Clamp01(myT / 37f);
             }
 
             var opp = GetOpponentPlayer();
@@ -326,8 +401,8 @@ namespace AbsoluteZero.UI.Game
             {
                 float oppT = opp.Temperature.Value;
                 _oppTempText.text = $"{oppT:F0}°";
-                _oppBarFill.fillAmount = Mathf.Clamp01(oppT / 37f);
-                _oppBarFill.color = TempToColor(oppT / 37f);
+                if (_oppHpSlider != null)
+                    _oppHpSlider.value = Mathf.Clamp01(oppT / 37f);
             }
         }
 
@@ -343,10 +418,22 @@ namespace AbsoluteZero.UI.Game
 
             if (!_oppBarAttached)
             {
-                var enemyGO = GameObject.Find("EnemyPlayer");
-                if (enemyGO != null)
+                Transform target = null;
+
+                var opp = GetOpponentPlayer();
+                if (opp != null)
+                    target = opp.transform;
+
+                if (target == null)
                 {
-                    _oppBarCanvas.transform.SetParent(enemyGO.transform, false);
+                    var enemyGO = GameObject.Find("EnemyPlayer");
+                    if (enemyGO != null)
+                        target = enemyGO.transform;
+                }
+
+                if (target != null)
+                {
+                    _oppBarCanvas.transform.SetParent(target, false);
                     _oppBarCanvas.transform.localPosition = OPP_BAR_LOCAL_OFFSET;
                     _oppBarAttached = true;
                 }
@@ -415,12 +502,6 @@ namespace AbsoluteZero.UI.Game
                 sessionManager.Disconnect();
         }
 
-        static Color TempToColor(float normalized)
-        {
-            float h = Mathf.Lerp(0.6f, 0f, Mathf.Clamp01(normalized));
-            return Color.HSVToRGB(h, 0.8f, 1f);
-        }
-
         void TrySpawnOpponentItems()
         {
             var opp = GetOpponentPlayer();
@@ -467,12 +548,12 @@ namespace AbsoluteZero.UI.Game
             var canvasGO = new GameObject("OverlayCanvas");
             _overlayCanvas = canvasGO.AddComponent<Canvas>();
             _overlayCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            _overlayCanvas.sortingOrder = 10;
+            _overlayCanvas.sortingOrder = 0;
 
             var scaler = canvasGO.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920, 1080);
-            scaler.matchWidthOrHeight = 0.5f;
+            scaler.matchWidthOrHeight = 0f;
 
             canvasGO.AddComponent<GraphicRaycaster>();
 
@@ -531,97 +612,291 @@ namespace AbsoluteZero.UI.Game
             var container = new GameObject("MyHpBar");
             container.transform.SetParent(root, false);
             var cRect = container.AddComponent<RectTransform>();
-            cRect.anchoredPosition = new Vector2(20, -20);
-            cRect.sizeDelta = new Vector2(260, 60);
-            AnchorTopLeft(cRect);
+            cRect.anchoredPosition = new Vector2(395.8f, -81.9f);
+            cRect.sizeDelta = new Vector2(600, 100);
+            cRect.anchorMin = new Vector2(0f, 1f);
+            cRect.anchorMax = new Vector2(0f, 1f);
+            cRect.pivot = new Vector2(0.5f, 0.5f);
 
-            var bg = new GameObject("BarBg");
-            bg.transform.SetParent(container.transform, false);
-            var bgRect = bg.AddComponent<RectTransform>();
-            bgRect.anchoredPosition = Vector2.zero;
-            bgRect.sizeDelta = new Vector2(240, 24);
-            var bgImg = bg.AddComponent<Image>();
-            bgImg.color = new Color(0.1f, 0.1f, 0.1f, 0.9f);
+            _myHpSlider = container.AddComponent<Slider>();
+            _myHpSlider.minValue = 0f;
+            _myHpSlider.maxValue = 1f;
+            _myHpSlider.value = 1f;
+            _myHpSlider.interactable = false;
+            _myHpSlider.direction = Slider.Direction.LeftToRight;
 
-            var fillGO = new GameObject("BarFill");
-            fillGO.transform.SetParent(bg.transform, false);
+            var bgGO = new GameObject("Background");
+            bgGO.transform.SetParent(container.transform, false);
+            var bgRect = bgGO.AddComponent<RectTransform>();
+            bgRect.anchorMin = new Vector2(0f, 0.25f);
+            bgRect.anchorMax = new Vector2(1f, 0.75f);
+            bgRect.offsetMin = Vector2.zero;
+            bgRect.offsetMax = Vector2.zero;
+            var bgImg = bgGO.AddComponent<Image>();
+            bgImg.sprite = GameSprites.Get(GameSprites.UI_BAR_BG);
+            bgImg.color = Color.white;
+
+            var fillArea = new GameObject("Fill Area");
+            fillArea.transform.SetParent(container.transform, false);
+            var faRect = fillArea.AddComponent<RectTransform>();
+            faRect.anchorMin = new Vector2(0f, 0.25f);
+            faRect.anchorMax = new Vector2(1f, 0.75f);
+            faRect.offsetMin = Vector2.zero;
+            faRect.offsetMax = Vector2.zero;
+
+            var fillGO = new GameObject("Fill");
+            fillGO.transform.SetParent(fillArea.transform, false);
             var fillRect = fillGO.AddComponent<RectTransform>();
             fillRect.anchorMin = Vector2.zero;
             fillRect.anchorMax = Vector2.one;
-            fillRect.offsetMin = new Vector2(2, 2);
-            fillRect.offsetMax = new Vector2(-2, -2);
-            _myBarFill = fillGO.AddComponent<Image>();
-            _myBarFill.type = Image.Type.Filled;
-            _myBarFill.fillMethod = Image.FillMethod.Horizontal;
-            _myBarFill.fillAmount = 1f;
-            _myBarFill.color = new Color(0.9f, 0.2f, 0.15f);
+            fillRect.offsetMin = Vector2.zero;
+            fillRect.offsetMax = Vector2.zero;
+            var fillImg = fillGO.AddComponent<Image>();
+            fillImg.sprite = GameSprites.Get(GameSprites.UI_BAR_FILL);
+            fillImg.type = Image.Type.Filled;
+            fillImg.fillMethod = Image.FillMethod.Horizontal;
+            fillImg.color = new Color(0.84f, 0f, 0f, 1f);
+
+            _myHpSlider.fillRect = fillRect;
+
+            var outlineGO = new GameObject("Outline");
+            outlineGO.transform.SetParent(container.transform, false);
+            var olRect = outlineGO.AddComponent<RectTransform>();
+            olRect.anchoredPosition = new Vector2(3.6f, 0f);
+            olRect.sizeDelta = new Vector2(620, 80);
+            var olImg = outlineGO.AddComponent<Image>();
+            olImg.sprite = GameSprites.Get(GameSprites.UI_BAR_OUTLINE);
+            olImg.raycastTarget = false;
+
+            var iconGO = new GameObject("Icon");
+            iconGO.transform.SetParent(container.transform, false);
+            var iconRect = iconGO.AddComponent<RectTransform>();
+            iconRect.anchoredPosition = new Vector2(-330.79f, -25.85f);
+            iconRect.sizeDelta = new Vector2(100, 200);
+            var iconImg = iconGO.AddComponent<Image>();
+            iconImg.sprite = GameSprites.Get(GameSprites.UI_THERMO_ICON);
+            iconImg.preserveAspect = true;
+            iconImg.raycastTarget = false;
+
+            BuildGiftLines(container.transform);
 
             _myTempText = CreateText(container.transform, "MyTemp",
-                new Vector2(0, -22), new Vector2(240, 24), "37°", 20);
-            _myTempText.alignment = TextAlignmentOptions.Left;
+                new Vector2(0, -55), new Vector2(200, 24), "37°", 20);
+            _myTempText.alignment = TextAlignmentOptions.Center;
+        }
+
+        void BuildGiftLines(Transform parent)
+        {
+            var giftRoot = new GameObject("GiftLine");
+            giftRoot.transform.SetParent(parent, false);
+            var grRect = giftRoot.AddComponent<RectTransform>();
+            grRect.anchorMin = Vector2.zero;
+            grRect.anchorMax = Vector2.one;
+            grRect.offsetMin = Vector2.zero;
+            grRect.offsetMax = Vector2.zero;
+
+            float[] xPositions = { 159.1f, 324.6f, 485.8f };
+            string[] iconNames = { GameSprites.UI_GIFT_ICON_A, GameSprites.UI_GIFT_ICON_B, GameSprites.UI_GIFT_ICON_C };
+            Vector2[] iconSizes = { new(70, 70), new(70, 35), new(35, 35) };
+            float[] iconYOffsets = { -50f, -30f, -30f };
+
+            for (int i = 0; i < 3; i++)
+            {
+                var lineGO = new GameObject($"line_{(i + 1) * 10}");
+                lineGO.transform.SetParent(giftRoot.transform, false);
+                var lineRect = lineGO.AddComponent<RectTransform>();
+                lineRect.anchorMin = new Vector2(0f, 0.5f);
+                lineRect.anchorMax = new Vector2(0f, 0.5f);
+                lineRect.pivot = new Vector2(0.5f, 0.5f);
+                lineRect.anchoredPosition = new Vector2(xPositions[i], 0f);
+                lineRect.sizeDelta = new Vector2(7.45f, 70f);
+                var lineImg = lineGO.AddComponent<Image>();
+                lineImg.sprite = GameSprites.Get(GameSprites.UI_GIFT_LINE);
+                lineImg.raycastTarget = false;
+
+                var giftGO = new GameObject("Icon_Gift");
+                giftGO.transform.SetParent(lineGO.transform, false);
+                var giftRect = giftGO.AddComponent<RectTransform>();
+                giftRect.anchoredPosition = new Vector2(0f, iconYOffsets[i]);
+                giftRect.sizeDelta = iconSizes[i];
+                var giftImg = giftGO.AddComponent<Image>();
+                giftImg.sprite = GameSprites.Get(iconNames[i]);
+                giftImg.raycastTarget = false;
+            }
         }
 
         void BuildClockTimer(Transform root)
         {
-            var container = new GameObject("ClockTimer");
+            var container = new GameObject("Timer");
             container.transform.SetParent(root, false);
             var cRect = container.AddComponent<RectTransform>();
-            cRect.anchoredPosition = new Vector2(-20, -20);
-            cRect.sizeDelta = new Vector2(120, 120);
+            cRect.anchoredPosition = new Vector2(-108, -108);
+            cRect.sizeDelta = new Vector2(204, 206);
+            cRect.localScale = new Vector3(0.7f, 0.7f, 1f);
             AnchorTopRight(cRect);
+            _timerContainerRT = cRect;
+            _timerContainerBasePos = cRect.anchoredPosition;
 
-            var clockSprite = GameSprites.Get(GameSprites.CLOCK);
-            if (clockSprite != null)
-            {
-                var clockGO = new GameObject("ClockIcon");
-                clockGO.transform.SetParent(container.transform, false);
-                var clRect = clockGO.AddComponent<RectTransform>();
-                clRect.anchoredPosition = Vector2.zero;
-                clRect.sizeDelta = new Vector2(100, 100);
-                _clockImage = clockGO.AddComponent<Image>();
-                _clockImage.sprite = clockSprite;
-                _clockImage.preserveAspect = true;
-            }
+            var timerBg = new GameObject("TimerBg");
+            timerBg.transform.SetParent(container.transform, false);
+            var tbRect = timerBg.AddComponent<RectTransform>();
+            tbRect.anchoredPosition = Vector2.zero;
+            tbRect.sizeDelta = new Vector2(204, 206);
+            _timerFillImage = timerBg.AddComponent<Image>();
+            _timerFillImage.sprite = GameSprites.Get(GameSprites.UI_TIMER_BG);
+            _timerFillImage.type = Image.Type.Filled;
+            _timerFillImage.fillMethod = Image.FillMethod.Radial360;
+            _timerFillImage.fillOrigin = 2;
+            _timerFillImage.fillClockwise = true;
+            _timerFillImage.fillAmount = 1f;
+            _timerFillImage.color = Color.white;
+            _timerFillImage.raycastTarget = false;
+
+            var sliderGO = new GameObject("Slider");
+            sliderGO.transform.SetParent(container.transform, false);
+            var slRect = sliderGO.AddComponent<RectTransform>();
+            slRect.anchoredPosition = new Vector2(-102f, -103f);
+            slRect.sizeDelta = new Vector2(204, 206);
+            _timerSliderImage = sliderGO.AddComponent<Image>();
+            _timerSliderImage.sprite = GameSprites.Get(GameSprites.UI_TIMER_BG);
+            _timerSliderImage.type = Image.Type.Filled;
+            _timerSliderImage.fillMethod = Image.FillMethod.Radial360;
+            _timerSliderImage.fillOrigin = 2;
+            _timerSliderImage.fillClockwise = true;
+            _timerSliderImage.fillAmount = 0f;
+            _timerSliderImage.color = new Color(0.18f, 0.18f, 0.18f, 1f);
+            _timerSliderImage.raycastTarget = false;
+
+            var outlineGO = new GameObject("Outline");
+            outlineGO.transform.SetParent(container.transform, false);
+            var olRect = outlineGO.AddComponent<RectTransform>();
+            olRect.anchoredPosition = Vector2.zero;
+            olRect.sizeDelta = new Vector2(261, 261);
+            var olImg = outlineGO.AddComponent<Image>();
+            olImg.sprite = GameSprites.Get(GameSprites.UI_TIMER_OUTLINE);
+            olImg.raycastTarget = false;
+
+            var lineGO = new GameObject("Line");
+            lineGO.transform.SetParent(container.transform, false);
+            var liRect = lineGO.AddComponent<RectTransform>();
+            liRect.anchoredPosition = Vector2.zero;
+            liRect.sizeDelta = new Vector2(191, 193);
+            var liImg = lineGO.AddComponent<Image>();
+            liImg.sprite = GameSprites.Get(GameSprites.UI_TIMER_LINE);
+            liImg.raycastTarget = false;
+
+            var handGO = new GameObject("ClockHand");
+            handGO.transform.SetParent(container.transform, false);
+            _clockHandRT = handGO.AddComponent<RectTransform>();
+            _clockHandRT.anchoredPosition = Vector2.zero;
+            _clockHandRT.sizeDelta = new Vector2(33, 114);
+            _clockHandRT.pivot = new Vector2(0.5f, 0.15f);
+            var handImg = handGO.AddComponent<Image>();
+            handImg.sprite = GameSprites.Get(GameSprites.UI_TIMER_HAND);
+            handImg.raycastTarget = false;
 
             _timerText = CreateText(container.transform, "TimerText",
-                new Vector2(0, -5), new Vector2(100, 60), "", 40);
+                new Vector2(0, -10), new Vector2(120, 60), "", 36);
             _timerText.color = Color.white;
             _timerText.fontStyle = FontStyles.Bold;
+
+            _timeAlarmObj = new GameObject("TimeAlarm");
+            _timeAlarmObj.transform.SetParent(root, false);
+            var alarmRect = _timeAlarmObj.AddComponent<RectTransform>();
+            alarmRect.anchoredPosition = new Vector2(0, 386);
+            alarmRect.sizeDelta = new Vector2(483, 198);
+            alarmRect.anchorMin = new Vector2(0.5f, 0.5f);
+            alarmRect.anchorMax = new Vector2(0.5f, 0.5f);
+            alarmRect.pivot = new Vector2(0.5f, 0.5f);
+            _timeAlarmImage = _timeAlarmObj.AddComponent<Image>();
+            _timeAlarmImage.sprite = GameSprites.Get(GameSprites.ALARM);
+            _timeAlarmImage.preserveAspect = true;
+            _timeAlarmImage.raycastTarget = false;
+            _timeAlarmObj.SetActive(false);
         }
 
         void BuildOppBarWorldUI()
         {
-            var canvasGO = new GameObject("OppBarWorldCanvas");
+            var canvasGO = new GameObject("EnemyCanvas");
             _oppBarCanvas = canvasGO.AddComponent<Canvas>();
             _oppBarCanvas.renderMode = RenderMode.WorldSpace;
 
             var rt = canvasGO.GetComponent<RectTransform>();
-            rt.sizeDelta = new Vector2(400, 100);
+            rt.sizeDelta = new Vector2(100, 100);
             canvasGO.transform.localScale = Vector3.one * OPP_BAR_SCALE;
 
-            var bg = new GameObject("OppBarBg");
-            bg.transform.SetParent(canvasGO.transform, false);
-            var bgRect = bg.AddComponent<RectTransform>();
-            bgRect.anchoredPosition = Vector2.zero;
-            bgRect.sizeDelta = new Vector2(360, 36);
-            var bgImg = bg.AddComponent<Image>();
-            bgImg.color = new Color(0.1f, 0.1f, 0.1f, 0.9f);
+            canvasGO.AddComponent<CanvasScaler>();
+            canvasGO.AddComponent<GraphicRaycaster>();
 
-            var fillGO = new GameObject("OppBarFill");
-            fillGO.transform.SetParent(bg.transform, false);
+            var hpBar = new GameObject("HPBar");
+            hpBar.transform.SetParent(canvasGO.transform, false);
+            var hpRect = hpBar.AddComponent<RectTransform>();
+            hpRect.anchoredPosition = Vector2.zero;
+            hpRect.sizeDelta = new Vector2(600, 100);
+
+            _oppHpSlider = hpBar.AddComponent<Slider>();
+            _oppHpSlider.minValue = 0f;
+            _oppHpSlider.maxValue = 1f;
+            _oppHpSlider.value = 1f;
+            _oppHpSlider.interactable = false;
+            _oppHpSlider.direction = Slider.Direction.LeftToRight;
+
+            var bgGO = new GameObject("Background");
+            bgGO.transform.SetParent(hpBar.transform, false);
+            var bgRect = bgGO.AddComponent<RectTransform>();
+            bgRect.anchorMin = Vector2.zero;
+            bgRect.anchorMax = Vector2.one;
+            bgRect.offsetMin = Vector2.zero;
+            bgRect.offsetMax = Vector2.zero;
+            var bgImg = bgGO.AddComponent<Image>();
+            bgImg.sprite = GameSprites.Get(GameSprites.UI_BAR_BG);
+            bgImg.color = Color.white;
+
+            var fillArea = new GameObject("Fill Area");
+            fillArea.transform.SetParent(hpBar.transform, false);
+            var faRect = fillArea.AddComponent<RectTransform>();
+            faRect.anchorMin = new Vector2(0f, 0.25f);
+            faRect.anchorMax = new Vector2(1f, 0.75f);
+            faRect.offsetMin = Vector2.zero;
+            faRect.offsetMax = Vector2.zero;
+
+            var fillGO = new GameObject("Fill");
+            fillGO.transform.SetParent(fillArea.transform, false);
             var fillRect = fillGO.AddComponent<RectTransform>();
             fillRect.anchorMin = Vector2.zero;
             fillRect.anchorMax = Vector2.one;
-            fillRect.offsetMin = new Vector2(2, 2);
-            fillRect.offsetMax = new Vector2(-2, -2);
-            _oppBarFill = fillGO.AddComponent<Image>();
-            _oppBarFill.type = Image.Type.Filled;
-            _oppBarFill.fillMethod = Image.FillMethod.Horizontal;
-            _oppBarFill.fillAmount = 1f;
-            _oppBarFill.color = new Color(0.9f, 0.2f, 0.15f);
+            fillRect.offsetMin = Vector2.zero;
+            fillRect.offsetMax = Vector2.zero;
+            var fillImg = fillGO.AddComponent<Image>();
+            fillImg.sprite = GameSprites.Get(GameSprites.UI_BAR_FILL);
+            fillImg.type = Image.Type.Filled;
+            fillImg.fillMethod = Image.FillMethod.Horizontal;
+            fillImg.color = new Color(0.84f, 0f, 0f, 1f);
+
+            _oppHpSlider.fillRect = fillRect;
+
+            var outlineGO = new GameObject("Outline");
+            outlineGO.transform.SetParent(hpBar.transform, false);
+            var olRect = outlineGO.AddComponent<RectTransform>();
+            olRect.anchoredPosition = new Vector2(3.6f, 0f);
+            olRect.sizeDelta = new Vector2(620, 80);
+            var olImg = outlineGO.AddComponent<Image>();
+            olImg.sprite = GameSprites.Get(GameSprites.UI_BAR_OUTLINE);
+            olImg.raycastTarget = false;
+
+            var iconGO = new GameObject("Icon");
+            iconGO.transform.SetParent(hpBar.transform, false);
+            var iconRect = iconGO.AddComponent<RectTransform>();
+            iconRect.anchoredPosition = new Vector2(-302f, -26f);
+            iconRect.sizeDelta = new Vector2(100, 200);
+            iconRect.localScale = new Vector3(-1f, 1f, 1f);
+            var iconImg = iconGO.AddComponent<Image>();
+            iconImg.sprite = GameSprites.Get(GameSprites.UI_THERMO_ICON);
+            iconImg.preserveAspect = true;
+            iconImg.raycastTarget = false;
 
             _oppTempText = CreateText(canvasGO.transform, "OppTemp",
-                new Vector2(0, -45), new Vector2(360, 32), "37°", 26);
+                new Vector2(0, -70), new Vector2(360, 32), "37°", 26);
         }
 
         void BuildReadyWorldUI()
@@ -749,6 +1024,8 @@ namespace AbsoluteZero.UI.Game
 
         void OnEnvironmentAnnounced(EnvironmentType env)
         {
+            StopSummerVacShake();
+
             if (_envPanel == null || _envText == null) return;
 
             string name = env switch
@@ -766,6 +1043,42 @@ namespace AbsoluteZero.UI.Game
             _envText.text = name;
             _envPanel.SetActive(true);
             StartCoroutine(HideEnvPanelAfterDelay());
+
+            if (env == EnvironmentType.SummerVacation)
+            {
+                if (_timerFillImage != null)
+                    _timerFillImage.color = new Color(1f, 0.35f, 0.25f);
+                _summerVacShaking = true;
+                _summerVacShakeCoroutine = StartCoroutine(SummerVacShakeRoutine());
+            }
+        }
+
+        void StopSummerVacShake()
+        {
+            if (_summerVacShaking)
+            {
+                _summerVacShaking = false;
+                if (_summerVacShakeCoroutine != null) StopCoroutine(_summerVacShakeCoroutine);
+                _summerVacShakeCoroutine = null;
+                if (_timerContainerRT != null)
+                    _timerContainerRT.anchoredPosition = _timerContainerBasePos;
+                if (_timerFillImage != null)
+                    _timerFillImage.color = Color.white;
+            }
+        }
+
+        IEnumerator SummerVacShakeRoutine()
+        {
+            const float amplitude = 3f;
+            const float frequency = 6f;
+            while (_summerVacShaking && _timerContainerRT != null)
+            {
+                float t = Time.time * frequency * Mathf.PI * 2f;
+                float offsetX = Mathf.Sin(t) * amplitude;
+                float offsetY = Mathf.Cos(t * 1.3f) * amplitude;
+                _timerContainerRT.anchoredPosition = _timerContainerBasePos + new Vector2(offsetX, offsetY);
+                yield return _waitSummerShake;
+            }
         }
 
         IEnumerator HideEnvPanelAfterDelay()
@@ -810,12 +1123,14 @@ namespace AbsoluteZero.UI.Game
 
             if (_resultHideCoroutine != null)
                 StopCoroutine(_resultHideCoroutine);
-            _resultHideCoroutine = StartCoroutine(HideResultAfterDelay(4f));
+            _resultHideCoroutine = StartCoroutine(HideResultAfterDelay());
         }
 
-        IEnumerator HideResultAfterDelay(float delay)
+        static readonly WaitForSeconds _waitResultHide = new(4f);
+
+        IEnumerator HideResultAfterDelay()
         {
-            yield return new WaitForSeconds(delay);
+            yield return _waitResultHide;
             if (_resultPanel != null)
                 _resultPanel.SetActive(false);
         }
@@ -868,23 +1183,6 @@ namespace AbsoluteZero.UI.Game
             rt.anchorMin = new Vector2(0.5f, 0f);
             rt.anchorMax = new Vector2(0.5f, 0f);
             rt.pivot = new Vector2(0.5f, 0f);
-        }
-
-        static Image CreateBarFill(Transform parent, string name, Color fillColor)
-        {
-            var fillGO = new GameObject(name);
-            fillGO.transform.SetParent(parent, false);
-            var fillRect = fillGO.AddComponent<RectTransform>();
-            fillRect.anchorMin = Vector2.zero;
-            fillRect.anchorMax = Vector2.one;
-            fillRect.offsetMin = Vector2.zero;
-            fillRect.offsetMax = Vector2.zero;
-            var fillImg = fillGO.AddComponent<Image>();
-            fillImg.color = fillColor;
-            fillImg.type = Image.Type.Filled;
-            fillImg.fillMethod = Image.FillMethod.Horizontal;
-            fillImg.fillAmount = 1f;
-            return fillImg;
         }
 
         static TextMeshProUGUI CreateText(Transform parent, string name,

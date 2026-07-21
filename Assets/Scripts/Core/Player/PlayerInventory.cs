@@ -125,6 +125,27 @@ namespace AbsoluteZero.Core.Player
             Debug.Log($"[ITEM] GrantRandomItems: {granted}/{count} items granted");
         }
 
+        public bool GrantSpecificItem(short itemId)
+        {
+            if (!IsServer) return false;
+            if (_itemRegistry == null || itemId < 0 || itemId >= _itemRegistry.Length) return false;
+
+            var item = _itemRegistry[itemId];
+
+            int existingSlot = FindSlotByItemId(itemId);
+            if (existingSlot >= 0 && !SlotStates[existingSlot].IsUnlimited)
+            {
+                var slot = SlotStates[existingSlot];
+                slot.RemainingUses = (byte)Mathf.Min(slot.RemainingUses + Mathf.Max(1, item.MaxUses), 254);
+                SlotStates[existingSlot] = slot;
+                return true;
+            }
+
+            if (SlotStates.Count >= MAX_SLOTS) return false;
+            SlotStates.Add(MakeSlot(itemId, item));
+            return true;
+        }
+
         ItemDataSO RollExcludingOwned(ItemDropTable dropTable)
         {
             const int MAX_ATTEMPTS = 20;

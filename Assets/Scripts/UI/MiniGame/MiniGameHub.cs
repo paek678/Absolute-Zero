@@ -81,6 +81,12 @@ namespace AbsoluteZero.UI.MiniGame
                 MiniGameType.TapRepeat => go.AddComponent<HotPackMiniGameUI>(),
                 MiniGameType.BoilWater => go.AddComponent<BuldakMiniGameUI>(),
                 MiniGameType.TightenScrews => go.AddComponent<ScrewdriverMiniGameUI>(),
+                MiniGameType.HitTargets => go.AddComponent<WaterGunMiniGameUI>(),
+                MiniGameType.ClawGrab => go.AddComponent<ClawGrabMiniGameUI>(),
+                MiniGameType.TimingCut => go.AddComponent<TapeCutMiniGameUI>(),
+                MiniGameType.PatternUnlock => go.AddComponent<PatternUnlockMiniGameUI>(),
+                MiniGameType.TapCard => go.AddComponent<RedCardMiniGameUI>(),
+                MiniGameType.HugCharacter => go.AddComponent<HugCharacterMiniGameUI>(),
                 _ => null
             };
 
@@ -92,8 +98,16 @@ namespace AbsoluteZero.UI.MiniGame
                 return;
             }
 
+            Sprite itemIcon = null;
+            var inv = _localPlayer?.GetInventory();
+            if (inv != null)
+            {
+                var data = inv.GetItemData(slotIndex);
+                if (data != null) itemIcon = data.Icon;
+            }
+
             _active.OnFinished += HandleFinished;
-            _active.Begin(slotIndex, budget, goal, _canvas.transform);
+            _active.Begin(slotIndex, budget, goal, _canvas.transform, itemIcon);
         }
 
         void HandleFinished(byte slotIndex, bool success)

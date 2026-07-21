@@ -18,7 +18,6 @@ namespace AbsoluteZero.Core.Turn
 
         [Header("Settings")]
         [SerializeField] float prepDuration = 20f;
-        [SerializeField] float roundEndDelay = 3f;
 
         static bool _debugPaused;
         public static bool DebugPaused => _debugPaused;
@@ -64,6 +63,9 @@ namespace AbsoluteZero.Core.Turn
         static readonly WaitForSeconds _waitTwo = new(2f);
         static readonly WaitForSeconds _waitThree = new(3f);
         static readonly WaitForSeconds _waitFour = new(4f);
+        static readonly WaitForSeconds _waitFive = new(5f);
+        static readonly WaitForSeconds _waitKidsSteal = new(EnvironmentVFXManager.STEAL_STAGING_DURATION);
+        static readonly WaitForSeconds _waitAmbulanceBlanket = new(EnvironmentVFXManager.BLANKET_STAGING_DURATION);
 
         public PlayerState GetPlayer(int index) => index == 0 ? _p1 : _p2;
         public PlayerModifiers[] GetModifiers() => _modifiers;
@@ -225,7 +227,9 @@ namespace AbsoluteZero.Core.Turn
 
             if (ActiveEnvironment.Value == EnvironmentType.Kids && TurnNumber.Value >= 2)
             {
-                Debug.Log("[ENV] Kids: removing 1 random item from each player");
+                Debug.Log("[ENV] Kids: steal staging + removing 1 random item from each player");
+                KidsStealStagingClientRpc();
+                yield return _waitKidsSteal;
                 RemoveRandomUnusedItem(_p1.GetInventory());
                 RemoveRandomUnusedItem(_p2.GetInventory());
             }
@@ -233,12 +237,20 @@ namespace AbsoluteZero.Core.Turn
             if (ActiveEnvironment.Value == EnvironmentType.Ambulance && TurnNumber.Value == 4)
             {
                 Debug.Log($"[ENV] Ambulance: Turn 4 triggered — P0={_p1.Temperature.Value:F1}° P1={_p2.Temperature.Value:F1}°");
-                if (_p1.Temperature.Value < _p2.Temperature.Value)
+                bool p1Lower = _p1.Temperature.Value < _p2.Temperature.Value;
+                bool p2Lower = _p2.Temperature.Value < _p1.Temperature.Value;
+                if (p1Lower || p2Lower)
+                {
+                    AmbulanceBlanketStagingClientRpc(p1Lower);
+                    yield return _waitAmbulanceBlanket;
+                }
+
+                if (p1Lower)
                 {
                     _tempSystem.ApplyHeal(_p1, 10f);
                     Debug.Log($"[ENV] Ambulance: P0 healed +10° → {_p1.Temperature.Value:F1}° (lower temp)");
                 }
-                else if (_p2.Temperature.Value < _p1.Temperature.Value)
+                else if (p2Lower)
                 {
                     _tempSystem.ApplyHeal(_p2, 10f);
                     Debug.Log($"[ENV] Ambulance: P1 healed +10° → {_p2.Temperature.Value:F1}° (lower temp)");
@@ -410,7 +422,7 @@ namespace AbsoluteZero.Core.Turn
 
             OnCombatResultClientRpc(result.ToNetData());
 
-            yield return _waitTwo;
+            yield return _waitFive;
             if (!IsSpawned) yield break;
 
             yield return StartCoroutine(ResolutionPhaseRoutine(result));
@@ -675,6 +687,23 @@ namespace AbsoluteZero.Core.Turn
         void OnCombatResultClientRpc(CombatResultData resultData)
         {
             OnCombatResult?.Invoke(resultData);
+        }
+
+        [Rpc(SendTo.Everyone)]
+        void KidsStealStagingClientRpc()
+        {
+            var vfx = EnvironmentVFXManager.Instance;
+            if (vfx != null) vfx.PlayKidsStealStaging();
+        }
+
+        [Rpc(SendTo.Everyone)]
+        void AmbulanceBlanketStagingClientRpc(bool p1IsLower)
+        {
+            var vfx = EnvironmentVFXManager.Instance;
+            if (vfx == null) return;
+            bool isLocalP1 = NetworkManager.Singleton.LocalClientId == 0;
+            bool healSelf = (p1IsLower && isLocalP1) || (!p1IsLower && !isLocalP1);
+            vfx.PlayAmbulanceBlanketStaging(healSelf);
         }
     }
 }

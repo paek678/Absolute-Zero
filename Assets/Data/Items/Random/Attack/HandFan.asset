@@ -14,15 +14,23 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AbsoluteZero.Core.Item.Data.AttackItemDataSO
   ItemName: Hand Fan
   Description: A hand fan for cooling
-  Icon: {fileID: 0}
+  Icon: {fileID: 21300000, guid: e0e340632dd30c94aaf26be57913018e, type: 3}
   Category: 0
   Persistence: 2
   SlotType: 0
   MaxUses: 1
   DropWeight: 12
+  IsFreeAction: 0
+  AnimTrigger: fan
+  OpponentAnimTrigger: attack
+  AnimDuration: 1.2
+  EffectDelay: 0.5
+  EffectHitCount: 1
+  EffectInterval: 0
   RequiresMiniGame: 0
   MiniGameType: 0
   MiniGameTimeLimit: 0
+  MiniGameGoal: 1
   Damage: 4
   AttackFilter: 0
   EqualizeToUserTemp: 0

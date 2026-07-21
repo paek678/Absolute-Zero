@@ -42,8 +42,23 @@ MonoBehaviour:
       m_Sprite: {fileID: 849999817, guid: 0f877cb0b68d0424a9704a83b5cfdff5, type: 3}
       m_FromMain: 0
       m_SpriteOverride: {fileID: 849999817, guid: 0f877cb0b68d0424a9704a83b5cfdff5, type: 3}
+    - m_Name: damage
+      m_Hash: 298341484
+      m_Sprite: {fileID: -785382517, guid: 842616ad3096a194db6a14209a9b6e8d, type: 3}
+      m_FromMain: 0
+      m_SpriteOverride: {fileID: -785382517, guid: 842616ad3096a194db6a14209a9b6e8d, type: 3}
+    - m_Name: degree20
+      m_Hash: 933491712
+      m_Sprite: {fileID: -1834986853, guid: 5e324185934bc5c4d878c8d6177b13ce, type: 3}
+      m_FromMain: 0
+      m_SpriteOverride: {fileID: -1834986853, guid: 5e324185934bc5c4d878c8d6177b13ce, type: 3}
+    - m_Name: degree10
+      m_Hash: 479111107
+      m_Sprite: {fileID: -1772750597, guid: 5e324185934bc5c4d878c8d6177b13ce, type: 3}
+      m_FromMain: 0
+      m_SpriteOverride: {fileID: -1772750597, guid: 5e324185934bc5c4d878c8d6177b13ce, type: 3}
     m_FromMain: 0
-    m_EntryOverrideCount: 5
+    m_EntryOverrideCount: 8
   - m_Name: arm_Left
     m_Hash: 934047130
     m_CategoryList: []
@@ -73,8 +88,18 @@ MonoBehaviour:
       m_Sprite: {fileID: 48834986, guid: 0f877cb0b68d0424a9704a83b5cfdff5, type: 3}
       m_FromMain: 0
       m_SpriteOverride: {fileID: 48834986, guid: 0f877cb0b68d0424a9704a83b5cfdff5, type: 3}
+    - m_Name: damage
+      m_Hash: 298341484
+      m_Sprite: {fileID: 817816771, guid: 842616ad3096a194db6a14209a9b6e8d, type: 3}
+      m_FromMain: 0
+      m_SpriteOverride: {fileID: 817816771, guid: 842616ad3096a194db6a14209a9b6e8d, type: 3}
+    - m_Name: lowDegree
+      m_Hash: 764932954
+      m_Sprite: {fileID: 512478006, guid: 5e324185934bc5c4d878c8d6177b13ce, type: 3}
+      m_FromMain: 0
+      m_SpriteOverride: {fileID: 512478006, guid: 5e324185934bc5c4d878c8d6177b13ce, type: 3}
     m_FromMain: 0
-    m_EntryOverrideCount: 5
+    m_EntryOverrideCount: 7
   - m_Name: arm_Right
     m_Hash: 670313902
     m_CategoryList: []
@@ -104,8 +129,18 @@ MonoBehaviour:
       m_Sprite: {fileID: 1205683622, guid: 0f877cb0b68d0424a9704a83b5cfdff5, type: 3}
       m_FromMain: 0
       m_SpriteOverride: {fileID: 1205683622, guid: 0f877cb0b68d0424a9704a83b5cfdff5, type: 3}
+    - m_Name: damage
+      m_Hash: 298341484
+      m_Sprite: {fileID: 1235607034, guid: 842616ad3096a194db6a14209a9b6e8d, type: 3}
+      m_FromMain: 0
+      m_SpriteOverride: {fileID: 1235607034, guid: 842616ad3096a194db6a14209a9b6e8d, type: 3}
+    - m_Name: lowDegree
+      m_Hash: 764932954
+      m_Sprite: {fileID: -2050103762, guid: 5e324185934bc5c4d878c8d6177b13ce, type: 3}
+      m_FromMain: 0
+      m_SpriteOverride: {fileID: -2050103762, guid: 5e324185934bc5c4d878c8d6177b13ce, type: 3}
     m_FromMain: 0
-    m_EntryOverrideCount: 5
+    m_EntryOverrideCount: 7
   - m_Name: item
     m_Hash: 521872670
     m_CategoryList: []
@@ -133,6 +168,22 @@ MonoBehaviour:
       m_SpriteOverride: {fileID: 1380271861, guid: b6f47e83e0f5bea4abe4facc37142e9c, type: 3}
     m_FromMain: 0
     m_EntryOverrideCount: 2
+  - m_Name: frontHair
+    m_Hash: 970358655
+    m_CategoryList: []
+    m_OverrideEntries:
+    - m_Name: default
+      m_Hash: 593363167
+      m_Sprite: {fileID: 624754778, guid: ec63200d8496c0342bcd80e1c07adb88, type: 3}
+      m_FromMain: 0
+      m_SpriteOverride: {fileID: 624754778, guid: ec63200d8496c0342bcd80e1c07adb88, type: 3}
+    - m_Name: damage
+      m_Hash: 298341484
+      m_Sprite: {fileID: 1020163795, guid: 842616ad3096a194db6a14209a9b6e8d, type: 3}
+      m_FromMain: 0
+      m_SpriteOverride: {fileID: 1020163795, guid: 842616ad3096a194db6a14209a9b6e8d, type: 3}
+    m_FromMain: 0
+    m_EntryOverrideCount: 2
   m_PrimaryLibraryGUID: 
-  m_ModificationHash: 639198986098229613
+  m_ModificationHash: 639199834350835345
   m_Version: 1

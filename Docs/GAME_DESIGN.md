@@ -69,6 +69,30 @@ Rendering: 3D background + 2D sprites on floor
 Both clients see mirrored view (my items = bottom, opponent = top)
 ```
 
+### Player Visibility
+
+| Element | Visible | Description |
+|---------|---------|-------------|
+| **Opponent character** | Full 2D sprite | Front view, all animations (attack, damage, freeze, idle, etc.) |
+| **Self character** | Hand only (TBD) | Full body hidden — first-person hand sprite for item-use animations |
+| **Network object** | Both exist | Both Player objects spawned and synced; self player's visual (body/head/hair) is hidden client-side, system logic unchanged |
+
+- System logic (NetworkObject, PlayerState, temperature, combat) runs identically for both players — visibility is purely a client-side rendering concern
+- Self player's hand animation asset is not yet created; will be added as a separate sprite/animator later
+- During Attack Phase, only the opponent character plays full-body animations (item use, damage reaction, freeze/death)
+
+### Character Architecture
+
+| Layer | Source | Description |
+|-------|--------|-------------|
+| **Visual (opponent)** | Scene-placed object | `EnemyPlayer` is pre-placed in GameScene — NOT spawned from prefab. Body, head, hair, arms, animator all included |
+| **System logic** | NetworkObject spawn | PlayerState, temperature, combat data — spawned separately as NetworkObject for sync |
+| **Linking** | Runtime reference | System logic references the scene-placed visual object; minimal binding (e.g. HP bar repositioning) |
+
+- Character visuals must NOT be instantiated from Player.prefab — use the existing scene object
+- Player.prefab is for system logic (NetworkObject + PlayerState) only, not for visual representation
+- Visual updates (animations, damage flash, freeze overlay) are driven by the system logic referencing the scene-placed character
+
 ---
 
 ## Temperature System
@@ -197,6 +221,41 @@ Appears at **2nd prep phase** of each round. Random. Resets per round.
 | **Summer Vacation** (여름방학) | Prep time: 20s → 10s | Less decision time |
 | **Heat Wave** (폭염경보) | Lower-temp player acts first | Overrides Ready-order |
 
+### Environment Variable Staging Detail
+
+> All environment variables follow the same base staging:
+> 1. Camera rotates LEFT to show surrounding environment
+> 2. Staging text appears center-screen (fade in / fade out) during camera rotation
+> 3. Each environment's unique staging plays
+> 4. Camera returns to default position
+
+| Env | Staging Text | Background Staging | Sound |
+|-----|-------------|-------------------|-------|
+| **Sunny Day** | "햇살이 더 쨍쨍해집니다." | All Light color → yellow tint, intensity UP | SFX_cicada |
+| **Cool Breeze** | "시원한 바람이 불어옵니다." | Wind particle effect appears around scene | SFX_wind |
+| **Kids** | "근처에 어린 친구들이 서성거립니다." | Kid sprite rises from below on LEFT side of pavilion | SFX_kidWhistle |
+| **Ambulance** | "근처에 응급구조원이 대기중입니다." | Ambulance sprite enters from off-screen LEFT → into view | SFX_siren |
+| **Summer Vacation** | "여름방학이 얼마 남지 않았습니다." | Timer shakes on X/Y, clock-inner SpriteRenderer color → RED | SFX_clock |
+| **Heat Wave** | "폭염경보가 발생했습니다." | All Light color → red tint, intensity UP | SFX_cicada |
+
+#### Kids — Turn 3 Special Staging
+1. Kid sprite on LEFT sinks back down (disappears)
+2. Kid sprite rises behind opponent (random item area), animation state: `ready`
+3. Animation → `steal`, play SFX_kidSteal, 1 random item consumed from BOTH players
+4. Kid sprite sinks down and disappears
+
+#### Ambulance — Turn 4 Special Staging
+**If MY temperature is lower:**
+1. Full-screen blanket drops from top → covers view (SFX_wear)
+2. Temperature recovers, blanket alpha fades to 0
+
+**If OPPONENT temperature is lower:**
+1. Rescue worker sprite rises behind opponent (next to opponent)
+2. Blanket drops from above → covers opponent (SFX_wear)
+3. Rescue worker animation `rescueA_complete` plays simultaneously
+4. Opponent temperature recovers, blanket alpha fades to 0
+5. Rescue worker sprite sinks down and disappears
+
 ---
 
 ## Item Selection Flow
@@ -249,6 +308,34 @@ Check: opponent 0°? → round end or next turn
 | Opponent 0° (final round) | Freeze → character shatters completely |
 | Self reaches 0° | Screen edges freeze → fade out → next round |
 | Self 0° (final round) | Camera rotates to opponent POV → own character shatters |
+
+### Item Staging Detail
+
+> **Global rules:**
+> - Damage/Heal → always play SFX_damaged / SFX_heal + hit/heal visual, in addition to item-specific SFX
+> - Item sprite source: (1P) FPS hand sprite, (3P) opponent-use sprite. If no 1P/3P note → use the floor item sprite
+> - All item animations play sequentially during Attack Phase (fixed rule — exceptions only when explicitly stated)
+
+| # | Item | Self (1P) | Opponent (3P) | Extra Staging |
+|---|------|-----------|---------------|---------------|
+| 1 | **부채** (Fan) | anim: `swing`, sprite: fan, dmg@0.5s/0.7s/0.9s (3 hits), SFX_swing | anim: `swing`, sprite: fan, dmg@0.3s, SFX_swing | — |
+| 2 | **바람막이** (Windbreaker) | anim: `defence`, sprite: windbreaker(1P), SFX_clothZiper | anim: `defence`, no item sprite, SFX_clothZiper | — |
+| 3 | **따뜻한 차 / 뜨.아** (WarmTea / HotAmericano) | anim: `use`, sprite: drink, heal@0.5s, SFX_drink | anim: `drink`, sprite: drink, heal@0.5s, SFX_drink | — |
+| 4 | **고양이** (Cat) | no anim, no sprite, SFX_cat (on cat movement start) | same | — |
+| 5 | **십자드라이버** (Screwdriver) | anim: `use`, sprite: screwdriver, exec@0.5s, SFX_driver | anim: `attack`, sprite: screwdriver, exec@0.5s, SFX_driver | Target fan SpriteRenderer color → blue. (Optional) Fan shakes on X/Y continuously |
+| 6 | **삼계탕** (Samgyetang) | anim: `feed`, sprite: samgyetang, dmg@0.5s, SFX_feed | anim: `attack`, sprite: samgyetang, dmg@0.5s, SFX_feed | If I→opponent: opponent plays `feed` anim + item sprite@0.5s. If opponent→me: simple heal staging only |
+| 7 | **집게손** (ClawMachine) | anim: `use`, sprite: claw, SFX_steal | anim: `attack`, sprite: claw, SFX_steal | — |
+| 8 | **아이스크림 / 아.아** (IceCream / IcedAmericano) | anim: `feed`, sprite: item, dmg@0.5s, SFX_feed | anim: `feed`, sprite: item, dmg@0.5s, SFX_feed | If I→opponent: opponent plays `feed` anim + item sprite@0.5s. If opponent→me: simple damage staging only |
+| 9 | **물총** (WaterGun) | anim: `gun`, sprite: watergun(1P), dmg@0.5s~1s, SFX_watergun | anim: `attack`, sprite: watergun(3P), dmg@0.5s~1s, SFX_watergun | (Optional) Water splash particle on hit |
+| 10 | **핫팩 / 스마트폰** (HotPack / Smartphone) | anim: `use`, sprite: item, heal@0.5s | anim: `heal`, sprite: item, heal@0.5s | No SFX |
+| 11 | **타로카드** (TarotCard) | anim: `card`, sprite: tarot, dmg@0.5s, SFX_heal | anim: `card`, sprite: tarot, dmg@0.5s, SFX_heal | Turn end blocked for 1s during animation |
+| 12 | **청테이프** (BlueTape) | anim: `tape`, no item sprite, SFX_boxtape | anim: `attack`, sprite: bluetape, SFX_boxtape | Basic items covered by "청테이프" sprite for 1 turn |
+| 13 | **마스크** (Mask) | anim: `mask`, sprite: mask(1P), SFX_wear | anim: `mask`, sprite: mask(3P), SFX_wear | Mask anim TBD — create from `playerA_idle` clip after 3P art received |
+| 14 | **손풍기** (HandFan) | anim: `fan`, sprite: handfan(1P), dmg@0.5s~1s, SFX_miniFan | anim: `attack`, sprite: handfan, dmg@0.5s~1s, SFX_miniFan | — |
+| 15 | **불닭볶음면** (BuldakNoodles) | anim: `eat`, sprite: buldak, heal@0.7s, SFX_eat (0.7s/0.9s/1.1s x3) | anim: `eat`, sprite: buldak, heal@0.7s, SFX_eat (0.7s x1) | — |
+| 16 | **탄산음료** (Soda) | anim: `use`, sprite: soda, dmg@0.5s, SFX_drink | anim: `drink`, sprite: soda, dmg@0.5s, SFX_drink | Soda damage does NOT trigger damage staging |
+| 17 | **레드카드** (RedCard) | anim: `card`, sprite: redcard, SFX_redcard | anim: `card`, sprite: redcard, SFX_redcard | If I→opponent: opponent plays `disappoint` immediately. If opponent→me: no FPS anim |
+| 18 | **안아줘요 티셔츠** (HugTshirt) | anim: `hug`, no item sprite, dmg@0.5s, SFX_hug | anim: `hug`, no item sprite, dmg@0.5s, SFX_hug | If I→opponent: camera approaches opponent until 0.5s, returns@1s. If opponent→me: opponent plays `jump` → moves toward me → plays `hug` → returns to position |
 
 ---
 

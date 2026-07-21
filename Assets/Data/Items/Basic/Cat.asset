@@ -14,13 +14,21 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AbsoluteZero.Core.Item.Data.SabotageItemDataSO
   ItemName: Cat
   Description: Cat rerolls all opponent random items
-  Icon: {fileID: 0}
+  Icon: {fileID: 21300000, guid: 06eeb138ed2fd1946a400921e6d36f33, type: 3}
   Category: 5
   Persistence: 1
   SlotType: 1
   MaxUses: 1
   DropWeight: 0
+  IsFreeAction: 0
+  AnimTrigger:
+  OpponentAnimTrigger:
+  AnimDuration: 0
+  EffectDelay: 0
+  EffectHitCount: 0
+  EffectInterval: 0
   RequiresMiniGame: 0
   MiniGameType: 0
   MiniGameTimeLimit: 0
+  MiniGameGoal: 1
   SabotageType: 0

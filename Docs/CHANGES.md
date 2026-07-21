@@ -5,6 +5,12 @@
 
 ---
 
+[2026-07-21] [Claude] [Visual] — gameGem asset migration (PLAN_012). Phase 1: 30 files copied (FPS controller/anims/sprites, kidA/rescueA NPC animators, particle sprites). Phase 2: EnvironmentVFXManager wiring (Environment/ sprite paths, kidA/rescueA Animators, steal/blanket triggers). Phase 3: FPS 1인칭 system — FPSVisualController.cs (Camera-child hand hierarchy, sprite cache, trigger play), AZPlayerVisual IsOwner FPS build, CombatVFXManager local-player FPS trigger integration. All assets moved to Resources/FPS/ for runtime load with preserved GUIDs. 0 compilation errors.
+
+[2026-07-21] [Claude] [Gameplay+Visual] — Environment variable staging implementation. EnvironmentVFXManager rewrite (Kids steal coroutines, Ambulance blanket overlay, light lerps). AZGameUI SummerVacation timer shake. TurnManager ClientRpc staging integration (KidsStealStagingClientRpc + AmbulanceBlanketStagingClientRpc with server-side yield waits). MiniGame fixes (ItemIcon property, cached WaitForSeconds, SO icon lookup). Bug fix: kid GameObject re-activation after SinkTransform. Full system verification report written (Docs/SYSTEM_VERIFICATION.md).
+
+[2026-07-20] [Claude] [Visual] — Visual & Animation Migration (PLAN_010) complete. Phase 1: BackGround prefab (pavilion structure). Phase 2: HitEffect/IceBreakEffect/FinalBreakEffect + CombatVFXManager. Phase 3: Player capsule → 2D sprite assembly (playerA.controller, 20 clips). Phase 4: Item-to-animation mapping (21 SO assets, AnimTrigger/OpponentAnimTrigger). Phase 5: UI upgrade — Slider-based HP bars (UIsprite1 sprites), circular Radial360 timer with clock hand, TimeAlarm shake, opponent world-space Slider HPBar. Phase 6: EnvironmentVFXManager (lighting lerp for SunnyDay/CoolBreeze/HeatWave, kid/ambulance sprite groups), FreezeObject 3-stage temperature visualization (freeze1/2/3).
+
 [2026-07-13] [Claude] [UI] — Lobby UI integration. AZLobbyUI (runtime-built, no Inspector wiring) with create/join/start/leave flow. TMP Essential Resources imported. NetworkManager UnityTransport wired.
 
 [2026-07-13] [Claude] [Gameplay] — Turn system greybox demo. AbsoluteZeroTurnManager (NetworkBehaviour state machine), AZGameUI (runtime-built UI with temp bars, timer, action buttons), AZPlayerVisual (temp-based capsule coloring). LobbyScene + GameScene created via MCP with all objects wired. Player prefab + NetworkPrefabsList configured.

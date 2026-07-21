@@ -14,16 +14,23 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AbsoluteZero.Core.Item.Data.SpecialItemDataSO
   ItemName: Tarot Card
   Description: Reveal opponent selection
-  Icon: {fileID: 0}
+  Icon: {fileID: 21300000, guid: d449ac55de98c8c43b79384bb2799461, type: 3}
   Category: 6
   Persistence: 2
   SlotType: 1
   MaxUses: 1
   DropWeight: 2
   IsFreeAction: 1
+  AnimTrigger: card
+  OpponentAnimTrigger: card
+  AnimDuration: 1
+  EffectDelay: 0.5
+  EffectHitCount: 1
+  EffectInterval: 0
   RequiresMiniGame: 0
   MiniGameType: 8
   MiniGameTimeLimit: 5
+  MiniGameGoal: 1
   SpecialEffect: 2
   EffectValue: 0
   TargetsSelf: 0

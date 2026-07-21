@@ -14,15 +14,23 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AbsoluteZero.Core.Item.Data.RecoveryItemDataSO
   ItemName: Smartphone
   Description: Play phone to warm hands
-  Icon: {fileID: 0}
+  Icon: {fileID: 21300000, guid: ed983f2f12c36a342bda9b8156ba52d4, type: 3}
   Category: 2
   Persistence: 2
   SlotType: 0
   MaxUses: 3
   DropWeight: 6
+  IsFreeAction: 0
+  AnimTrigger: use
+  OpponentAnimTrigger: heal
+  AnimDuration: 0.8
+  EffectDelay: 0.5
+  EffectHitCount: 1
+  EffectInterval: 0
   RequiresMiniGame: 1
   MiniGameType: 3
   MiniGameTimeLimit: 5
+  MiniGameGoal: 1
   HealPerUse:
   - 3
   - 5

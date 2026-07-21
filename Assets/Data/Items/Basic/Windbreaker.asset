@@ -14,14 +14,22 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AbsoluteZero.Core.Item.Data.DefenseItemDataSO
   ItemName: Windbreaker
   Description: Block incoming cold damage
-  Icon: {fileID: 0}
+  Icon: {fileID: 21300000, guid: ee0d0fe34d70b0947a1fd821c1536716, type: 3}
   Category: 1
   Persistence: 0
   SlotType: 0
   MaxUses: 0
   DropWeight: 0
+  IsFreeAction: 0
+  AnimTrigger: defence
+  OpponentAnimTrigger: defence
+  AnimDuration: 0.8
+  EffectDelay: 0
+  EffectHitCount: 0
+  EffectInterval: 0
   RequiresMiniGame: 0
   MiniGameType: 0
   MiniGameTimeLimit: 0
+  MiniGameGoal: 1
   BlockAmount: 4
   Filter: 0

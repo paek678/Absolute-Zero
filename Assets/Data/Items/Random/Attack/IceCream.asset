@@ -14,15 +14,23 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AbsoluteZero.Core.Item.Data.AttackItemDataSO
   ItemName: Ice Cream
   Description: Cold ice cream attack
-  Icon: {fileID: 0}
+  Icon: {fileID: 21300000, guid: 6fd5b776b70aaa148ab79073317fba67, type: 3}
   Category: 0
   Persistence: 2
   SlotType: 0
   MaxUses: 1
   DropWeight: 10
+  IsFreeAction: 0
+  AnimTrigger: feed
+  OpponentAnimTrigger: feed
+  AnimDuration: 0.8
+  EffectDelay: 0.5
+  EffectHitCount: 1
+  EffectInterval: 0
   RequiresMiniGame: 0
   MiniGameType: 0
   MiniGameTimeLimit: 0
+  MiniGameGoal: 1
   Damage: 5
   AttackFilter: 1
   EqualizeToUserTemp: 0
