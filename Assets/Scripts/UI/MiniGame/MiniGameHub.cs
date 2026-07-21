@@ -86,6 +86,7 @@ namespace AbsoluteZero.UI.MiniGame
                 MiniGameType.TimingCut => go.AddComponent<TapeCutMiniGameUI>(),
                 MiniGameType.PatternUnlock => go.AddComponent<PatternUnlockMiniGameUI>(),
                 MiniGameType.TapCard => go.AddComponent<RedCardMiniGameUI>(),
+                MiniGameType.HugCharacter => go.AddComponent<HugCharacterMiniGameUI>(),
                 _ => null
             };
 

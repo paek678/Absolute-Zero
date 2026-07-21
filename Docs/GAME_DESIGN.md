@@ -175,11 +175,11 @@ Item click → Mini-game starts (PrepPhase timer continues)
 | Claw Machine (집게손) | 7s | Timing tap | Claw moves left-right above target item. Tap when aligned | Claw grabs item at correct timing | Missed timing or time out |
 | Water Gun (물총) | 5s | Tap | 3 targets move irregularly. Tap to shoot | Hit all 3 targets in time | Missed targets or time out |
 | Hot Pack (핫팩) | **TBD (7s or 10s)** | Rapid tap | Hot Pack turns red as tapped, gauge rises. **TBD: 아이템표 10s/30tap vs 미니게임표 7s/15tap** | Reach tap count in time | Count not reached |
-| Blue Tape (청테이프) | 5s | Timing tap | Tape stretches with timing bar. Tap in green zone | Tap in green zone | Tap outside green or time out |
+| Blue Tape (청테이프) | 5s | Reaction stop | Tape unrolls from a roll and scrolls left. A green band scrolls toward a fixed cut line. Tap when the green band is on the cut line | Tap while green is on the cut line | Tap on blue, green passes the line, or time out |
 | Smartphone (스마트폰) | 5s | Drag | 3×3 dot grid, trace shown pattern (ㄱ, ㄴ, Z, etc.) | Pattern matched | Wrong pattern or time out |
 | Buldak Noodles (불닭볶음면) | 10s | Rapid tap | Pot + gauge. Tapping boils water, gauge rises | Gauge reaches 100% | Gauge incomplete |
 | Red Card (레드카드) | 5s | Tap | Yellow + red cards appear mixed. Find and tap red card | Tap red card correctly | Tap yellow or time out |
-| Hug T-shirt (안아줘요 티셔츠) | 10s | Timing tap (both sides) | Character approaches center. Tap left+right (arms) simultaneously when in hug zone | Timed correctly | Mistimed or time out |
+| Hug T-shirt (안아줘요 티셔츠) | 10s | Timing tap | Ping-pong cursor moves over a bar with a green (hug) zone at a random position. Tap when the cursor is in the green zone | Tap in green zone | Tap outside green or time out |
 
 ---
 

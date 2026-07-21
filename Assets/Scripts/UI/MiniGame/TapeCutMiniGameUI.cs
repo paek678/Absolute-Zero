@@ -1,102 +1,114 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace AbsoluteZero.UI.MiniGame
 {
     /// <summary>
-    /// 청테이프 미니게임 (TimingCut) — 왼쪽 롤에서 테이프를 쭉 뽑아내는 연출 + 왕복 커서 타이밍 바 (5초).
-    /// 테이프가 시간에 따라 점점 길어지고, 초록 영역 안에서 끊으면 성공. 배너: "끊어라!"
+    /// 청테이프 미니게임 (TimingCut) — 반응속도. 롤(왼쪽)에서 테이프가 왼쪽→오른쪽으로 풀려나가고,
+    /// 파란 테이프 표면(눈금)이 흐르며 초록 밴드가 연속으로 지나간다. 초록이 커트 라인에 왔을 때 탭 (5초).
+    /// 초록에서 탭 = 성공, 파란 부분에서 탭 = 실패, 시간 초과 = 실패. (초록 놓쳐도 다음 초록이 옴)
+    /// 배너: "끊어라!"
     /// </summary>
     public class TapeCutMiniGameUI : MiniGameUIBase
     {
         protected override string BannerText => "끊어라!";
 
-        const float BarHalf = 250f;
-        const float CursorSpeed = 430f;
-        const float GreenHalfWidth = 46f;
+        const float ScrollSpeed = 150f;     // px/s (표면·초록이 오른쪽으로 흐름)
+        const float GreenHalf = 48f;        // 초록 밴드 반폭 = 판정 반폭
+        const float Period = 260f;          // 초록 밴드 간격
+        const int BandCount = 4;
+        const int TickCount = 6;
+        const float TickGap = 120f;
+        const float TapeY = 20f;
+
+        // 마스크 컨테이너 (롤 오른쪽만 노출) — content 로컬
+        const float ContainerCenterX = 130f;
+        const float ContainerHalfW = 360f;  // 로컬 x 범위 [-360, 360]
+        const float JudgeContentX = -70f;   // 커트 라인 (롤 출구 근처)
+        float JudgeLocalX => JudgeContentX - ContainerCenterX;   // = -200
+
+        // 시작 연출: 테이프 끝단이 롤에서 오른쪽으로 쭉 뽑혀나감
+        const float TipRevealSpeed = 820f;
 
         static readonly Color TapeBlue = new(0.35f, 0.55f, 0.85f);
-        static readonly Color TapeDark = new(0.25f, 0.4f, 0.7f);
+        static readonly Color TapeGreen = new(0.25f, 0.8f, 0.35f);
         static readonly Color RollColor = new(0.28f, 0.48f, 0.78f);
 
-        const float RollX = -280f;
-        const float TapeY = 40f;
-        const float TapeStartWidth = 40f;
-        const float TapeMaxWidth = 480f;
-
-        float _cursorT;
-        float _pullT;
-        float _greenCenterX;
         bool _resolved;
-        RectTransform _cursor;
-        RectTransform _tapeRect;
-        Image _tapeImg;
-        Image _sheenImg;
+        float _rollAngle;
+        float _tipX;
+        bool _tipActive = true;
         RectTransform _rollRect;
-        Image _greenZone;
+        RectTransform _tip;
+        readonly List<RectTransform> _bands = new();
+        readonly List<RectTransform> _ticks = new();
 
         protected override void BuildContent(RectTransform content)
         {
-            // 테이프 롤 (왼쪽 원형 — 바깥 원 + 안 구멍)
-            var roll = CreateCircle(content, "Roll", new Vector2(RollX, TapeY), 90f, RollColor);
+            // ── 마스크 컨테이너 (롤 오른쪽 영역만 노출) ──
+            var containerGO = new GameObject("TapeArea");
+            containerGO.transform.SetParent(content, false);
+            var containerRect = containerGO.AddComponent<RectTransform>();
+            containerRect.anchoredPosition = new Vector2(ContainerCenterX, TapeY);
+            containerRect.sizeDelta = new Vector2(ContainerHalfW * 2f, 74f);
+            containerGO.AddComponent<RectMask2D>();
+
+            // 파란 테이프 바탕 (컨테이너 가득)
+            var baseGO = new GameObject("TapeBase");
+            baseGO.transform.SetParent(containerRect, false);
+            var baseRect = baseGO.AddComponent<RectTransform>();
+            baseRect.anchorMin = Vector2.zero;
+            baseRect.anchorMax = Vector2.one;
+            baseRect.offsetMin = Vector2.zero;
+            baseRect.offsetMax = Vector2.zero;
+            var baseImg = baseGO.AddComponent<Image>();
+            baseImg.color = TapeBlue;
+            baseImg.raycastTarget = false;
+
+            // 표면 눈금 (오른쪽으로 흐르며 테이프 이동감 표현)
+            for (int i = 0; i < TickCount; i++)
+            {
+                float localX = -ContainerHalfW + i * TickGap;
+                var tick = CreatePanel(containerRect, $"Tick{i}", new Vector2(localX, 0f),
+                    new Vector2(5f, 64f), new Color(1f, 1f, 1f, 0.12f));
+                tick.raycastTarget = false;
+                _ticks.Add(tick.rectTransform);
+            }
+
+            // 초록 밴드들 (주기적으로 배치 → 오른쪽으로 흐르며 루프)
+            for (int i = 0; i < BandCount; i++)
+            {
+                float localX = -ContainerHalfW + i * Period;
+                var band = CreatePanel(containerRect, $"Green{i}", new Vector2(localX, 0f),
+                    new Vector2(GreenHalf * 2f, 74f), TapeGreen);
+                band.raycastTarget = false;
+                _bands.Add(band.rectTransform);
+            }
+
+            // 시작 연출용 테이프 끝단 (밝은 세로 띠 — 롤에서 오른쪽으로 뽑혀나감)
+            _tipX = -ContainerHalfW;
+            var tip = CreatePanel(containerRect, "TapeTip", new Vector2(_tipX, 0f),
+                new Vector2(10f, 74f), new Color(0.85f, 0.95f, 1f));
+            tip.raycastTarget = false;
+            _tip = tip.rectTransform;
+
+            // ── 롤 (왼쪽, 밴드 위에 그려서 밑에서 나오는 느낌) ──
+            var roll = CreateCircle(content, "Roll", new Vector2(-340f, TapeY), 150f, RollColor);
             roll.raycastTarget = false;
             _rollRect = roll.rectTransform;
-            CreateCircle(roll.transform, "Hole", Vector2.zero, 28f, new Color(0.15f, 0.15f, 0.2f)).raycastTarget = false;
-            // 롤 위 광택 (슬래시 라인)
-            CreatePanel(roll.transform, "Sheen", new Vector2(8f, 12f), new Vector2(14f, 50f),
+            CreateCircle(roll.transform, "Hole", Vector2.zero, 44f, new Color(0.15f, 0.15f, 0.2f)).raycastTarget = false;
+            CreatePanel(roll.transform, "Sheen", new Vector2(10f, 16f), new Vector2(16f, 70f),
                 new Color(1f, 1f, 1f, 0.15f)).raycastTarget = false;
 
-            // 뽑아지는 테이프 (롤 오른쪽 끝에서 시작, 점점 오른쪽으로 길어짐)
-            var tapeGO = new GameObject("Tape");
-            tapeGO.transform.SetParent(content, false);
-            _tapeRect = tapeGO.AddComponent<RectTransform>();
-            _tapeRect.pivot = new Vector2(0f, 0.5f);
-            _tapeRect.anchoredPosition = new Vector2(RollX + 45f, TapeY);
-            _tapeRect.sizeDelta = new Vector2(TapeStartWidth, 36f);
-            _tapeImg = tapeGO.AddComponent<Image>();
-            _tapeImg.color = TapeBlue;
-            _tapeImg.raycastTarget = false;
+            // ── 커트 라인 (고정, 롤 출구 근처) + "여기!" 안내 ──
+            CreatePanel(content, "CutLine", new Vector2(JudgeContentX, TapeY), new Vector2(6f, 104f), Color.white)
+                .raycastTarget = false;
+            CreateText(content, "CutHint", new Vector2(JudgeContentX, TapeY + 92f), new Vector2(180f, 44f), "여기!", 32)
+                .raycastTarget = false;
 
-            // 테이프 위 광택 줄
-            var sheenGO = new GameObject("TapeSheen");
-            sheenGO.transform.SetParent(tapeGO.transform, false);
-            var sheenRect = sheenGO.AddComponent<RectTransform>();
-            sheenRect.anchorMin = new Vector2(0f, 0.65f);
-            sheenRect.anchorMax = new Vector2(1f, 0.85f);
-            sheenRect.offsetMin = new Vector2(4f, 0f);
-            sheenRect.offsetMax = new Vector2(-4f, 0f);
-            _sheenImg = sheenGO.AddComponent<Image>();
-            _sheenImg.color = new Color(1f, 1f, 1f, 0.2f);
-            _sheenImg.raycastTarget = false;
-
-            // 테이프 끝 (찢어진 가장자리 — 삼각)
-            var endGO = new GameObject("TapeEnd");
-            endGO.transform.SetParent(tapeGO.transform, false);
-            var endRect = endGO.AddComponent<RectTransform>();
-            endRect.anchorMin = new Vector2(1f, 0f);
-            endRect.anchorMax = new Vector2(1f, 1f);
-            endRect.pivot = new Vector2(0f, 0.5f);
-            endRect.sizeDelta = new Vector2(14f, 0f);
-            endRect.anchoredPosition = Vector2.zero;
-            var endImg = endGO.AddComponent<Image>();
-            endImg.color = TapeDark;
-            endImg.raycastTarget = false;
-
-            // 타이밍 바 + 초록 영역 + 커서
-            CreatePanel(content, "BarBg", new Vector2(0f, -150f), new Vector2(BarHalf * 2f + 20f, 26f),
-                new Color(0f, 0f, 0f, 0.65f)).raycastTarget = false;
-
-            _greenCenterX = Random.Range(-150f, 150f);
-            _greenZone = CreatePanel(content, "GreenZone", new Vector2(_greenCenterX, -150f),
-                new Vector2(GreenHalfWidth * 2f, 22f), new Color(0.25f, 0.8f, 0.35f));
-            _greenZone.raycastTarget = false;
-
-            var cursor = CreatePanel(content, "Cursor", new Vector2(-BarHalf, -150f), new Vector2(8f, 38f), Color.white);
-            cursor.raycastTarget = false;
-            _cursor = cursor.rectTransform;
-
-            // 화면 탭
-            var tapArea = CreatePanel(content, "TapArea", Vector2.zero, new Vector2(1920f, 1080f), new Color(0f, 0f, 0f, 0f));
+            // ── 화면 탭 ──
+            var tapArea = CreatePanel(content, "TapCatcher", Vector2.zero, new Vector2(1920f, 1080f), new Color(0f, 0f, 0f, 0f));
             var button = tapArea.gameObject.AddComponent<Button>();
             button.targetGraphic = tapArea;
             button.transition = Selectable.Transition.None;
@@ -107,24 +119,48 @@ namespace AbsoluteZero.UI.MiniGame
         {
             if (_resolved) return;
 
-            // 커서 왕복
-            _cursorT += dt * CursorSpeed;
-            var pos = _cursor.anchoredPosition;
-            pos.x = Mathf.PingPong(_cursorT, BarHalf * 2f) - BarHalf;
-            _cursor.anchoredPosition = pos;
+            float move = ScrollSpeed * dt;
+            float span = BandCount * Period;
+            float bandWrap = ContainerHalfW + GreenHalf;
 
-            // 테이프가 롤에서 뽑아지는 연출 — 시간에 따라 폭이 늘어남
-            _pullT += dt;
-            float pullProgress = Mathf.Clamp01(_pullT / 4f);
-            float tapeWidth = Mathf.Lerp(TapeStartWidth, TapeMaxWidth, pullProgress);
-            _tapeRect.sizeDelta = new Vector2(tapeWidth, 36f);
+            // 초록 밴드 스크롤 (오른쪽)
+            foreach (var band in _bands)
+            {
+                var p = band.anchoredPosition;
+                p.x += move;
+                if (p.x > bandWrap) p.x -= span;
+                band.anchoredPosition = p;
+            }
 
-            // 롤이 서서히 줄어드는 연출
-            float rollScale = 1f - 0.25f * pullProgress;
-            _rollRect.localScale = Vector3.one * rollScale;
+            // 표면 눈금 스크롤 (오른쪽)
+            float tickSpan = TickCount * TickGap;
+            float tickWrap = ContainerHalfW + 5f;
+            foreach (var tick in _ticks)
+            {
+                var p = tick.anchoredPosition;
+                p.x += move;
+                if (p.x > tickWrap) p.x -= tickSpan;
+                tick.anchoredPosition = p;
+            }
 
-            // 롤 회전 (뽑히는 느낌)
-            _rollRect.localRotation = Quaternion.Euler(0f, 0f, -_pullT * 120f);
+            // 시작 연출: 테이프 끝단이 왼쪽(롤)→오른쪽으로 쭉 뽑혀나감
+            if (_tipActive)
+            {
+                _tipX += TipRevealSpeed * dt;
+                if (_tipX >= ContainerHalfW)
+                {
+                    _tipActive = false;
+                    _tip.gameObject.SetActive(false);
+                }
+                else
+                {
+                    _tip.anchoredPosition = new Vector2(_tipX, 0f);
+                }
+            }
+
+            // 롤 회전 (풀리는 느낌)
+            _rollAngle -= move * 1.4f;
+            _rollRect.localRotation = Quaternion.Euler(0f, 0f, _rollAngle);
         }
 
         void OnTap()
@@ -132,20 +168,27 @@ namespace AbsoluteZero.UI.MiniGame
             if (_resolved) return;
             _resolved = true;
 
-            var cursorImg = _cursor.GetComponent<Image>();
-            bool inGreen = Mathf.Abs(_cursor.anchoredPosition.x - _greenCenterX) <= GreenHalfWidth;
-            if (!inGreen)
+            bool onGreen = false;
+            foreach (var band in _bands)
             {
-                cursorImg.color = new Color(0.9f, 0.3f, 0.25f);
-                PlayConfirmPop(_cursor.anchoredPosition, 120f, new Color(1f, 0.3f, 0.25f, 0.7f));
-                Finish(false);
-                return;
+                if (Mathf.Abs(band.anchoredPosition.x - JudgeLocalX) <= GreenHalf)
+                {
+                    onGreen = true;
+                    band.GetComponent<Image>().color = new Color(0.45f, 1f, 0.5f);
+                    break;
+                }
             }
 
-            cursorImg.color = new Color(0.45f, 1f, 0.5f);
-            _greenZone.color = new Color(0.45f, 1f, 0.5f);
-            PlayConfirmPop(_cursor.anchoredPosition, 150f);
-            Finish(true);
+            if (onGreen)
+            {
+                PlayConfirmPop(new Vector2(JudgeContentX, TapeY), 160f);
+                Finish(true);
+            }
+            else
+            {
+                PlayConfirmPop(new Vector2(JudgeContentX, TapeY), 120f, new Color(1f, 0.3f, 0.25f, 0.7f));
+                Finish(false);
+            }
         }
     }
 }
