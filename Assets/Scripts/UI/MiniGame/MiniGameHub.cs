@@ -81,6 +81,10 @@ namespace AbsoluteZero.UI.MiniGame
                 MiniGameType.TapRepeat => go.AddComponent<HotPackMiniGameUI>(),
                 MiniGameType.BoilWater => go.AddComponent<BuldakMiniGameUI>(),
                 MiniGameType.TightenScrews => go.AddComponent<ScrewdriverMiniGameUI>(),
+                MiniGameType.HitTargets => go.AddComponent<WaterGunMiniGameUI>(),
+                MiniGameType.ClawGrab => go.AddComponent<ClawGrabMiniGameUI>(),
+                MiniGameType.TimingCut => go.AddComponent<TapeCutMiniGameUI>(),
+                MiniGameType.PatternUnlock => go.AddComponent<PatternUnlockMiniGameUI>(),
                 _ => null
             };
 

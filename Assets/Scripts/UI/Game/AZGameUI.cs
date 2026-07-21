@@ -87,6 +87,10 @@ namespace AbsoluteZero.UI.Game
             hubGO.AddComponent<MiniGameHub>();
             MiniGameHub.OnFinishedLocal += OnMiniGameFinished;
 
+            // 개발용 지급 치트 복원 (F1~F8 — 에디터/개발 빌드 전용, 미니게임 7종 테스트용)
+            var debugGranterGO = new GameObject("DebugItemGranter");
+            debugGranterGO.AddComponent<Core.Game.DebugItemGranter>();
+
             SpawnStayItemFans();
         }
 
