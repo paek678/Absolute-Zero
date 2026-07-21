@@ -26,6 +26,8 @@ namespace AbsoluteZero.UI.MiniGame
 
         float TargetDegrees => Goal * 360f;
 
+        static float ScrewX(int index) => -190f + index * 190f;
+
         protected override void BuildContent(RectTransform content)
         {
             for (int i = 0; i < SCREW_COUNT; i++)
@@ -101,7 +103,9 @@ namespace AbsoluteZero.UI.MiniGame
 
         void CompleteCurrentScrew()
         {
+            // 나사별 완료 순간 피드백: 초록 테두리 + 초록 확인 팝
             _borders[_currentScrew].color = BorderDone;
+            PlayConfirmPop(new Vector2(ScrewX(_currentScrew), 0f), 210f);
             _currentScrew++;
 
             if (_currentScrew >= SCREW_COUNT)
