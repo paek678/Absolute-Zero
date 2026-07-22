@@ -225,7 +225,7 @@ namespace AbsoluteZero.Core.Turn
                 Debug.Log($"[ENV] SummerVacation: prep duration {prepDuration}s → {currentPrepDuration}s");
             }
 
-            if (ActiveEnvironment.Value == EnvironmentType.Kids && TurnNumber.Value >= 2)
+            if (ActiveEnvironment.Value == EnvironmentType.Kids && TurnNumber.Value >= 3)
             {
                 Debug.Log("[ENV] Kids: steal staging + removing 1 random item from each player");
                 KidsStealStagingClientRpc();
@@ -388,11 +388,6 @@ namespace AbsoluteZero.Core.Turn
                 ? _p2.GetInventory().SlotStates[q2.selectedAction.Value.SlotIndex].ItemId
                 : (short)-1;
 
-            Debug.Log($"[COMBAT] --- Executing sub items ---");
-            ExecuteSubItems(_p1, 0);
-            ExecuteSubItems(_p2, 1);
-            Debug.Log($"[COMBAT] After subs: P0={_p1.Temperature.Value:F1}° | P1={_p2.Temperature.Value:F1}°");
-
             float p1TempBeforeCombat = _p1.Temperature.Value;
             float p2TempBeforeCombat = _p2.Temperature.Value;
 
@@ -422,7 +417,14 @@ namespace AbsoluteZero.Core.Turn
 
             OnCombatResultClientRpc(result.ToNetData());
 
-            yield return _waitFive;
+            yield return _waitOne;
+            float vfxTimeout = 10f;
+            while (CombatVFXManager.Instance != null && CombatVFXManager.Instance.IsPlaying && vfxTimeout > 0f)
+            {
+                vfxTimeout -= Time.deltaTime;
+                yield return null;
+            }
+            yield return _waitOne;
             if (!IsSpawned) yield break;
 
             yield return StartCoroutine(ResolutionPhaseRoutine(result));
@@ -589,18 +591,20 @@ namespace AbsoluteZero.Core.Turn
             var cam = Camera.main;
             if (cam == null) yield break;
 
-            Quaternion startRot = cam.transform.rotation;
-            Quaternion targetRot = startRot * Quaternion.Euler(0, -25f, 0);
+            Vector3 startEuler = cam.transform.eulerAngles;
+            float startY = startEuler.y;
+            float targetY = startY - 25f;
 
             const float panDuration = 0.6f;
             float t = 0f;
             while (t < panDuration)
             {
                 t += Time.deltaTime;
-                cam.transform.rotation = Quaternion.Slerp(startRot, targetRot, t / panDuration);
+                float ratio = Mathf.SmoothStep(0f, 1f, t / panDuration);
+                cam.transform.eulerAngles = new Vector3(startEuler.x, Mathf.Lerp(startY, targetY, ratio), startEuler.z);
                 yield return null;
             }
-            cam.transform.rotation = targetRot;
+            cam.transform.eulerAngles = new Vector3(startEuler.x, targetY, startEuler.z);
 
             yield return _waitTwo;
 
@@ -608,10 +612,11 @@ namespace AbsoluteZero.Core.Turn
             while (t < panDuration)
             {
                 t += Time.deltaTime;
-                cam.transform.rotation = Quaternion.Slerp(targetRot, startRot, t / panDuration);
+                float ratio = Mathf.SmoothStep(0f, 1f, t / panDuration);
+                cam.transform.eulerAngles = new Vector3(startEuler.x, Mathf.Lerp(targetY, startY, ratio), startEuler.z);
                 yield return null;
             }
-            cam.transform.rotation = startRot;
+            cam.transform.eulerAngles = startEuler;
         }
 
         void RemoveRandomUnusedItem(PlayerInventory inventory)

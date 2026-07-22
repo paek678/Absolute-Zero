@@ -1,4 +1,6 @@
 using System.Collections;
+using AbsoluteZero.Core.Audio;
+using AbsoluteZero.Core.Common;
 using AbsoluteZero.Core.Item;
 using AbsoluteZero.Core.Item.Data;
 using AbsoluteZero.Core.Player;
@@ -16,10 +18,19 @@ namespace AbsoluteZero.Core.Combat
         [SerializeField] GameObject _iceBreakEffectPrefab;
         [SerializeField] GameObject _finalBreakEffectPrefab;
 
+        public bool IsPlaying { get; private set; }
+
         static readonly WaitForSeconds _waitIntro = new(0.5f);
         static readonly WaitForSeconds _waitBriefPause = new(0.3f);
         static readonly WaitForSeconds _waitDamageReact = new(0.7f);
-        static readonly WaitForSeconds _waitDeathSequence = new(1.6f);
+        static readonly WaitForSeconds _waitDeathSequence = new(2.5f);
+        static readonly WaitForSeconds _waitFeedHalf = new(0.5f);
+        static readonly WaitForSeconds _waitBuldak07 = new(0.7f);
+        static readonly WaitForSeconds _waitBuldak02 = new(0.2f);
+        static readonly WaitForSeconds _waitHug03 = new(0.3f);
+        static readonly WaitForSeconds _waitHug08 = new(0.8f);
+        static readonly WaitForSeconds _waitCatWake = new(0.4f);
+        static readonly WaitForSeconds _waitCatReady = new(0.3f);
 
         void Awake()
         {
@@ -46,8 +57,9 @@ namespace AbsoluteZero.Core.Combat
 
         IEnumerator PlayCombatVFXSequence(CombatResultData result)
         {
+            IsPlaying = true;
             var nm = NetworkManager.Singleton;
-            if (nm == null) yield break;
+            if (nm == null) { IsPlaying = false; yield break; }
 
             int firstIdx = result.FirstPlayerIndex;
             int secondIdx = 1 - firstIdx;
@@ -60,14 +72,21 @@ namespace AbsoluteZero.Core.Combat
                 && result.EventCount == 1
                 && result.Event0Source == (byte)firstIdx;
 
+            LogAttackTimingSummary(firstIdx, firstItemId, secondIdx, secondItemId, deadIdx);
+
             yield return _waitIntro;
 
             Debug.Log($"[CombatVFX] Sequence: first=P{firstIdx}(item={firstItemId}), second=P{secondIdx}(item={secondItemId}), deadIdx={deadIdx}");
 
+            var firstItemData = firstItemId >= 0 ? ItemManager.Instance?.GetItemData(firstItemId) : null;
+            var secondItemData = secondItemId >= 0 ? ItemManager.Instance?.GetItemData(secondItemId) : null;
+            bool secondIsDefending = secondItemData != null && secondItemData.Category == ItemCategory.Defense;
+            bool firstIsDefending = firstItemData != null && firstItemData.Category == ItemCategory.Defense;
+
             if (firstItemId >= 0)
             {
-                Debug.Log($"[CombatVFX] Playing FIRST item sequence: P{firstIdx} item={firstItemId}");
-                yield return StartCoroutine(PlayItemSequence(firstIdx, firstItemId, nm));
+                Debug.Log($"[CombatVFX] Playing FIRST item sequence: P{firstIdx} item={firstItemId}, targetDefending={secondIsDefending}");
+                yield return StartCoroutine(PlayItemSequence(firstIdx, firstItemId, nm, secondIsDefending));
             }
 
             if (firstActionKilled && deadIdx >= 0)
@@ -76,6 +95,7 @@ namespace AbsoluteZero.Core.Combat
                 var deadVisual = GetPlayerVisual(deadIdx, nm);
                 if (deadVisual != null) deadVisual.PlayDeathSequence();
                 yield return _waitDeathSequence;
+                IsPlaying = false;
                 yield break;
             }
 
@@ -84,8 +104,8 @@ namespace AbsoluteZero.Core.Combat
 
             if (secondItemId >= 0)
             {
-                Debug.Log($"[CombatVFX] Playing SECOND item sequence: P{secondIdx} item={secondItemId}");
-                yield return StartCoroutine(PlayItemSequence(secondIdx, secondItemId, nm));
+                Debug.Log($"[CombatVFX] Playing SECOND item sequence: P{secondIdx} item={secondItemId}, targetDefending={firstIsDefending}");
+                yield return StartCoroutine(PlayItemSequence(secondIdx, secondItemId, nm, firstIsDefending));
             }
 
             if (!firstActionKilled && deadIdx >= 0)
@@ -95,9 +115,11 @@ namespace AbsoluteZero.Core.Combat
                 if (deadVisual != null) deadVisual.PlayDeathSequence();
                 yield return _waitDeathSequence;
             }
+
+            IsPlaying = false;
         }
 
-        IEnumerator PlayItemSequence(int userIdx, short itemId, NetworkManager nm)
+        IEnumerator PlayItemSequence(int userIdx, short itemId, NetworkManager nm, bool targetDefending = false)
         {
             var itemData = ItemManager.Instance?.GetItemData(itemId);
             if (itemData == null)
@@ -110,19 +132,28 @@ namespace AbsoluteZero.Core.Combat
             var userVisual = GetPlayerVisual(userIdx, nm);
             var targetVisual = GetPlayerVisual(targetIdx, nm);
 
-            bool hasUserAnim = userVisual != null && !string.IsNullOrEmpty(itemData.AnimTrigger);
             bool isAttack = itemData.Category == ItemCategory.Attack;
             bool isRecovery = itemData.Category == ItemCategory.Recovery;
+            bool isLocalUser = (int)nm.LocalClientId == userIdx;
 
-            Debug.Log($"[CombatVFX] PlayItemSequence: P{userIdx} '{itemData.ItemName}' trigger='{itemData.AnimTrigger}' cat={itemData.Category} hasAnim={hasUserAnim} userVisual={userVisual != null} targetVisual={targetVisual != null}");
-            Debug.Log($"[CombatVFX]   effectDelay={itemData.EffectDelay} effectHitCount={itemData.EffectHitCount} effectInterval={itemData.EffectInterval} animDuration={itemData.AnimDuration} oppTrigger='{itemData.OpponentAnimTrigger}'");
+            string userTrigger = isLocalUser
+                ? itemData.AnimTrigger
+                : (!string.IsNullOrEmpty(itemData.OpponentAnimTrigger) ? itemData.OpponentAnimTrigger : itemData.AnimTrigger);
+            bool hasUserAnim = userVisual != null && !string.IsNullOrEmpty(userTrigger);
+
+            Debug.Log($"[CombatVFX] PlayItemSequence: P{userIdx} '{itemData.ItemName}' trigger='{userTrigger}' (1P='{itemData.AnimTrigger}' 3P='{itemData.OpponentAnimTrigger}') isLocal={isLocalUser} cat={itemData.Category}");
 
             if (hasUserAnim)
             {
-                Debug.Log($"[CombatVFX] → userVisual.PlayCombatAnimation('{itemData.AnimTrigger}')");
-                userVisual.PlayCombatAnimation(itemData.AnimTrigger);
+                Debug.Log($"[CombatVFX] → userVisual.PlayCombatAnimation('{userTrigger}')");
+                userVisual.PlayCombatAnimation(userTrigger);
 
-                bool isLocalUser = (int)nm.LocalClientId == userIdx;
+                bool isBuldak = itemData.ItemName == "Buldak Noodles";
+                if (!isBuldak)
+                    GameAudioManager.Instance?.PlayItemSfx(itemData.AnimTrigger, itemData.ItemName);
+                else
+                    StartCoroutine(PlayBuldakSfx(isLocalUser));
+
                 if (isLocalUser)
                 {
                     var fps = FPSVisualController.Instance;
@@ -130,7 +161,7 @@ namespace AbsoluteZero.Core.Combat
                     if (fps != null) fps.PlayFPSAnimation(itemData.AnimTrigger);
                 }
 
-                float animLen = GetAnimDuration(itemData, userVisual.GetAnimator());
+                float animLen = GetAnimDuration(itemData, userVisual.GetAnimator(), userTrigger);
 
                 if (itemData.EffectHitCount > 0 && itemData.EffectDelay > 0f)
                 {
@@ -141,12 +172,23 @@ namespace AbsoluteZero.Core.Combat
                     {
                         if (isAttack && targetVisual != null)
                         {
-                            targetVisual.PlayDamageFlash();
-                            PlayHitAt(GetPlayerWorldPos(targetIdx));
+                            if (targetDefending)
+                            {
+                                if (h == 0)
+                                    targetVisual.PlayCombatAnimation("defence");
+                            }
+                            else
+                            {
+                                targetVisual.PlayDamageFlash();
+                                if (!isLocalUser)
+                                    PlayHitAt(GetPlayerWorldPos(targetIdx));
+                                GameAudioManager.Instance?.PlayDamaged();
+                            }
                         }
                         else if (isRecovery && userVisual != null)
                         {
-                            PlayHitAt(GetPlayerWorldPos(userIdx));
+                            if (isLocalUser)
+                                PlayHitAt(GetPlayerWorldPos(userIdx));
                         }
 
                         if (h < itemData.EffectHitCount - 1 && itemData.EffectInterval > 0f)
@@ -171,40 +213,204 @@ namespace AbsoluteZero.Core.Combat
                     var fps = FPSVisualController.Instance;
                     if (fps != null) fps.ReturnToIdle();
                 }
+
+                if (targetDefending && targetVisual != null)
+                    targetVisual.ReturnToIdle();
+
+                if (itemData.ItemName == "Screwdriver" && targetVisual != null)
+                    TintTargetFanBlue(targetVisual);
+            }
+            else if (itemData.ItemName == "Cat")
+            {
+                yield return StartCoroutine(PlayCatSpriteSequence(userIdx, targetIdx, isLocalUser));
             }
             else if ((isAttack || isRecovery) && itemData.EffectHitCount > 0)
             {
                 if (isAttack && targetVisual != null)
                 {
-                    targetVisual.PlayDamageFlash();
-                    PlayHitAt(GetPlayerWorldPos(targetIdx));
+                    if (targetDefending)
+                    {
+                        targetVisual.PlayCombatAnimation("defence");
+                    }
+                    else
+                    {
+                        targetVisual.PlayDamageFlash();
+                        if (!isLocalUser)
+                            PlayHitAt(GetPlayerWorldPos(targetIdx));
+                        GameAudioManager.Instance?.PlayDamaged();
+                    }
                 }
                 else if (isRecovery)
                 {
-                    PlayHitAt(GetPlayerWorldPos(userIdx));
+                    if (isLocalUser)
+                        PlayHitAt(GetPlayerWorldPos(userIdx));
                 }
                 yield return _waitDamageReact;
+                if (targetDefending && targetVisual != null)
+                    targetVisual.ReturnToIdle();
             }
 
-            if (!string.IsNullOrEmpty(itemData.OpponentAnimTrigger) && targetVisual != null)
+            bool isTargetOpponent = userIdx != (int)nm.LocalClientId;
+            string itemName = itemData.ItemName;
+
+            if ((itemName == "Samgyetang" || itemName == "Ice Cream" || itemName == "Iced Americano")
+                && targetVisual != null && !isTargetOpponent)
             {
-                Debug.Log($"[CombatVFX] → opponent anim: targetVisual.PlayCombatAnimation('{itemData.OpponentAnimTrigger}')");
-                targetVisual.PlayCombatAnimation(itemData.OpponentAnimTrigger);
-                float oppLen = GetAnimDuration(itemData, targetVisual.GetAnimator());
-                yield return new WaitForSeconds(oppLen);
+                yield return StartCoroutine(PlayFeedReaction(targetVisual, targetIdx, itemName));
+            }
+            else if (itemName == "Red Card" && targetVisual != null && !isTargetOpponent)
+            {
+                targetVisual.PlayCombatAnimation("disappoint");
+                yield return _waitDamageReact;
                 targetVisual.ReturnToIdle();
+            }
+            else if (itemName == "Hug T-shirt")
+            {
+                yield return StartCoroutine(PlayHugSequence(userIdx, targetIdx, userVisual, targetVisual, isLocalUser, isTargetOpponent));
             }
 
             Debug.Log($"[CombatVFX] PlayItemSequence DONE: P{userIdx} '{itemData.ItemName}'");
         }
 
-        float GetAnimDuration(ItemDataSO itemData, Animator animator)
+        void LogAttackTimingSummary(int firstIdx, short firstItemId, int secondIdx, short secondItemId, int deadIdx)
+        {
+            Debug.Log("╔══════════════════════════════════════════════════════════════");
+            Debug.Log("║ ATTACK PHASE — TIMING SUMMARY");
+            Debug.Log("╠══════════════════════════════════════════════════════════════");
+
+            LogItemTiming("FIRST", firstIdx, firstItemId);
+            LogItemTiming("SECOND", secondIdx, secondItemId);
+
+            if (deadIdx >= 0)
+                Debug.Log($"║ DEATH: P{deadIdx} → freeze(0.33s) + hold(1.5s) + break = ~1.83s");
+
+            Debug.Log("╚══════════════════════════════════════════════════════════════");
+        }
+
+        void LogItemTiming(string order, int playerIdx, short itemId)
+        {
+            if (itemId < 0)
+            {
+                Debug.Log($"║ {order}: P{playerIdx} — NO ITEM");
+                return;
+            }
+
+            var itemData = ItemManager.Instance?.GetItemData(itemId);
+            if (itemData == null)
+            {
+                Debug.Log($"║ {order}: P{playerIdx} — itemId={itemId} DATA NOT FOUND");
+                return;
+            }
+
+            float animDur = itemData.AnimDuration > 0f ? itemData.AnimDuration : 0.8f;
+            float totalHitTime = itemData.EffectDelay + (itemData.EffectHitCount - 1) * itemData.EffectInterval;
+            float oppDur = !string.IsNullOrEmpty(itemData.OpponentAnimTrigger)
+                ? (itemData.AnimDuration > 0f ? itemData.AnimDuration : 0.8f)
+                : 0f;
+
+            Debug.Log($"║ {order}: P{playerIdx} '{itemData.ItemName}' (id={itemId})");
+            Debug.Log($"║   AnimTrigger='{itemData.AnimTrigger}' | OppTrigger='{itemData.OpponentAnimTrigger}'");
+            Debug.Log($"║   AnimDuration={animDur:F2}s | EffectDelay={itemData.EffectDelay:F2}s");
+            Debug.Log($"║   HitCount={itemData.EffectHitCount} | HitInterval={itemData.EffectInterval:F2}s | TotalHitTime={totalHitTime:F2}s");
+            Debug.Log($"║   OppAnimDuration={oppDur:F2}s | EstTotal={animDur + oppDur:F2}s");
+        }
+
+        float GetAnimDuration(ItemDataSO itemData, Animator animator, string trigger = null)
         {
             if (itemData.AnimDuration > 0f) return itemData.AnimDuration;
             if (animator == null) return 0.8f;
             animator.Update(0f);
             var info = animator.GetCurrentAnimatorStateInfo(0);
             return info.length > 0f ? info.length : 0.8f;
+        }
+
+        IEnumerator PlayCatSpriteSequence(int userIdx, int targetIdx, bool isLocalUser)
+        {
+            GameAudioManager.Instance?.PlayItemSfx("", "Cat");
+
+            var spSleep = Resources.Load<Sprite>("Cat/cat_sleep");
+            var spWakeup = Resources.Load<Sprite>("Cat/cat_wakeup");
+            var spJump = Resources.Load<Sprite>(isLocalUser ? "Cat/cat_jump" : "Cat/cat_jump2");
+            var spRummage = Resources.Load<Sprite>("Cat/cat_rummage");
+
+            if (spSleep == null) { Debug.LogWarning("[CombatVFX] Cat sprites not found"); yield break; }
+
+            var litMat = Resources.Load<Material>("sprite3DMat");
+
+            var go = new GameObject("CatAnim");
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = spSleep;
+            sr.sortingOrder = 90;
+            if (litMat != null) sr.material = litMat;
+
+            Vector3 userPos = GetPlayerWorldPos(userIdx);
+            go.transform.position = userPos + new Vector3(-0.5f, 0.3f, 0f);
+            go.transform.localScale = Vector3.one * 1.2f;
+
+            yield return _waitCatReady;
+
+            if (spWakeup != null) sr.sprite = spWakeup;
+            yield return _waitCatWake;
+
+            if (spJump != null) sr.sprite = spJump;
+
+            var targetItemRoot = isLocalUser
+                ? GameObject.Find("OppItemSpawnRoot")
+                : GameObject.Find("MyItemSpawnRoot");
+            Vector3 destPos = targetItemRoot != null
+                ? targetItemRoot.transform.position + new Vector3(0f, 0.5f, 0f)
+                : GetPlayerWorldPos(targetIdx) + new Vector3(0f, 0.3f, 0f);
+
+            Vector3 arcStart = go.transform.position;
+            bool flipX = destPos.x < arcStart.x;
+            go.transform.localScale = new Vector3(flipX ? -1.2f : 1.2f, 1.2f, 1f);
+
+            float arcDur = 0.8f;
+            float arcHeight = 2.5f;
+            float t = 0f;
+            while (t < arcDur)
+            {
+                t += Time.deltaTime;
+                float p = Mathf.Clamp01(t / arcDur);
+                Vector3 linear = Vector3.Lerp(arcStart, destPos, p);
+                float yOffset = arcHeight * 4f * p * (1f - p);
+                go.transform.position = linear + new Vector3(0f, yOffset, 0f);
+                yield return null;
+            }
+            go.transform.position = destPos;
+
+            if (spRummage != null) sr.sprite = spRummage;
+
+            float rumbleDur = 1.5f;
+            float rumbleRange = 1.2f;
+            float rumbleSpeed = 12f;
+            t = 0f;
+            while (t < rumbleDur)
+            {
+                t += Time.deltaTime;
+                float xOff = Mathf.Sin(t * rumbleSpeed) * rumbleRange;
+                go.transform.position = destPos + new Vector3(xOff, 0f, 0f);
+
+                float s = 1.2f + Mathf.Sin(t * rumbleSpeed * 2f) * 0.1f;
+                float dir = Mathf.Sin(t * rumbleSpeed) >= 0f ? 1f : -1f;
+                go.transform.localScale = new Vector3(dir * s, s, 1f);
+                yield return null;
+            }
+
+            float exitDur = 0.5f;
+            Vector3 exitStart = go.transform.position;
+            Vector3 exitEnd = exitStart + new Vector3(6f, 2f, 0f);
+            t = 0f;
+            while (t < exitDur)
+            {
+                t += Time.deltaTime;
+                float p = Mathf.Clamp01(t / exitDur);
+                go.transform.position = Vector3.Lerp(exitStart, exitEnd, p);
+                sr.color = new Color(1f, 1f, 1f, 1f - p);
+                yield return null;
+            }
+
+            Destroy(go);
         }
 
         AZPlayerVisual GetPlayerVisual(int playerIndex, NetworkManager nm)
@@ -274,6 +480,132 @@ namespace AbsoluteZero.Core.Combat
 
             var sp = GameObject.Find(playerIndex == 0 ? "SpawnPoint_1" : "SpawnPoint_2");
             return sp != null ? sp.transform.position + Vector3.up * 1.5f : Vector3.zero;
+        }
+
+        IEnumerator PlayFeedReaction(AZPlayerVisual targetVisual, int targetIdx, string itemName)
+        {
+            targetVisual.PlayCombatAnimation("feed");
+
+            var sprite = GameSprites.GetItemSprite(itemName);
+            GameObject feedSpriteGO = null;
+            if (sprite != null)
+            {
+                feedSpriteGO = new GameObject("FeedSprite");
+                var sr = feedSpriteGO.AddComponent<SpriteRenderer>();
+                sr.sprite = sprite;
+                sr.sortingOrder = 90;
+                var litMat = Resources.Load<Material>("sprite3DMat");
+                if (litMat != null) sr.material = litMat;
+                feedSpriteGO.transform.position = GetPlayerWorldPos(targetIdx) + new Vector3(0.3f, 0.5f, 0f);
+                feedSpriteGO.transform.localScale = Vector3.one * 0.8f;
+            }
+
+            yield return _waitFeedHalf;
+            yield return _waitFeedHalf;
+
+            if (feedSpriteGO != null) Destroy(feedSpriteGO);
+            targetVisual.ReturnToIdle();
+        }
+
+        IEnumerator PlayHugSequence(int userIdx, int targetIdx,
+            AZPlayerVisual userVisual, AZPlayerVisual targetVisual,
+            bool isLocalUser, bool isTargetOpponent)
+        {
+            if (isLocalUser)
+            {
+                var cam = Camera.main;
+                if (cam != null)
+                {
+                    var startPos = cam.transform.position;
+                    var targetPos = GetPlayerWorldPos(targetIdx);
+                    var approachPos = Vector3.Lerp(startPos, targetPos, 0.4f);
+
+                    float t = 0f;
+                    while (t < 0.5f)
+                    {
+                        t += Time.deltaTime;
+                        cam.transform.position = Vector3.Lerp(startPos, approachPos, Mathf.SmoothStep(0f, 1f, t / 0.5f));
+                        yield return null;
+                    }
+
+                    yield return _waitHug03;
+
+                    t = 0f;
+                    while (t < 1f)
+                    {
+                        t += Time.deltaTime;
+                        cam.transform.position = Vector3.Lerp(approachPos, startPos, Mathf.SmoothStep(0f, 1f, t / 1f));
+                        yield return null;
+                    }
+                    cam.transform.position = startPos;
+                }
+            }
+
+            if (isTargetOpponent && userVisual != null)
+            {
+                var userTf = userVisual.GetVisualRoot() ?? userVisual.transform;
+                var userStartPos = userTf.position;
+                var targetPos = GetPlayerWorldPos(targetIdx);
+
+                userVisual.PlayCombatAnimation("jump");
+                yield return _waitHug03;
+
+                float moveDur = 0.4f;
+                float t = 0f;
+                while (t < moveDur)
+                {
+                    t += Time.deltaTime;
+                    userTf.position = Vector3.Lerp(userStartPos, targetPos, Mathf.SmoothStep(0f, 1f, t / moveDur));
+                    yield return null;
+                }
+
+                userVisual.PlayCombatAnimation("hug");
+                yield return _waitHug08;
+
+                t = 0f;
+                while (t < 0.5f)
+                {
+                    t += Time.deltaTime;
+                    userTf.position = Vector3.Lerp(targetPos, userStartPos, Mathf.SmoothStep(0f, 1f, t / 0.5f));
+                    yield return null;
+                }
+                userTf.position = userStartPos;
+                userVisual.ReturnToIdle();
+            }
+        }
+
+        IEnumerator PlayBuldakSfx(bool isLocalUser)
+        {
+            yield return _waitBuldak07;
+            GameAudioManager.Instance?.PlayItemSfx("eat", "Buldak Noodles");
+            if (isLocalUser)
+            {
+                yield return _waitBuldak02;
+                GameAudioManager.Instance?.PlayItemSfx("eat", "Buldak Noodles");
+                yield return _waitBuldak02;
+                GameAudioManager.Instance?.PlayItemSfx("eat", "Buldak Noodles");
+            }
+        }
+
+        void TintTargetFanBlue(AZPlayerVisual targetVisual)
+        {
+            var root = targetVisual.GetVisualRoot();
+            if (root == null) return;
+
+            var fan = root.Find("fan");
+            if (fan == null) fan = root.Find("Fan");
+            if (fan == null)
+            {
+                Debug.LogWarning("[CombatVFX] TintTargetFanBlue: fan child not found");
+                return;
+            }
+
+            var sr = fan.GetComponent<SpriteRenderer>();
+            if (sr != null)
+            {
+                sr.color = new Color(0.4f, 0.6f, 1f);
+                Debug.Log("[CombatVFX] TintTargetFanBlue: fan color set to blue");
+            }
         }
     }
 }

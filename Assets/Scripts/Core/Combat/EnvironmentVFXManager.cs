@@ -1,4 +1,5 @@
 using System.Collections;
+using AbsoluteZero.Core.Audio;
 using AbsoluteZero.Core.Common;
 using AbsoluteZero.Core.Item;
 using AbsoluteZero.Core.Turn;
@@ -220,6 +221,7 @@ namespace AbsoluteZero.Core.Combat
             yield return StartCoroutine(RiseTransform(leftKid, stealPos, RISE_DURATION));
 
             if (kidAnim != null) { kidAnim.SetTrigger("steal"); Debug.Log("[EnvVFX] KidsSteal: trigger 'steal'"); }
+            GameAudioManager.Instance?.PlayKidSteal();
             yield return _waitStealPause;
 
             yield return StartCoroutine(SinkTransform(leftKid, stealPos, SINK_DURATION));

@@ -75,6 +75,7 @@ namespace AbsoluteZero.UI.Game
             TriggerIceboxAnimation();
             _inventory.SlotStates.OnListChanged += OnSlotStatesChanged;
             _localPlayer.HasSelectedItem.OnValueChanged += OnHasSelectedItemChanged;
+            _localPlayer.IsBasicBlocked.OnValueChanged += OnBasicBlockedChanged;
             _initialized = true;
         }
 
@@ -176,6 +177,7 @@ namespace AbsoluteZero.UI.Game
             }
 
             UpdateSelectionVisuals();
+            UpdateBannedOverlays();
         }
 
         void HandleClick()
@@ -208,8 +210,8 @@ namespace AbsoluteZero.UI.Game
             var itemData = _inventory.GetItemData(slotIndex);
             if (itemData == null) return false;
 
-            if (itemData.SlotType == ItemSlotType.Sub)
-                return true;
+            if (_localPlayer.IsBasicBlocked.Value && itemData.Persistence == ItemPersistence.Permanent)
+                return false;
 
             return !_localPlayer.HasSelectedItem.Value;
         }
@@ -260,6 +262,38 @@ namespace AbsoluteZero.UI.Game
             UpdateSelectionVisuals();
         }
 
+        void OnBasicBlockedChanged(bool oldVal, bool newVal)
+        {
+            Debug.Log($"[ItemDisplay] OnBasicBlockedChanged: {oldVal} → {newVal}");
+            UpdateBannedOverlays();
+        }
+
+        void UpdateBannedOverlays()
+        {
+            if (_views == null || _inventory == null || _localPlayer == null)
+            {
+                Debug.Log($"[ItemDisplay] UpdateBannedOverlays SKIP — views={_views != null}, inv={_inventory != null}, player={_localPlayer != null}");
+                return;
+            }
+
+            bool blocked = _localPlayer.IsBasicBlocked.Value;
+            Debug.Log($"[ItemDisplay] UpdateBannedOverlays: blocked={blocked}, viewCount={_views.Length}");
+
+            for (int i = 0; i < _views.Length; i++)
+            {
+                if (_views[i] == null) continue;
+
+                var itemData = _inventory.GetItemData(i);
+                if (itemData == null) continue;
+
+                bool isBanned = blocked && itemData.SlotType == ItemSlotType.Main;
+                Debug.Log($"[ItemDisplay] Slot {i} '{itemData.ItemName}': SlotType={itemData.SlotType}, isBanned={isBanned}");
+                _views[i].SetBanned(isBanned);
+                if (isBanned)
+                    _views[i].SetInteractable(false);
+            }
+        }
+
         void UpdateSelectionVisuals()
         {
             if (_views == null || _localPlayer == null || _inventory == null) return;
@@ -277,8 +311,12 @@ namespace AbsoluteZero.UI.Game
 
                 if (!isThisSelected)
                 {
+                    var itemData = _inventory.GetItemData(i);
+                    bool isBanned = _localPlayer.IsBasicBlocked.Value
+                                    && itemData != null
+                                    && itemData.SlotType == ItemSlotType.Main;
                     bool usable = i < _inventory.SlotStates.Count && _inventory.SlotStates[i].IsUsable;
-                    _views[i].SetInteractable(!hasSelected && usable);
+                    _views[i].SetInteractable(!isBanned && !hasSelected && usable);
                 }
             }
         }
@@ -343,7 +381,10 @@ namespace AbsoluteZero.UI.Game
                 _inventory.SlotStates.OnListChanged -= OnSlotStatesChanged;
 
             if (_localPlayer != null)
+            {
                 _localPlayer.HasSelectedItem.OnValueChanged -= OnHasSelectedItemChanged;
+                _localPlayer.IsBasicBlocked.OnValueChanged -= OnBasicBlockedChanged;
+            }
 
             if (_views != null)
             {

@@ -17,13 +17,13 @@ MonoBehaviour:
   Icon: {fileID: 21300000, guid: 06eeb138ed2fd1946a400921e6d36f33, type: 3}
   Category: 5
   Persistence: 1
-  SlotType: 1
+  SlotType: 0
   MaxUses: 1
   DropWeight: 0
   IsFreeAction: 0
   AnimTrigger:
   OpponentAnimTrigger:
-  AnimDuration: 0
+  AnimDuration: 1.5
   EffectDelay: 0
   EffectHitCount: 0
   EffectInterval: 0

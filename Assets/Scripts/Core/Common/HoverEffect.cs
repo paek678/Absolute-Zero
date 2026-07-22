@@ -1,3 +1,4 @@
+using AbsoluteZero.Core.Audio;
 using UnityEngine;
 
 namespace AbsoluteZero.Core.Common
@@ -37,6 +38,9 @@ namespace AbsoluteZero.Core.Common
 
         public void SetHovered(bool hovered)
         {
+            if (hovered && !_isHovered)
+                GameAudioManager.Instance?.PlayHover();
+
             _isHovered = hovered;
             if (_isSelected || _outlineRenderer == null) return;
             _outlineRenderer.color = HoverOutlineColor;

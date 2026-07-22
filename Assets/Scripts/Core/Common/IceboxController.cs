@@ -1,4 +1,5 @@
 using System.Collections;
+using AbsoluteZero.Core.Audio;
 using UnityEngine;
 
 namespace AbsoluteZero.Core.Common
@@ -147,6 +148,8 @@ namespace AbsoluteZero.Core.Common
 
             if (_iceboxAnimator != null)
                 _iceboxAnimator.SetBool(IsOpenHash, true);
+
+            GameAudioManager.Instance?.PlayBoxOpen();
 
             if (_iceboxParticle != null)
             {

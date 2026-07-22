@@ -116,12 +116,7 @@ namespace AbsoluteZero.Core.Player
                 return;
             }
 
-            if (itemData.SlotType == ItemSlotType.Sub && _actionQueue.hasUsedSub)
-            {
-                Debug.Log($"[PlayerState P{SyncedPlayerIndex.Value}] SelectItem rejected: already used sub this turn");
-                return;
-            }
-            if (itemData.SlotType != ItemSlotType.Sub && HasSelectedItem.Value)
+            if (HasSelectedItem.Value)
             {
                 Debug.Log($"[PlayerState P{SyncedPlayerIndex.Value}] SelectItem rejected: already selected an item this turn");
                 return;
@@ -143,57 +138,24 @@ namespace AbsoluteZero.Core.Player
                 return;
             }
 
-            if (itemData.SlotType == ItemSlotType.Sub)
-            {
-                if (itemData.IsFreeAction)
-                {
-                    ExecuteFreeAction(slotIndex, itemData, ctx);
-                    Turn.TurnManager.Instance.OnItemUsedClientRpc(
-                        (byte)SyncedPlayerIndex.Value, slotIndex, (byte)itemData.Category, true);
-                    return;
-                }
-
-                ServerQueueItem(slotIndex, itemData);
-            }
-            else
-            {
-                ServerQueueItem(slotIndex, itemData);
-            }
+            ServerQueueItem(slotIndex, itemData);
         }
 
         void ServerQueueItem(byte slotIndex, ItemDataSO itemData)
         {
-            if (itemData.SlotType == ItemSlotType.Sub)
+            if (HasSelectedItem.Value)
             {
-                if (_actionQueue.hasUsedSub)
-                {
-                    Debug.Log($"[PlayerState P{SyncedPlayerIndex.Value}] Queue rejected: already used sub this turn");
-                    return;
-                }
-
-                _actionQueue.SetSub(slotIndex, itemData);
-
-                Debug.Log($"[PlayerState P{SyncedPlayerIndex.Value}] Sub item queued: {itemData.ItemName} (executes at attack start)");
-
-                Turn.TurnManager.Instance.OnItemUsedClientRpc(
-                    (byte)SyncedPlayerIndex.Value, slotIndex, (byte)itemData.Category, true);
+                Debug.Log($"[PlayerState P{SyncedPlayerIndex.Value}] Queue rejected: already selected an item this turn");
+                return;
             }
-            else
-            {
-                if (HasSelectedItem.Value)
-                {
-                    Debug.Log($"[PlayerState P{SyncedPlayerIndex.Value}] Queue rejected: already selected an item this turn");
-                    return;
-                }
 
-                _actionQueue.SetSelected(slotIndex, itemData);
-                HasSelectedItem.Value = true;
+            _actionQueue.SetSelected(slotIndex, itemData);
+            HasSelectedItem.Value = true;
 
-                Debug.Log($"[PlayerState P{SyncedPlayerIndex.Value}] Main item selected: {itemData.ItemName} (queued for Attack)");
+            Debug.Log($"[PlayerState P{SyncedPlayerIndex.Value}] Item selected: {itemData.ItemName} (queued for Attack)");
 
-                Turn.TurnManager.Instance.OnItemUsedClientRpc(
-                    (byte)SyncedPlayerIndex.Value, slotIndex, (byte)itemData.Category, false);
-            }
+            Turn.TurnManager.Instance.OnItemUsedClientRpc(
+                (byte)SyncedPlayerIndex.Value, slotIndex, (byte)itemData.Category, false);
         }
 
         [Rpc(SendTo.Owner)]

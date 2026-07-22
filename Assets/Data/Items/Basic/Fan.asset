@@ -23,7 +23,7 @@ MonoBehaviour:
   IsFreeAction: 0
   AnimTrigger: swing
   OpponentAnimTrigger: swing
-  AnimDuration: 1
+  AnimDuration: 1.5
   EffectDelay: 0.5
   EffectHitCount: 3
   EffectInterval: 0.2

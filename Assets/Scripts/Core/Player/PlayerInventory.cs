@@ -181,10 +181,12 @@ namespace AbsoluteZero.Core.Player
             if (!IsServer) return;
             if (dropTable == null || dropTable.IsEmpty) return;
 
-            Debug.Log($"[ITEM] RerollAllRandom: rerolling non-unlimited slots");
+            Debug.Log($"[ITEM] RerollAllRandom: rerolling Sub slots only");
             for (int i = 0; i < SlotStates.Count; i++)
             {
                 if (SlotStates[i].IsEmpty || SlotStates[i].IsUnlimited) continue;
+                var existingItem = GetItemData(i);
+                if (existingItem == null || existingItem.SlotType != Item.ItemSlotType.Sub) continue;
 
                 string oldName = GetItemData(i)?.ItemName ?? $"id={SlotStates[i].ItemId}";
                 var newItem = dropTable.Roll();

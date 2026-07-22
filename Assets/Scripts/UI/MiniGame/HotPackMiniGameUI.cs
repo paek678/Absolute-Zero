@@ -23,7 +23,7 @@ namespace AbsoluteZero.UI.MiniGame
         {
             // 아이콘이 곧 탭 대상 — 히트박스는 아이콘보다 넉넉하게
             var (button, icon) = CreateIconTapTarget(content, "PackTap",
-                new Vector2(0f, -20f), new Vector2(400f, 400f), new Vector2(250f, 250f),
+                new Vector2(0f, -20f), new Vector2(400f, 400f), new Vector2(1250f, 1250f),
                 ItemIcon, ColdColor);
             _packIcon = icon;
             button.onClick.AddListener(OnTap);

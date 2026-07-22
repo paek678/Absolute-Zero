@@ -10,6 +10,7 @@ namespace AbsoluteZero.Core.Item
         public HoverEffect Hover { get; private set; }
 
         SpriteRenderer _mainSprite;
+        SpriteRenderer _bannedOverlay;
         TextMesh _label;
         Material _litMat;
 
@@ -52,12 +53,29 @@ namespace AbsoluteZero.Core.Item
 
             Hover = gameObject.AddComponent<HoverEffect>();
             Hover.Initialize();
+
+            var bannedGO = new GameObject("BannedOverlay");
+            bannedGO.transform.SetParent(transform, false);
+            bannedGO.transform.localPosition = new Vector3(0f, 0f, -0.02f);
+            _bannedOverlay = bannedGO.AddComponent<SpriteRenderer>();
+            var bannedTex = Resources.Load<Sprite>("banned_tape");
+            if (bannedTex != null) _bannedOverlay.sprite = bannedTex;
+            if (_litMat != null) _bannedOverlay.material = _litMat;
+            _bannedOverlay.sortingOrder = 7;
+            bannedGO.SetActive(false);
         }
 
         public void SetInteractable(bool interactable)
         {
             if (_mainSprite == null) return;
             _mainSprite.color = interactable ? Color.white : new Color(1f, 1f, 1f, 0.35f);
+        }
+
+        public void SetBanned(bool banned)
+        {
+            Debug.Log($"[ItemView] SetBanned({banned}) on '{gameObject.name}', overlay={_bannedOverlay != null}, sprite={(_bannedOverlay != null ? (_bannedOverlay.sprite != null).ToString() : "N/A")}");
+            if (_bannedOverlay != null)
+                _bannedOverlay.gameObject.SetActive(banned);
         }
 
         public void UpdateDisplay(string itemName, string usesText, bool usable)

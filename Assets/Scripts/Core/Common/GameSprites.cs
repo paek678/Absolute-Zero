@@ -44,6 +44,10 @@ namespace AbsoluteZero.Core.Common
         public const string UI_BTN_0 = "UIsprite1_0";
         public const string UI_BTN_1 = "UIsprite1_1";
 
+        // Button sprites
+        public const string BTN_DEFAULT = "btn_default";
+        public const string BTN_PRESSED = "btn_pressed";
+
         // Alarm sprite
         public const string ALARM = "attacktime_0";
 
@@ -61,6 +65,12 @@ namespace AbsoluteZero.Core.Common
             var alarmSprites = Resources.LoadAll<Sprite>("attacktime");
             foreach (var s in alarmSprites)
                 _lookup[s.name] = s;
+
+            var btnDefault = Resources.Load<Sprite>("btn_default");
+            if (btnDefault != null) _lookup[btnDefault.name] = btnDefault;
+
+            var btnPressed = Resources.Load<Sprite>("btn_pressed");
+            if (btnPressed != null) _lookup[btnPressed.name] = btnPressed;
         }
 
         public static Sprite Get(string name)
@@ -86,6 +96,8 @@ namespace AbsoluteZero.Core.Common
             { "Tarot Card", "TarotCard" },
             { "Hot Pack", "HotPack" },
             { "Smartphone", "Smartphone" },
+            { "Water Gun", "WaterGun" },
+            { "Red Card", "RedCard" },
         };
 
         static readonly Dictionary<string, Sprite> _itemSpriteCache = new();

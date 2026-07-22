@@ -26,7 +26,7 @@ namespace AbsoluteZero.UI.MiniGame
         {
             // 냄비 아이콘이 곧 탭 대상
             var (button, icon) = CreateIconTapTarget(content, "PotTap",
-                new Vector2(0f, 0f), new Vector2(380f, 340f), new Vector2(230f, 200f),
+                new Vector2(0f, 0f), new Vector2(380f, 340f), new Vector2(1150f, 1000f),
                 ItemIcon, PotCold);
             _potIcon = icon;
             button.onClick.AddListener(OnTap);

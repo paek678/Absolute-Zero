@@ -23,7 +23,7 @@ MonoBehaviour:
   IsFreeAction: 1
   AnimTrigger: card
   OpponentAnimTrigger: card
-  AnimDuration: 1
+  AnimDuration: 1.5
   EffectDelay: 0.5
   EffectHitCount: 1
   EffectInterval: 0

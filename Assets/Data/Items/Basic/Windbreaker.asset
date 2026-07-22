@@ -23,7 +23,7 @@ MonoBehaviour:
   IsFreeAction: 0
   AnimTrigger: defence
   OpponentAnimTrigger: defence
-  AnimDuration: 0.8
+  AnimDuration: 1.5
   EffectDelay: 0
   EffectHitCount: 0
   EffectInterval: 0

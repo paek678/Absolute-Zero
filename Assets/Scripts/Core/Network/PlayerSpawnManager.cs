@@ -240,7 +240,15 @@ namespace AbsoluteZero.Core.Network
             if (resolvedSpawnPoints.Count > 0)
             {
                 int index = (int)(clientId % (ulong)resolvedSpawnPoints.Count);
-                return resolvedSpawnPoints[index].position;
+                if (resolvedSpawnPoints[index] != null)
+                    return resolvedSpawnPoints[index].position;
+
+                resolvedSpawnPoints.RemoveAll(t => t == null);
+                if (resolvedSpawnPoints.Count > 0)
+                {
+                    index = (int)(clientId % (ulong)resolvedSpawnPoints.Count);
+                    return resolvedSpawnPoints[index].position;
+                }
             }
 
             return GetFallbackSpawn(clientId);

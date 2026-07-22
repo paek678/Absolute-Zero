@@ -1,4 +1,5 @@
 using System.Collections;
+using AbsoluteZero.Core.Audio;
 using AbsoluteZero.Core.Combat;
 using AbsoluteZero.Core.Common;
 using AbsoluteZero.Core.Item;
@@ -42,15 +43,19 @@ namespace AbsoluteZero.UI.Game
         Canvas _oppBarCanvas;
         TextMeshProUGUI _oppTempText;
         Slider _oppHpSlider;
+        Image _myHpFillImage;
+        Image _oppHpFillImage;
 
         Canvas _readyCanvas;
         Button _readyButton;
+        Image _readyButtonImage;
 
         GameObject _gameOverPanel;
         TextMeshProUGUI _gameOverText;
 
         ItemWorldDisplay _worldDisplay;
         GameObject[] _oppItemObjects;
+        PlayerInventory _oppInventory;
         bool _oppItemsSpawned;
 
         TextMeshProUGUI _stackText;
@@ -77,8 +82,13 @@ namespace AbsoluteZero.UI.Game
         static readonly WaitForSeconds _waitAlarmShake = new(0.05f);
         static readonly WaitForSeconds _waitSummerShake = new(0.016f);
 
+        static readonly Color HP_COLOR_GREEN = new(0.39f, 0.78f, 0.31f, 1f);
+        static readonly Color HP_COLOR_PINK = new(0.90f, 0.47f, 0.59f, 1f);
+        static readonly Color HP_COLOR_SKY = new(0.39f, 0.71f, 0.92f, 1f);
+        static readonly Color HP_COLOR_BLUE = new(0.20f, 0.39f, 0.86f, 1f);
+
         static readonly Vector3 OPP_BAR_LOCAL_OFFSET = new(0f, 2.2f, 0f);
-        static readonly Vector3 READY_BTN_POS = new(0f, 0.05f, 1.2f);
+        static readonly Vector3 READY_BTN_POS = new(0f, 0.35f, 1.2f);
         const float WORLD_CANVAS_SCALE = 0.005f;
         const float OPP_BAR_SCALE = 0.007f;
         const int ALARM_TIME_THRESHOLD = 5;
@@ -108,6 +118,7 @@ namespace AbsoluteZero.UI.Game
 #endif
 
             SpawnStayItemFans();
+            EnsureAudioManager();
         }
 
         void SpawnStayItemFans()
@@ -132,6 +143,15 @@ namespace AbsoluteZero.UI.Game
                 sr.sortingOrder = 3;
                 if (litMat != null) sr.material = litMat;
             }
+        }
+
+        void EnsureAudioManager()
+        {
+            if (GameAudioManager.Instance != null) return;
+            var go = new GameObject("GameAudioManager");
+            go.AddComponent<GameAudioManager>();
+            DontDestroyOnLoad(go);
+            GameAudioManager.Instance?.PlayBGM();
         }
 
         void Update()
@@ -175,8 +195,18 @@ namespace AbsoluteZero.UI.Game
                 _localPlayer.HasSelectedItem.OnValueChanged -= OnHasSelectedItemChanged;
             MiniGameHub.OnFinishedLocal -= OnMiniGameFinished;
             StopSummerVacShake();
+
+            if (GameAudioManager.Instance != null)
+            {
+                GameAudioManager.Instance.StopFanLoop();
+                GameAudioManager.Instance.StopClockTick();
+                GameAudioManager.Instance.StopEnvironment();
+                GameAudioManager.Instance.StopBGM();
+            }
             if (_worldDisplay != null)
                 _worldDisplay.OnWorldItemClicked -= OnItemClicked;
+            if (_oppInventory != null)
+                _oppInventory.SlotStates.OnListChanged -= OnOppSlotStatesChanged;
             if (_oppItemObjects != null)
             {
                 foreach (var go in _oppItemObjects)
@@ -258,7 +288,17 @@ namespace AbsoluteZero.UI.Game
             };
 
             if (_readyCanvas != null)
+            {
                 _readyCanvas.gameObject.SetActive(newPhase == TurnPhase.PrepPhase);
+                if (newPhase == TurnPhase.PrepPhase)
+                {
+                    var defaultSprite = GameSprites.Get(GameSprites.BTN_DEFAULT);
+                    if (_readyButtonImage != null && defaultSprite != null)
+                        _readyButtonImage.sprite = defaultSprite;
+                    if (_readyButton != null)
+                        _readyButton.interactable = true;
+                }
+            }
 
             if (newPhase == TurnPhase.PrepPhase)
             {
@@ -268,14 +308,18 @@ namespace AbsoluteZero.UI.Game
                 _selectedMainName = null;
                 _selectedSubName = null;
                 UpdateStackDisplay();
+                GameAudioManager.Instance?.StartFanLoop();
             }
             else if (newPhase == TurnPhase.AttackPhase)
             {
                 _statusText.text = "Resolving...";
                 _gameOverPanel.SetActive(false);
+                GameAudioManager.Instance?.StopFanLoop();
             }
             else if (newPhase == TurnPhase.RoundOver)
             {
+                GameAudioManager.Instance?.StopFanLoop();
+                GameAudioManager.Instance?.StopEnvironment();
                 Invoke(nameof(ShowRoundResult), 0.15f);
             }
         }
@@ -326,7 +370,6 @@ namespace AbsoluteZero.UI.Game
             if (_tm == null || _tm.CurrentPhase.Value != TurnPhase.PrepPhase)
             {
                 _timerText.text = "";
-                if (_timerFillImage != null) _timerFillImage.fillAmount = 1f;
                 if (_timerSliderImage != null) _timerSliderImage.fillAmount = 0f;
                 if (_clockHandRT != null) _clockHandRT.localRotation = Quaternion.identity;
                 SetAlarmActive(false);
@@ -339,8 +382,6 @@ namespace AbsoluteZero.UI.Game
 
             _timerText.text = $"{remaining}";
 
-            if (_timerFillImage != null)
-                _timerFillImage.fillAmount = ratio;
             if (_timerSliderImage != null)
                 _timerSliderImage.fillAmount = 1f - ratio;
             if (_clockHandRT != null)
@@ -363,12 +404,14 @@ namespace AbsoluteZero.UI.Game
                 _timeAlarmObj.SetActive(true);
                 _alarmShaking = true;
                 _alarmCoroutine = StartCoroutine(AlarmShakeRoutine());
+                GameAudioManager.Instance?.PlayClockTick();
             }
             else if (!active && _alarmShaking)
             {
                 _alarmShaking = false;
                 if (_alarmCoroutine != null) StopCoroutine(_alarmCoroutine);
                 _timeAlarmObj.SetActive(false);
+                GameAudioManager.Instance?.StopClockTick();
             }
         }
 
@@ -394,6 +437,8 @@ namespace AbsoluteZero.UI.Game
                 _myTempText.text = $"{myT:F0}°";
                 if (_myHpSlider != null)
                     _myHpSlider.value = Mathf.Clamp01(myT / 37f);
+                if (_myHpFillImage != null)
+                    _myHpFillImage.color = GetTempColor(myT);
             }
 
             var opp = GetOpponentPlayer();
@@ -403,7 +448,29 @@ namespace AbsoluteZero.UI.Game
                 _oppTempText.text = $"{oppT:F0}°";
                 if (_oppHpSlider != null)
                     _oppHpSlider.value = Mathf.Clamp01(oppT / 37f);
+                if (_oppHpFillImage != null)
+                    _oppHpFillImage.color = GetTempColor(oppT);
             }
+        }
+
+        static Color GetTempColor(float temp)
+        {
+            if (temp >= 30f)
+            {
+                float t = Mathf.InverseLerp(37f, 30f, temp);
+                return Color.Lerp(HP_COLOR_GREEN, HP_COLOR_PINK, t);
+            }
+            if (temp >= 20f)
+            {
+                float t = Mathf.InverseLerp(30f, 20f, temp);
+                return Color.Lerp(HP_COLOR_PINK, HP_COLOR_SKY, t);
+            }
+            if (temp >= 10f)
+            {
+                float t = Mathf.InverseLerp(20f, 10f, temp);
+                return Color.Lerp(HP_COLOR_SKY, HP_COLOR_BLUE, t);
+            }
+            return HP_COLOR_BLUE;
         }
 
         void UpdateScoreDisplay()
@@ -464,26 +531,26 @@ namespace AbsoluteZero.UI.Game
             var itemData = inv.GetItemData(slotIndex);
             if (itemData == null) return;
 
-            if (_localPlayer.HasSelectedItem.Value && itemData.SlotType != ItemSlotType.Sub)
+            if (_localPlayer.HasSelectedItem.Value)
                 return;
 
+            GameAudioManager.Instance?.PlayButtonClick();
             _localPlayer.SelectItemServerRpc((byte)slotIndex);
             _worldDisplay?.NotifyItemConfirmed(slotIndex);
 
-            if (itemData.SlotType == ItemSlotType.Sub)
-                _selectedSubName = itemData.ItemName;
-            else
-                _selectedMainName = itemData.ItemName;
+            _selectedMainName = itemData.ItemName;
 
             UpdateStackDisplay();
 
-            _statusText.text = itemData.IsInstantUse
-                ? $"Used: {itemData.ItemName}"
-                : $"Selected: {itemData.ItemName}";
+            _statusText.text = $"Selected: {itemData.ItemName}";
         }
 
         void OnReadyClicked()
         {
+            if (HoverRaycaster.Instance != null && HoverRaycaster.Instance.CurrentHovered != null)
+                return;
+
+            GameAudioManager.Instance?.PlayButtonClick();
             if (_localPlayer == null) return;
             if (MiniGameHub.IsRunning) return;
 
@@ -491,12 +558,18 @@ namespace AbsoluteZero.UI.Game
             _statusText.text = _localPlayer.HasSelectedItem.Value
                 ? "Ready!"
                 : "Ready! (No action)";
-            if (_readyCanvas != null)
-                _readyCanvas.gameObject.SetActive(false);
+
+            var pressedSprite = GameSprites.Get(GameSprites.BTN_PRESSED);
+            if (_readyButtonImage != null && pressedSprite != null)
+                _readyButtonImage.sprite = pressedSprite;
+
+            if (_readyButton != null)
+                _readyButton.interactable = false;
         }
 
         void OnBackToLobbyClicked()
         {
+            GameAudioManager.Instance?.PlayButtonClick();
             var sessionManager = Core.Network.SessionManager.Instance;
             if (sessionManager != null)
                 sessionManager.Disconnect();
@@ -513,32 +586,59 @@ namespace AbsoluteZero.UI.Game
 
             ItemManager.Instance.InitializeClientRegistry(inv);
 
-            int count = inv.SlotStates.Count;
-            _oppItemObjects = new GameObject[count];
-            var litMat = Resources.Load<Material>("sprite3DMat");
+            _oppInventory = inv;
+            _oppInventory.SlotStates.OnListChanged += OnOppSlotStatesChanged;
 
-            for (int i = 0; i < count; i++)
+            RebuildOpponentItems();
+            _oppItemsSpawned = true;
+        }
+
+        void OnOppSlotStatesChanged(NetworkListEvent<ItemSlotNetData> changeEvent)
+        {
+            RebuildOpponentItems();
+        }
+
+        void RebuildOpponentItems()
+        {
+            if (_oppInventory == null) return;
+
+            if (_oppItemObjects != null)
             {
-                var itemData = inv.GetItemData(i);
+                foreach (var go in _oppItemObjects)
+                    if (go != null) Destroy(go);
+            }
+
+            int slotCount = _oppInventory.SlotStates.Count;
+            var litMat = Resources.Load<Material>("sprite3DMat");
+            var activeItems = new System.Collections.Generic.List<GameObject>();
+
+            for (int i = 0; i < slotCount; i++)
+            {
+                var slot = _oppInventory.SlotStates[i];
+                if (slot.IsEmpty) continue;
+
+                var itemData = _oppInventory.GetItemData(i);
                 if (itemData == null) continue;
 
-                var marker = GameObject.Find($"EnemyItem{i + 1}");
-                if (marker == null) continue;
-
                 string itemName = itemData.ItemName;
-
-                var go = new GameObject($"OppItem_{i}_{itemName}");
-                go.transform.position = marker.transform.position;
+                var go = new GameObject($"OppItem_{activeItems.Count}_{itemName}");
 
                 var sr = go.AddComponent<SpriteRenderer>();
                 sr.sprite = GameSprites.GetItemSprite(itemName);
                 if (litMat != null) sr.material = litMat;
                 sr.sortingOrder = 5;
 
-                _oppItemObjects[i] = go;
+                activeItems.Add(go);
             }
 
-            _oppItemsSpawned = true;
+            for (int i = 0; i < activeItems.Count; i++)
+            {
+                var marker = GameObject.Find($"EnemyItem{i + 1}");
+                if (marker != null)
+                    activeItems[i].transform.position = marker.transform.position;
+            }
+
+            _oppItemObjects = activeItems.ToArray();
         }
 
         #region UI Construction
@@ -655,7 +755,8 @@ namespace AbsoluteZero.UI.Game
             fillImg.sprite = GameSprites.Get(GameSprites.UI_BAR_FILL);
             fillImg.type = Image.Type.Filled;
             fillImg.fillMethod = Image.FillMethod.Horizontal;
-            fillImg.color = new Color(0.84f, 0f, 0f, 1f);
+            fillImg.color = HP_COLOR_GREEN;
+            _myHpFillImage = fillImg;
 
             _myHpSlider.fillRect = fillRect;
 
@@ -744,18 +845,15 @@ namespace AbsoluteZero.UI.Game
             tbRect.sizeDelta = new Vector2(204, 206);
             _timerFillImage = timerBg.AddComponent<Image>();
             _timerFillImage.sprite = GameSprites.Get(GameSprites.UI_TIMER_BG);
-            _timerFillImage.type = Image.Type.Filled;
-            _timerFillImage.fillMethod = Image.FillMethod.Radial360;
-            _timerFillImage.fillOrigin = 2;
-            _timerFillImage.fillClockwise = true;
-            _timerFillImage.fillAmount = 1f;
+            _timerFillImage.type = Image.Type.Simple;
+            _timerFillImage.preserveAspect = true;
             _timerFillImage.color = Color.white;
             _timerFillImage.raycastTarget = false;
 
             var sliderGO = new GameObject("Slider");
             sliderGO.transform.SetParent(container.transform, false);
             var slRect = sliderGO.AddComponent<RectTransform>();
-            slRect.anchoredPosition = new Vector2(-102f, -103f);
+            slRect.anchoredPosition = Vector2.zero;
             slRect.sizeDelta = new Vector2(204, 206);
             _timerSliderImage = sliderGO.AddComponent<Image>();
             _timerSliderImage.sprite = GameSprites.Get(GameSprites.UI_TIMER_BG);
@@ -871,7 +969,8 @@ namespace AbsoluteZero.UI.Game
             fillImg.sprite = GameSprites.Get(GameSprites.UI_BAR_FILL);
             fillImg.type = Image.Type.Filled;
             fillImg.fillMethod = Image.FillMethod.Horizontal;
-            fillImg.color = new Color(0.84f, 0f, 0f, 1f);
+            fillImg.color = HP_COLOR_GREEN;
+            _oppHpFillImage = fillImg;
 
             _oppHpSlider.fillRect = fillRect;
 
@@ -895,8 +994,37 @@ namespace AbsoluteZero.UI.Game
             iconImg.preserveAspect = true;
             iconImg.raycastTarget = false;
 
+            BuildOppDividerLines(hpBar.transform);
+
             _oppTempText = CreateText(canvasGO.transform, "OppTemp",
                 new Vector2(0, -70), new Vector2(360, 32), "37°", 26);
+        }
+
+        void BuildOppDividerLines(Transform parent)
+        {
+            var root = new GameObject("DividerLines");
+            root.transform.SetParent(parent, false);
+            var rootRect = root.AddComponent<RectTransform>();
+            rootRect.anchorMin = Vector2.zero;
+            rootRect.anchorMax = Vector2.one;
+            rootRect.offsetMin = Vector2.zero;
+            rootRect.offsetMax = Vector2.zero;
+
+            float[] xPositions = { 159.1f, 324.6f, 485.8f };
+            for (int i = 0; i < 3; i++)
+            {
+                var lineGO = new GameObject($"line_{(i + 1) * 10}");
+                lineGO.transform.SetParent(root.transform, false);
+                var lineRect = lineGO.AddComponent<RectTransform>();
+                lineRect.anchorMin = new Vector2(0f, 0.5f);
+                lineRect.anchorMax = new Vector2(0f, 0.5f);
+                lineRect.pivot = new Vector2(0.5f, 0.5f);
+                lineRect.anchoredPosition = new Vector2(xPositions[i], 0f);
+                lineRect.sizeDelta = new Vector2(7.45f, 70f);
+                var lineImg = lineGO.AddComponent<Image>();
+                lineImg.sprite = GameSprites.Get(GameSprites.UI_GIFT_LINE);
+                lineImg.raycastTarget = false;
+            }
         }
 
         void BuildReadyWorldUI()
@@ -913,12 +1041,12 @@ namespace AbsoluteZero.UI.Game
 
             canvasGO.AddComponent<GraphicRaycaster>();
 
-            var readySprite = GameSprites.Get(GameSprites.READY_TEXT);
+            var readySprite = GameSprites.Get(GameSprites.BTN_DEFAULT);
             var btnGO = new GameObject("ReadyBtn");
             btnGO.transform.SetParent(canvasGO.transform, false);
             var btnRect = btnGO.AddComponent<RectTransform>();
             btnRect.anchoredPosition = Vector2.zero;
-            btnRect.sizeDelta = new Vector2(280, 160);
+            btnRect.sizeDelta = new Vector2(560, 320);
 
             var btnImg = btnGO.AddComponent<Image>();
             if (readySprite != null)
@@ -931,6 +1059,7 @@ namespace AbsoluteZero.UI.Game
                 btnImg.color = new Color(0.5f, 0.5f, 0.2f);
             }
 
+            _readyButtonImage = btnImg;
             _readyButton = btnGO.AddComponent<Button>();
             _readyButton.targetGraphic = btnImg;
             _readyButton.onClick.AddListener(OnReadyClicked);
@@ -1043,6 +1172,8 @@ namespace AbsoluteZero.UI.Game
             _envText.text = name;
             _envPanel.SetActive(true);
             StartCoroutine(HideEnvPanelAfterDelay());
+
+            GameAudioManager.Instance?.PlayEnvironment(env);
 
             if (env == EnvironmentType.SummerVacation)
             {

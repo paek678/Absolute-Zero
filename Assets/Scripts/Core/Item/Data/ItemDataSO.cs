@@ -45,7 +45,7 @@ namespace AbsoluteZero.Core.Item.Data
 
         public virtual bool CanUse(ItemContext ctx)
         {
-            if (ctx.User.IsBasicBlocked.Value && Persistence != ItemPersistence.RandomConsumable)
+            if (ctx.User.IsBasicBlocked.Value && SlotType == ItemSlotType.Main)
                 return false;
             return true;
         }

@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using AbsoluteZero.Core.Audio;
 using AbsoluteZero.Core.Combat;
 using AbsoluteZero.Core.Common;
 using Unity.Netcode;
@@ -16,6 +17,10 @@ namespace AbsoluteZero.Core.Player
             { "tape", "attack" },
             { "fan", "swing" },
             { "mask", "defence" },
+            { "feed", "attack" },
+            { "disappoint", "damage" },
+            { "jump", "attack" },
+            { "hug", "attack" },
         };
 
         Transform _visualRoot;
@@ -27,6 +32,7 @@ namespace AbsoluteZero.Core.Player
         Coroutine _animEndCoroutine;
 
         SpriteRenderer _freezeRenderer;
+        SpriteRenderer _fanRenderer;
         Sprite _freeze1;
         Sprite _freeze2;
         Sprite _freeze3;
@@ -35,6 +41,7 @@ namespace AbsoluteZero.Core.Player
         readonly WaitForSeconds _waitAnimEnd = new(0.6f);
         static readonly WaitForSeconds _waitFreezeTick = new(0.167f);
         static readonly WaitForSeconds _waitFreezeHold = new(1.5f);
+        static readonly WaitForSeconds _waitBreakHide = new(0.4f);
         static readonly int FlashAmount = Shader.PropertyToID("_FlashAmount");
         static readonly int IsWindHash = Animator.StringToHash("isWind");
 
@@ -71,6 +78,11 @@ namespace AbsoluteZero.Core.Player
                 _cachedMaterials[i] = _spriteRenderers[i].material;
 
             Debug.Log($"[PlayerVisual] EnemyPlayer: {_spriteRenderers.Length} sprite renderers found");
+
+            var fanChild = _visualRoot.Find("fan") ?? _visualRoot.Find("Fan");
+            if (fanChild != null)
+                _fanRenderer = fanChild.GetComponent<SpriteRenderer>();
+
             BuildFreezeObject(_visualRoot);
         }
 
@@ -189,6 +201,9 @@ namespace AbsoluteZero.Core.Player
                     _spriteRenderers[i].color = tint;
             }
 
+            if (_fanRenderer != null && _playerState.IsFanUpgraded.Value)
+                _fanRenderer.color = new Color(0.4f, 0.6f, 1f);
+
             if (_animator != null)
                 _animator.SetBool(IsWindHash, _playerState.IsFanActive.Value);
 
@@ -199,13 +214,33 @@ namespace AbsoluteZero.Core.Player
         public void PlayDeathSequence()
         {
             Debug.Log("[PlayerVisual] PlayDeathSequence START");
+
+            if (_flashCoroutine != null)
+            {
+                StopCoroutine(_flashCoroutine);
+                _flashCoroutine = null;
+                SetFlashAmount(0f);
+            }
+            if (_animEndCoroutine != null)
+            {
+                StopCoroutine(_animEndCoroutine);
+                _animEndCoroutine = null;
+            }
+
+            if (_animator != null)
+                _animator.SetTrigger("end");
+
             StartCoroutine(DeathRoutine());
         }
 
         IEnumerator DeathRoutine()
         {
+            yield return null;
+
             if (_animator != null)
                 _animator.SetTrigger("freeze");
+
+            GameAudioManager.Instance?.PlayFreeze();
 
             if (_freezeRenderer != null)
             {
@@ -224,8 +259,27 @@ namespace AbsoluteZero.Core.Player
 
             yield return _waitFreezeHold;
 
+            GameAudioManager.Instance?.PlayIceBreak();
             CameraShake.Instance?.Shake(0.5f, 0.3f);
             CombatVFXManager.Instance?.PlayFinalBreakAt(GetVisualPosition());
+
+            if (_freezeRenderer != null)
+                _freezeRenderer.gameObject.SetActive(false);
+
+            Vector3 savedPos = Vector3.zero;
+            if (_visualRoot != null)
+            {
+                savedPos = _visualRoot.position;
+                _visualRoot.position = new Vector3(0f, -100f, 0f);
+            }
+
+            yield return _waitBreakHide;
+
+            if (_visualRoot != null)
+                _visualRoot.position = savedPos;
+
+            if (_animator != null)
+                _animator.SetTrigger("end");
         }
 
         public void PlayCombatAnimation(string triggerName)
@@ -276,6 +330,8 @@ namespace AbsoluteZero.Core.Player
         }
 
         public Animator GetAnimator() => _animator;
+
+        public Transform GetVisualRoot() => _visualRoot;
 
         public Vector3 GetVisualPosition() =>
             _visualRoot != null ? _visualRoot.position : transform.position;
