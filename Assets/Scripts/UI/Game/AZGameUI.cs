@@ -123,25 +123,74 @@ namespace AbsoluteZero.UI.Game
 
         void SpawnStayItemFans()
         {
-            var fanSprite = GameSprites.GetStayItemSprite();
-            if (fanSprite == null) return;
+            // 새 선풍기 아트 (몸체 + 회전 날개 + 정면 그릴). 없으면 기존 플레이스홀더로 폴백.
+            var bodySprite = Resources.Load<Sprite>("Fan/fan_body");
+            var bladesSprite = Resources.Load<Sprite>("Fan/fan_blades");
+            var grilleSprite = Resources.Load<Sprite>("Fan/fan_grille");
+            var fallback = GameSprites.GetStayItemSprite();
+
+            // ── 선풍기 미세조정 값 (FanTestScene에서 맞춘 값) ──
+            const float fanLift = 1.4f;                             // 테이블에 안 박히게 위로 올리는 높이
+            var bladesPos = new Vector3(-0.23f, 0.6f, -0.01f);      // 날개 위치 (몸체 로컬)
+            var bladesScale = new Vector3(1.2f, 1.2f, 1f);          // 날개 크기
+            const float bladesTiltY = 35f;                          // 날개 Y 기울기 (3/4 뷰 원근감)
+            var grillePos = new Vector3(-0.16f, 0.59f, -0.02f);     // 뚜껑 위치 (몸체 로컬)
+            var grilleScale = new Vector3(0.92f, 1.02f, 1f);        // 뚜껑 크기
 
             var litMat = Resources.Load<Material>("sprite3DMat");
-            string[] markerNames = { "PlayerStayItem", "EnemyStayItem" };
+            // 마커별 바인딩: 내 선풍기 = 로컬(-1), 상대 선풍기 = 상대(-2)
+            var markers = new (string name, int playerIndex)[]
+            {
+                ("PlayerStayItem", -1),
+                ("EnemyStayItem", -2),
+            };
 
-            foreach (var name in markerNames)
+            foreach (var (name, playerIndex) in markers)
             {
                 var marker = GameObject.Find(name);
                 if (marker == null) continue;
 
                 var go = new GameObject($"{name}_Fan");
                 go.transform.SetParent(marker.transform, false);
-                go.transform.localPosition = Vector3.zero;
+                go.transform.localPosition = new Vector3(0f, fanLift, 0f);   // 위로 올려 테이블에 안 박히게
 
-                var sr = go.AddComponent<SpriteRenderer>();
-                sr.sprite = fanSprite;
-                sr.sortingOrder = 3;
-                if (litMat != null) sr.material = litMat;
+                var bodySr = go.AddComponent<SpriteRenderer>();
+                bodySr.sprite = bodySprite != null ? bodySprite : fallback;
+                bodySr.sortingOrder = 3;
+                if (litMat != null) bodySr.material = litMat;
+
+                // 새 아트가 있으면 회전 날개 + 정면 그릴(뚜껑) 조립
+                if (bodySprite != null && bladesSprite != null)
+                {
+                    // 날개 (그릴 뒤에서 회전) — Y 기울기 후 로컬 Z축 회전이라 원근감 유지된 채 깔끔히 돔
+                    var blades = new GameObject("Blades");
+                    blades.transform.SetParent(go.transform, false);
+                    blades.transform.localPosition = bladesPos;
+                    blades.transform.localScale = bladesScale;
+                    blades.transform.localRotation = Quaternion.Euler(0f, bladesTiltY, 0f);
+
+                    var bladeSr = blades.AddComponent<SpriteRenderer>();
+                    bladeSr.sprite = bladesSprite;
+                    bladeSr.sortingOrder = 4;
+                    if (litMat != null) bladeSr.material = litMat;
+
+                    var spinner = go.AddComponent<AbsoluteZero.Core.Common.FanBladeSpinner>();
+                    spinner.Bind(blades.transform, playerIndex);
+
+                    // 그릴(뚜껑) — 날개 앞 정적 커버
+                    if (grilleSprite != null)
+                    {
+                        var grille = new GameObject("Grille");
+                        grille.transform.SetParent(go.transform, false);
+                        grille.transform.localPosition = grillePos;
+                        grille.transform.localScale = grilleScale;
+
+                        var grilleSr = grille.AddComponent<SpriteRenderer>();
+                        grilleSr.sprite = grilleSprite;
+                        grilleSr.sortingOrder = 5;
+                        if (litMat != null) grilleSr.material = litMat;
+                    }
+                }
             }
         }
 
