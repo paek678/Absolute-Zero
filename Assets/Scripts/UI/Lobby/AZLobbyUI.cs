@@ -376,6 +376,18 @@ namespace AbsoluteZero.UI.LobbyUI
             AppendLog(msg);
         }
 
+        private void CopyLobbyCode()
+        {
+            string code = lobbyCodeText != null ? lobbyCodeText.text : "";
+            if (string.IsNullOrEmpty(code) || code == "------")
+            {
+                SetLobbyStatus("No lobby code to copy yet.");
+                return;
+            }
+            GUIUtility.systemCopyBuffer = code;
+            SetLobbyStatus($"Copied lobby code: {code}");
+        }
+
         private void AppendLog(string msg)
         {
             if (logText == null) return;
@@ -482,12 +494,18 @@ namespace AbsoluteZero.UI.LobbyUI
                 new Vector2(0, 280), new Vector2(400, 40), "LOBBY", 32);
 
             CreateText(lobbyPanel.transform, "CodeLabel",
-                new Vector2(0, 235), new Vector2(200, 25), "Lobby Code:", 16,
+                new Vector2(0, 235), new Vector2(300, 25), "Lobby Code (click to copy):", 16,
                 new Color(0.6f, 0.6f, 0.7f));
 
             lobbyCodeText = CreateText(lobbyPanel.transform, "LobbyCode",
                 new Vector2(0, 200), new Vector2(300, 50), "------", 40);
             lobbyCodeText.color = new Color(1f, 0.9f, 0.4f);
+
+            // 코드 클릭 시 클립보드로 복사
+            var codeBtn = lobbyCodeText.gameObject.AddComponent<Button>();
+            codeBtn.targetGraphic = lobbyCodeText;
+            codeBtn.transition = Selectable.Transition.None;
+            codeBtn.onClick.AddListener(CopyLobbyCode);
 
             CreateText(lobbyPanel.transform, "PlayersLabel",
                 new Vector2(0, 155), new Vector2(200, 25), "Players:", 18,

@@ -136,6 +136,13 @@ namespace AbsoluteZero.Core.Combat
             bool isRecovery = itemData.Category == ItemCategory.Recovery;
             bool isLocalUser = (int)nm.LocalClientId == userIdx;
 
+            // 버프/디버프는 공격/회복 브랜치를 안 타므로 여기서 화면 VFX 처리 (의도 기준):
+            // 내가 버프(불닭 등 자힐) 사용 → 온기 / 상대가 나에게 디버프(삼계탕 등) → 서리
+            if (isLocalUser && itemData.Category == ItemCategory.Buff)
+                ScreenVFXManager.Instance.PlayRecoveryVFX();
+            else if (!isLocalUser && itemData.Category == ItemCategory.Debuff)
+                ScreenVFXManager.Instance.PlayHitVFX();
+
             string userTrigger = isLocalUser
                 ? itemData.AnimTrigger
                 : (!string.IsNullOrEmpty(itemData.OpponentAnimTrigger) ? itemData.OpponentAnimTrigger : itemData.AnimTrigger);
@@ -181,14 +188,20 @@ namespace AbsoluteZero.Core.Combat
                             {
                                 targetVisual.PlayDamageFlash();
                                 if (!isLocalUser)
+                                {
                                     PlayHitAt(GetPlayerWorldPos(targetIdx));
+                                    if (h == 0) ScreenVFXManager.Instance.PlayHitVFX();   // 내가 맞음 → 서리 화면 플래시
+                                }
                                 GameAudioManager.Instance?.PlayDamaged();
                             }
                         }
                         else if (isRecovery && userVisual != null)
                         {
                             if (isLocalUser)
+                            {
                                 PlayHitAt(GetPlayerWorldPos(userIdx));
+                                if (h == 0) ScreenVFXManager.Instance.PlayRecoveryVFX();   // 내가 회복 → 온기 화면 플래시
+                            }
                         }
 
                         if (h < itemData.EffectHitCount - 1 && itemData.EffectInterval > 0f)
@@ -236,14 +249,20 @@ namespace AbsoluteZero.Core.Combat
                     {
                         targetVisual.PlayDamageFlash();
                         if (!isLocalUser)
+                        {
                             PlayHitAt(GetPlayerWorldPos(targetIdx));
+                            ScreenVFXManager.Instance.PlayHitVFX();   // 내가 맞음 → 서리 화면 플래시
+                        }
                         GameAudioManager.Instance?.PlayDamaged();
                     }
                 }
                 else if (isRecovery)
                 {
                     if (isLocalUser)
+                    {
                         PlayHitAt(GetPlayerWorldPos(userIdx));
+                        ScreenVFXManager.Instance.PlayRecoveryVFX();   // 내가 회복 → 온기 화면 플래시
+                    }
                 }
                 yield return _waitDamageReact;
                 if (targetDefending && targetVisual != null)
