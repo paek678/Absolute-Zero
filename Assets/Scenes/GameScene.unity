@@ -560,6 +560,10 @@ PrefabInstance:
       propertyPath: m_Sprite
       value: 
       objectReference: {fileID: -1513238855, guid: ec63200d8496c0342bcd80e1c07adb88, type: 3}
+    - target: {fileID: 2112920071372760126, guid: f50978330683ed644aba43c168f59809, type: 3}
+      propertyPath: m_SortingOrder
+      value: 20
+      objectReference: {fileID: 0}
     - target: {fileID: 4304703149368884041, guid: f50978330683ed644aba43c168f59809, type: 3}
       propertyPath: m_Name
       value: EnemyPlayer
