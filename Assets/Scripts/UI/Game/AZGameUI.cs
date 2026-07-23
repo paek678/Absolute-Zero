@@ -1086,6 +1086,10 @@ namespace AbsoluteZero.UI.Game
             _readyButton = btnGO.AddComponent<Button>();
             _readyButton.targetGraphic = btnImg;
             _readyButton.onClick.AddListener(OnReadyClicked);
+
+            // 도발 이모티콘 휠 — 준비 완료 후 버튼을 눌러 부채꼴로 이모지 선택 (자체적으로 RPC 전송)
+            btnGO.AddComponent<AbsoluteZero.UI.Emote.EmoteWheel>();
+
             _readyCanvas.gameObject.SetActive(false);
         }
 

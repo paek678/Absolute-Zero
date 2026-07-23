@@ -32,6 +32,10 @@ namespace AbsoluteZero.Core.Player
         public readonly NetworkVariable<bool> IsBasicBlocked = new(
             false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
+        // 기본 영구 아이템(부채/바람막이) 연속 사용 방지 — 사용 시 다음 턴 영구 아이템 잠금
+        public readonly NetworkVariable<bool> IsPermanentLocked = new(
+            false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
         readonly ActionQueue _actionQueue = new();
         PlayerInventory _inventory;
 
@@ -262,6 +266,39 @@ namespace AbsoluteZero.Core.Player
             IsFanActive.Value = false;
 
             Debug.Log($"[PlayerState P{SyncedPlayerIndex.Value}] Ready pressed (hasItem={HasSelectedItem.Value})");
+        }
+
+        // ─── 도발 이모티콘 ──────────────────────────────────────
+
+        double _lastEmoteServerTime = -100.0;
+        /// <summary>서버 기준 마지막 도발 발동 시각 (공격 시작 지연 판정용).</summary>
+        public double LastEmoteServerTime => _lastEmoteServerTime;
+
+        [Rpc(SendTo.Server)]
+        public void SendEmoteServerRpc(byte emoteId, RpcParams rpcParams = default)
+        {
+            if (!IsServer) return;
+            var tm = Turn.TurnManager.Instance;
+            if (tm == null || !tm.AcceptEmotes) return;   // 프렙 진행 중 & 공격 시작 지연 전만
+            if (emoteId >= Emote.EmoteCatalog.Count) return;
+
+            _lastEmoteServerTime = NetworkManager.ServerTime.Time;
+            ShowEmoteClientRpc(emoteId);
+        }
+
+        [Rpc(SendTo.Everyone)]
+        void ShowEmoteClientRpc(byte emoteId)
+        {
+            // 보낸 사람 자신의 화면엔 월드 버블 생략 — 로컬 플레이어는 1인칭이라 유효한 월드 앵커가 없고
+            // (netTransform 폴백은 클라 로컬 좌석과 불일치해 오배치됨), 이미 로컬 확인 팝으로 대체됨.
+            if (IsOwner) return;
+
+            // 상대 화면: enemy visual 루트에만 앵커 (없으면 표시 생략, 폴백 금지)
+            var visual = GetComponent<AZPlayerVisual>();
+            Transform root = visual != null ? visual.GetVisualRoot() : null;
+            if (root == null) return;
+
+            Emote.EmoteBubble.Show(root, root.position, emoteId);
         }
     }
 }

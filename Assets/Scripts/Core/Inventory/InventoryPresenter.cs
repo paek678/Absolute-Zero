@@ -143,6 +143,7 @@ namespace AbsoluteZero.Core.Inventory
             _localInventory.SlotStates.OnListChanged += OnLocalSlotStatesChanged;
             _localPlayer.HasSelectedItem.OnValueChanged += OnHasSelectedItemChanged;
             _localPlayer.IsBasicBlocked.OnValueChanged += OnBasicBlockedChanged;
+            _localPlayer.IsPermanentLocked.OnValueChanged += OnBasicBlockedChanged;
 
             _localBound = true;
 
@@ -200,6 +201,7 @@ namespace AbsoluteZero.Core.Inventory
             {
                 _localPlayer.HasSelectedItem.OnValueChanged -= OnHasSelectedItemChanged;
                 _localPlayer.IsBasicBlocked.OnValueChanged -= OnBasicBlockedChanged;
+                _localPlayer.IsPermanentLocked.OnValueChanged -= OnBasicBlockedChanged;
             }
 
             _localBound = false;
@@ -297,7 +299,8 @@ namespace AbsoluteZero.Core.Inventory
 
         void OnBasicBlockedChanged(bool oldVal, bool newVal)
         {
-            Debug.Log($"[InventoryPresenter] BasicBlocked: {oldVal} → {newVal}");
+            // IsBasicBlocked(청테이프) / IsPermanentLocked(영구 연속사용) 공용 리프레시
+            Debug.Log($"[InventoryPresenter] Block state changed: {oldVal} → {newVal}");
             UpdateBannedOverlays();
             OnBannedStateChanged?.Invoke();
         }
@@ -467,9 +470,9 @@ namespace AbsoluteZero.Core.Inventory
                 if (!isThisSelected)
                 {
                     var itemData = _localInventory.GetItemData(i);
-                    bool isBanned = _localPlayer.IsBasicBlocked.Value
-                                    && itemData != null
-                                    && itemData.SlotType == ItemSlotType.Main;
+                    bool isBanned = itemData != null
+                                    && ((_localPlayer.IsBasicBlocked.Value && itemData.SlotType == ItemSlotType.Main)
+                                        || (_localPlayer.IsPermanentLocked.Value && itemData.Persistence == ItemPersistence.Permanent));
                     bool usable = i < _localInventory.SlotStates.Count && _localInventory.SlotStates[i].IsUsable;
                     _localViews[i].SetInteractable(!isBanned && !hasSelected && usable);
                 }
@@ -481,6 +484,7 @@ namespace AbsoluteZero.Core.Inventory
             if (_localViews == null || _localInventory == null || _localPlayer == null) return;
 
             bool blocked = _localPlayer.IsBasicBlocked.Value;
+            bool permLocked = _localPlayer.IsPermanentLocked.Value;
 
             for (int i = 0; i < _localViews.Length; i++)
             {
@@ -489,7 +493,8 @@ namespace AbsoluteZero.Core.Inventory
                 var itemData = _localInventory.GetItemData(i);
                 if (itemData == null) continue;
 
-                bool isBanned = blocked && itemData.SlotType == ItemSlotType.Main;
+                bool isBanned = (blocked && itemData.SlotType == ItemSlotType.Main)
+                                || (permLocked && itemData.Persistence == ItemPersistence.Permanent);
                 _localViews[i].SetBanned(isBanned);
                 if (isBanned)
                     _localViews[i].SetInteractable(false);
@@ -529,6 +534,8 @@ namespace AbsoluteZero.Core.Inventory
             if (itemData == null) return false;
 
             if (_localPlayer.IsBasicBlocked.Value && itemData.Persistence == ItemPersistence.Permanent)
+                return false;
+            if (_localPlayer.IsPermanentLocked.Value && itemData.Persistence == ItemPersistence.Permanent)
                 return false;
 
             return !_localPlayer.HasSelectedItem.Value;
