@@ -183,6 +183,14 @@ namespace AbsoluteZero.UI.LobbyUI
             if (relayManager == null || sessionManager == null) return;
             if (isConnectingToRelay) return;
 
+            // 혼자(상대 없음)면 시작 차단 — 시작 시 로딩에서 상대를 기다리다 갇히는 문제 방지
+            var lobby = lobbyManager.CurrentLobby;
+            if (lobby == null || lobby.Players.Count < 2)
+            {
+                SetLobbyStatus("상대가 없어 시작할 수 없습니다 (2명 필요)");
+                return;
+            }
+
             isConnectingToRelay = true;
             startBtn.interactable = false;
             SetLobbyStatus("릴레이 시작 중...");
@@ -351,6 +359,10 @@ namespace AbsoluteZero.UI.LobbyUI
                     new Color(0.3f, 0.3f, 0.3f, 0.5f));
                 playerSlotObjects.Add(slotGO);
             }
+
+            // 혼자면 시작 버튼 비활성 (호스트 & 연결 중이 아닐 때만)
+            if (startBtn != null && lobbyManager != null && lobbyManager.IsHost && !isConnectingToRelay)
+                startBtn.interactable = lobby.Players.Count >= 2;
         }
 
         private void ClearPlayerList()
