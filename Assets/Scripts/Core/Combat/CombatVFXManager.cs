@@ -136,6 +136,13 @@ namespace AbsoluteZero.Core.Combat
             bool isRecovery = itemData.Category == ItemCategory.Recovery;
             bool isLocalUser = (int)nm.LocalClientId == userIdx;
 
+            // 버프/디버프는 공격/회복 브랜치를 안 타므로 여기서 화면 VFX 처리 (의도 기준):
+            // 내가 버프(불닭 등 자힐) 사용 → 온기 / 상대가 나에게 디버프(삼계탕 등) → 서리
+            if (isLocalUser && itemData.Category == ItemCategory.Buff)
+                ScreenVFXManager.Instance.PlayRecoveryVFX();
+            else if (!isLocalUser && itemData.Category == ItemCategory.Debuff)
+                ScreenVFXManager.Instance.PlayHitVFX();
+
             string userTrigger = isLocalUser
                 ? itemData.AnimTrigger
                 : (!string.IsNullOrEmpty(itemData.OpponentAnimTrigger) ? itemData.OpponentAnimTrigger : itemData.AnimTrigger);
