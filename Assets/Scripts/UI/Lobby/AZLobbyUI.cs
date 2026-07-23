@@ -25,6 +25,7 @@ namespace AbsoluteZero.UI.LobbyUI
         private Button createBtn;
         private TMP_InputField joinCodeInput;
         private Button joinBtn;
+        private TextMeshProUGUI orText;
         private TextMeshProUGUI statusText;
 
         private TextMeshProUGUI lobbyCodeText;
@@ -107,6 +108,21 @@ namespace AbsoluteZero.UI.LobbyUI
         {
             mainPanel.SetActive(false);
             lobbyPanel.SetActive(true);
+            ApplyLobbyMembershipUI(lobbyManager != null && lobbyManager.IsInLobby);
+        }
+
+        // 로비 소속 여부에 따라 UI 정리:
+        // - 로비에 있으면 생성/참가 컨트롤 숨김(지저분함 제거), 없으면 표시
+        // - 로비에 없으면 이전 코드 잔존 제거("------"로 리셋)
+        private void ApplyLobbyMembershipUI(bool inLobby)
+        {
+            if (createBtn != null) createBtn.gameObject.SetActive(!inLobby);
+            if (orText != null) orText.gameObject.SetActive(!inLobby);
+            if (joinCodeInput != null) joinCodeInput.gameObject.SetActive(!inLobby);
+            if (joinBtn != null) joinBtn.gameObject.SetActive(!inLobby);
+
+            if (!inLobby && lobbyCodeText != null)
+                lobbyCodeText.text = "------";
         }
 
         #endregion
@@ -138,6 +154,13 @@ namespace AbsoluteZero.UI.LobbyUI
         private async void OnJoinClicked()
         {
             if (lobbyManager == null) return;
+
+            // 이미 로비에 있으면 참가 차단 (자기 자신의 로비 자가입장 방지 포함)
+            if (lobbyManager.IsInLobby)
+            {
+                SetStatus("이미 로비에 있습니다");
+                return;
+            }
 
             string code = joinCodeInput.text.ToUpper().Trim();
             if (string.IsNullOrEmpty(code))
@@ -229,13 +252,15 @@ namespace AbsoluteZero.UI.LobbyUI
         {
             myPlayerId = lobbyManager.PlayerId;
 
-            lobbyCodeText.text = lobby.LobbyCode;
-
             bool canStart = lobbyManager.IsHost && relayManager != null && sessionManager != null;
             startBtn.gameObject.SetActive(canStart);
 
             UpdatePlayerList(lobby);
             ShowLobbyPanel();
+
+            // 로비 입장 상태 확정: 생성/참가 컨트롤 숨기고, 코드는 그 뒤에 설정(리셋에 안 지워지도록)
+            ApplyLobbyMembershipUI(true);
+            lobbyCodeText.text = lobby.LobbyCode;
 
             string hostTag = lobbyManager.IsHost ? " (호스트)" : "";
             SetLobbyStatus($"로비 참가{hostTag} — 코드: {lobby.LobbyCode}");
@@ -285,6 +310,7 @@ namespace AbsoluteZero.UI.LobbyUI
             joinCodeInput.interactable = true;
             joinCodeInput.text = "";
             ClearPlayerList();
+            ApplyLobbyMembershipUI(false);   // 생성/참가 컨트롤 복구 + 코드 잔존 제거
             ShowMainPanel();
             SetStatus("준비 완료");
         }
@@ -644,7 +670,7 @@ namespace AbsoluteZero.UI.LobbyUI
                 new Color(0.2f, 0.5f, 0.8f), 24);
             createBtn.onClick.AddListener(OnCreateClicked);
 
-            CreateText(panel, "OrText",
+            orText = CreateText(panel, "OrText",
                 new Vector2(0, -40), new Vector2(100, 25), "— 또는 —", 16,
                 new Color(0.5f, 0.5f, 0.5f));
 
