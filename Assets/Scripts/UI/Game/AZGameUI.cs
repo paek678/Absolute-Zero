@@ -121,85 +121,142 @@ namespace AbsoluteZero.UI.Game
             EnsureAudioManager();
         }
 
+        [Header("=== 선풍기 튜닝 (플레이 중 인스펙터로 라이브 조정) ===")]
+        [SerializeField] float playerFanScale = 0.54f;                    // 내 선풍기(카메라 근접) 전체 스케일 (1.5배로 키움)
+        [SerializeField] float enemyFanScale = 0.95f;                     // 상대 선풍기(원거리) 전체 스케일
+        [SerializeField] float fanLiftBase = 1.4f;                        // scale 1 기준 상승 (실제 lift = base × scale)
+        [SerializeField] Vector3 fanHeadCenter = new(-0.16f, 0.60f, 0f);  // 날개·뚜껑 공통 중심 (몸체 로컬)
+        [SerializeField] float fanBladeScale = 1.2f;                      // 날개 크기 (x,y 균일, 스퀴시 전)
+        [SerializeField] float fanBladeSquashX = 0.82f;                   // 부모 피벗 X 스퀴시 ≈ cos35° — "돌린 뒤 누르기"라 타원 외곽 고정·날개만 회전, 평면은 뚜껑과 평행(깊이 안 뚫음)
+        [SerializeField] Vector2 fanGrilleScale = new(0.92f, 1.02f);      // 뚜껑 크기
+        [SerializeField] float fanBladesZ = -0.015f;
+        [SerializeField] float fanGrilleZ = -0.03f;
+
         void SpawnStayItemFans()
         {
-            // 새 선풍기 아트 (몸체 + 회전 날개 + 정면 그릴). 없으면 기존 플레이스홀더로 폴백.
             var bodySprite = Resources.Load<Sprite>("Fan/fan_body");
             var bladesSprite = Resources.Load<Sprite>("Fan/fan_blades");
             var grilleSprite = Resources.Load<Sprite>("Fan/fan_grille");
             var fallback = GameSprites.GetStayItemSprite();
-
-            // ── 선풍기 미세조정 값 (FanTestScene에서 맞춘 값) ──
-            const float fanLift = 1.4f;                             // 테이블에 안 박히게 위로 올리는 높이
-            var bladesPos = new Vector3(-0.23f, 0.6f, -0.01f);      // 날개 위치 (몸체 로컬)
-            var bladesScale = new Vector3(1.2f, 1.2f, 1f);          // 날개 크기
-            const float bladesTiltY = 35f;                          // 날개 Y 기울기 (3/4 뷰 원근감)
-            var grillePos = new Vector3(-0.16f, 0.59f, -0.02f);     // 뚜껑 위치 (몸체 로컬)
-            var grilleScale = new Vector3(0.92f, 1.02f, 1f);        // 뚜껑 크기
-
             var litMat = Resources.Load<Material>("sprite3DMat");
-            // 마커별 바인딩: 내 선풍기 = 로컬(-1), 상대 선풍기 = 상대(-2)
-            var markers = new (string name, int playerIndex)[]
+
+            SpawnFanAt("PlayerStayItem", true, bodySprite, bladesSprite, grilleSprite, fallback, litMat);
+            SpawnFanAt("EnemyStayItem", false, bodySprite, bladesSprite, grilleSprite, fallback, litMat);
+        }
+
+        // 계층: {name}_Fan(몸체, 스케일 s) → Head(중심) → { Grille(뚜껑, sort5), BladePivot(X스퀴시) → Blades(sort4, 스피너가 Z회전) }
+        // Y틸트 대신 부모 피벗 X스퀴시로 3/4 원근감 → 날개 평면이 몸체·뚜껑과 평행 유지 → 깊이버퍼 뚫는 문제 해소
+        void SpawnFanAt(string markerName, bool isPlayer,
+            Sprite bodySprite, Sprite bladesSprite, Sprite grilleSprite, Sprite fallback, Material litMat)
+        {
+            var marker = GameObject.Find(markerName);
+            if (marker == null) return;
+
+            float s = isPlayer ? playerFanScale : enemyFanScale;
+            int playerIndex = isPlayer ? -1 : -2;   // 스피너 바인딩: 로컬 / 상대
+
+            var go = new GameObject($"{markerName}_Fan");
+            go.transform.SetParent(marker.transform, false);
+            go.transform.localPosition = new Vector3(0f, fanLiftBase * s, 0f);   // lift는 스케일 비례 (안 그러면 공중에 뜸)
+            go.transform.localScale = Vector3.one * s;
+
+            var bodySr = go.AddComponent<SpriteRenderer>();
+            bodySr.sprite = bodySprite != null ? bodySprite : fallback;
+            bodySr.sortingOrder = 3;
+            if (litMat != null) bodySr.material = litMat;
+
+            if (bodySprite == null || bladesSprite == null) return;   // 폴백이면 몸체만
+
+            // Head — 날개·뚜껑 공통 중심 (정렬 통일)
+            var head = new GameObject("Head");
+            head.transform.SetParent(go.transform, false);
+            head.transform.localPosition = fanHeadCenter;
+
+            // 뚜껑(그릴) — Head 직속, 정적, sort 5
+            if (grilleSprite != null)
             {
-                ("PlayerStayItem", -1),
-                ("EnemyStayItem", -2),
-            };
+                var grille = new GameObject("Grille");
+                grille.transform.SetParent(head.transform, false);
+                grille.transform.localPosition = new Vector3(0f, 0f, fanGrilleZ);
+                grille.transform.localScale = new Vector3(fanGrilleScale.x, fanGrilleScale.y, 1f);
+                var grilleSr = grille.AddComponent<SpriteRenderer>();
+                grilleSr.sprite = grilleSprite;
+                grilleSr.sortingOrder = 5;
+                if (litMat != null) grilleSr.material = litMat;
+            }
 
-            foreach (var (name, playerIndex) in markers)
+            // BladePivot(X 스퀴시) → Blades(Z회전만). 유니티가 자식→부모 순 적용이라 "돌린 뒤 누르기" =
+            // 타원 외곽선은 고정되고 그 안에서 날개만 회전 (Y35°와 화면상 동일하되 평면은 뚜껑과 평행 → 깊이 안 뚫음)
+            var pivot = new GameObject("BladePivot");
+            pivot.transform.SetParent(head.transform, false);
+            pivot.transform.localPosition = new Vector3(0f, 0f, fanBladesZ);
+            pivot.transform.localScale = new Vector3(fanBladeSquashX, 1f, 1f);
+
+            var blades = new GameObject("Blades");
+            blades.transform.SetParent(pivot.transform, false);
+            blades.transform.localScale = Vector3.one * fanBladeScale;
+            var bladeSr = blades.AddComponent<SpriteRenderer>();
+            bladeSr.sprite = bladesSprite;
+            bladeSr.sortingOrder = 4;
+            if (litMat != null) bladeSr.material = litMat;
+
+            var spinner = go.AddComponent<AbsoluteZero.Core.Common.FanBladeSpinner>();
+            spinner.Bind(blades.transform, playerIndex);
+        }
+
+#if UNITY_EDITOR
+        // 플레이 중 인스펙터로 값 바꾸면 스폰된 선풍기에 즉시 재적용 (라이브 튜닝)
+        void OnValidate()
+        {
+            if (Application.isPlaying) ReapplyFanTuning();
+        }
+
+        void ReapplyFanTuning()
+        {
+            ReapplyFanOne("PlayerStayItem_Fan", true);
+            ReapplyFanOne("EnemyStayItem_Fan", false);
+        }
+
+        void ReapplyFanOne(string fanName, bool isPlayer)
+        {
+            var go = GameObject.Find(fanName);
+            if (go == null) return;
+
+            float s = isPlayer ? playerFanScale : enemyFanScale;
+            go.transform.localPosition = new Vector3(0f, fanLiftBase * s, 0f);
+            go.transform.localScale = Vector3.one * s;
+
+            var head = go.transform.Find("Head");
+            if (head == null) return;
+            head.localPosition = fanHeadCenter;
+
+            var grille = head.Find("Grille");
+            if (grille != null)
             {
-                var marker = GameObject.Find(name);
-                if (marker == null) continue;
+                grille.localPosition = new Vector3(0f, 0f, fanGrilleZ);
+                grille.localScale = new Vector3(fanGrilleScale.x, fanGrilleScale.y, 1f);
+            }
 
-                var go = new GameObject($"{name}_Fan");
-                go.transform.SetParent(marker.transform, false);
-                go.transform.localPosition = new Vector3(0f, fanLift, 0f);   // 위로 올려 테이블에 안 박히게
-
-                var bodySr = go.AddComponent<SpriteRenderer>();
-                bodySr.sprite = bodySprite != null ? bodySprite : fallback;
-                bodySr.sortingOrder = 3;
-                if (litMat != null) bodySr.material = litMat;
-
-                // 새 아트가 있으면 회전 날개 + 정면 그릴(뚜껑) 조립
-                if (bodySprite != null && bladesSprite != null)
-                {
-                    // 날개 (그릴 뒤에서 회전) — Y 기울기 후 로컬 Z축 회전이라 원근감 유지된 채 깔끔히 돔
-                    var blades = new GameObject("Blades");
-                    blades.transform.SetParent(go.transform, false);
-                    blades.transform.localPosition = bladesPos;
-                    blades.transform.localScale = bladesScale;
-                    blades.transform.localRotation = Quaternion.Euler(0f, bladesTiltY, 0f);
-
-                    var bladeSr = blades.AddComponent<SpriteRenderer>();
-                    bladeSr.sprite = bladesSprite;
-                    bladeSr.sortingOrder = 4;
-                    if (litMat != null) bladeSr.material = litMat;
-
-                    var spinner = go.AddComponent<AbsoluteZero.Core.Common.FanBladeSpinner>();
-                    spinner.Bind(blades.transform, playerIndex);
-
-                    // 그릴(뚜껑) — 날개 앞 정적 커버
-                    if (grilleSprite != null)
-                    {
-                        var grille = new GameObject("Grille");
-                        grille.transform.SetParent(go.transform, false);
-                        grille.transform.localPosition = grillePos;
-                        grille.transform.localScale = grilleScale;
-
-                        var grilleSr = grille.AddComponent<SpriteRenderer>();
-                        grilleSr.sprite = grilleSprite;
-                        grilleSr.sortingOrder = 5;
-                        if (litMat != null) grilleSr.material = litMat;
-                    }
-                }
+            var pivot = head.Find("BladePivot");
+            if (pivot != null)
+            {
+                pivot.localPosition = new Vector3(0f, 0f, fanBladesZ);
+                pivot.localScale = new Vector3(fanBladeSquashX, 1f, 1f);
+                var blades = pivot.Find("Blades");
+                if (blades != null) blades.localScale = Vector3.one * fanBladeScale;
             }
         }
+#endif
 
         void EnsureAudioManager()
         {
-            if (GameAudioManager.Instance != null) return;
-            var go = new GameObject("GameAudioManager");
-            go.AddComponent<GameAudioManager>();
-            DontDestroyOnLoad(go);
+            if (GameAudioManager.Instance == null)
+            {
+                var go = new GameObject("GameAudioManager");
+                go.AddComponent<GameAudioManager>();
+                DontDestroyOnLoad(go);
+            }
+            // 재진입 시(매니저 이미 존재)에도 항상 BGM 재생 — 이미 재생 중이면 PlayBGM 내부에서 no-op
             GameAudioManager.Instance?.PlayBGM();
         }
 
