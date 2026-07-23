@@ -181,14 +181,20 @@ namespace AbsoluteZero.Core.Combat
                             {
                                 targetVisual.PlayDamageFlash();
                                 if (!isLocalUser)
+                                {
                                     PlayHitAt(GetPlayerWorldPos(targetIdx));
+                                    if (h == 0) ScreenVFXManager.Instance.PlayHitVFX();   // 내가 맞음 → 서리 화면 플래시
+                                }
                                 GameAudioManager.Instance?.PlayDamaged();
                             }
                         }
                         else if (isRecovery && userVisual != null)
                         {
                             if (isLocalUser)
+                            {
                                 PlayHitAt(GetPlayerWorldPos(userIdx));
+                                if (h == 0) ScreenVFXManager.Instance.PlayRecoveryVFX();   // 내가 회복 → 온기 화면 플래시
+                            }
                         }
 
                         if (h < itemData.EffectHitCount - 1 && itemData.EffectInterval > 0f)
@@ -236,14 +242,20 @@ namespace AbsoluteZero.Core.Combat
                     {
                         targetVisual.PlayDamageFlash();
                         if (!isLocalUser)
+                        {
                             PlayHitAt(GetPlayerWorldPos(targetIdx));
+                            ScreenVFXManager.Instance.PlayHitVFX();   // 내가 맞음 → 서리 화면 플래시
+                        }
                         GameAudioManager.Instance?.PlayDamaged();
                     }
                 }
                 else if (isRecovery)
                 {
                     if (isLocalUser)
+                    {
                         PlayHitAt(GetPlayerWorldPos(userIdx));
+                        ScreenVFXManager.Instance.PlayRecoveryVFX();   // 내가 회복 → 온기 화면 플래시
+                    }
                 }
                 yield return _waitDamageReact;
                 if (targetDefending && targetVisual != null)
