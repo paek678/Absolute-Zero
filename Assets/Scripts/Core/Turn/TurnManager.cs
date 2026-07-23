@@ -186,6 +186,12 @@ namespace AbsoluteZero.Core.Turn
             yield return StartCoroutine(PrepPhaseRoutine());
         }
 
+        // ─── 도발 이모티콘 윈도우 (공격 시작 지연용) ────────────
+        const float EMOTE_DISPLAY_SEC = 1.0f;
+        bool _emoteWindowClosed;
+        /// <summary>서버: 지금 도발 이모티콘을 받아줄 수 있는가 (프렙 진행 중 & 공격 시작 지연 전).</summary>
+        public bool AcceptEmotes => IsSpawned && CurrentPhase.Value == TurnPhase.PrepPhase && !_emoteWindowClosed;
+
         IEnumerator PrepPhaseRoutine()
         {
             if (!IsSpawned) yield break;
@@ -266,6 +272,7 @@ namespace AbsoluteZero.Core.Turn
 
             CurrentPhase.Value = TurnPhase.PrepPhase;
             OnPhaseChangedClientRpc(TurnPhase.PrepPhase, TurnNumber.Value);
+            _emoteWindowClosed = false;   // 새 프렙 시작 → 도발 허용
 
             _p1TempAtTurnStart = _p1.Temperature.Value;
             _p2TempAtTurnStart = _p2.Temperature.Value;
@@ -322,6 +329,13 @@ namespace AbsoluteZero.Core.Turn
 
             RevertFanUpgrade(_p1);
             RevertFanUpgrade(_p2);
+
+            // 재생 중인 도발이 끝난 뒤 공격 시작 — 도발 창 닫고 남은 표시 시간만큼 대기
+            _emoteWindowClosed = true;
+            double lastEmote = System.Math.Max(_p1.LastEmoteServerTime, _p2.LastEmoteServerTime);
+            float emoteRemain = (float)(EMOTE_DISPLAY_SEC - (NetworkManager.ServerTime.Time - lastEmote));
+            for (float t = 0f; t < emoteRemain; t += Time.deltaTime)
+                yield return null;
 
             yield return StartCoroutine(AttackPhaseRoutine());
         }

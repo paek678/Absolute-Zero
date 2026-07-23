@@ -279,7 +279,7 @@ namespace AbsoluteZero.Core.Player
         {
             if (!IsServer) return;
             var tm = Turn.TurnManager.Instance;
-            if (tm == null || tm.CurrentPhase.Value != TurnPhase.PrepPhase) return;   // 프렙에서만
+            if (tm == null || !tm.AcceptEmotes) return;   // 프렙 진행 중 & 공격 시작 지연 전만
             if (emoteId >= Emote.EmoteCatalog.Count) return;
 
             _lastEmoteServerTime = NetworkManager.ServerTime.Time;
