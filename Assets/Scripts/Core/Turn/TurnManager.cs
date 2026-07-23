@@ -361,6 +361,9 @@ namespace AbsoluteZero.Core.Turn
 
             _p1.IsBasicBlocked.Value = false;
             _p2.IsBasicBlocked.Value = false;
+            // 영구 아이템 잠금은 이번 턴 resolve에서 다시 세팅됨 (다음 턴 프렙에 적용)
+            _p1.IsPermanentLocked.Value = false;
+            _p2.IsPermanentLocked.Value = false;
 
             Debug.Log($"[COMBAT] --- Processing delayed buffs/debuffs ---");
             _buffSystem.ProcessTurnStart(_p1, _p2);

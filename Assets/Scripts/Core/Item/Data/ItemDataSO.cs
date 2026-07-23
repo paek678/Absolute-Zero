@@ -47,6 +47,9 @@ namespace AbsoluteZero.Core.Item.Data
         {
             if (ctx.User.IsBasicBlocked.Value && SlotType == ItemSlotType.Main)
                 return false;
+            // 기본 영구 아이템 연속 사용 방지: 지난 턴에 영구 아이템을 썼으면 이번 턴 영구 아이템 잠금
+            if (ctx.User.IsPermanentLocked.Value && Persistence == ItemPersistence.Permanent)
+                return false;
             return true;
         }
     }

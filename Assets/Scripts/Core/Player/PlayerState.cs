@@ -32,6 +32,10 @@ namespace AbsoluteZero.Core.Player
         public readonly NetworkVariable<bool> IsBasicBlocked = new(
             false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
+        // 기본 영구 아이템(부채/바람막이) 연속 사용 방지 — 사용 시 다음 턴 영구 아이템 잠금
+        public readonly NetworkVariable<bool> IsPermanentLocked = new(
+            false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
         readonly ActionQueue _actionQueue = new();
         PlayerInventory _inventory;
 

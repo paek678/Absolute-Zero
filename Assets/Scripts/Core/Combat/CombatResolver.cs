@@ -151,6 +151,10 @@ namespace AbsoluteZero.Core.Combat
             action.ItemData.ExecuteEffect(ctx);
             user.GetInventory().ConsumeItem(action.SlotIndex);
 
+            // 기본 영구 아이템(부채 등)을 썼으면 다음 턴 영구 아이템 잠금 (연속 사용 방지)
+            if (action.ItemData.Persistence == ItemPersistence.Permanent)
+                user.IsPermanentLocked.Value = true;
+
             Debug.Log($"[COMBAT] ExecuteMain AFTER: P{userIdx}={user.Temperature.Value:F1}° P{targetIdx}={target.Temperature.Value:F1}°");
 
             return new CombatEvent
@@ -175,6 +179,10 @@ namespace AbsoluteZero.Core.Combat
                     BlockAmount = defItem.BlockAmount
                 };
                 player.GetInventory().ConsumeItem(queue.selectedAction.Value.SlotIndex);
+
+                // 기본 영구 방어템(바람막이)을 썼으면 다음 턴 영구 아이템 잠금
+                if (defItem.Persistence == ItemPersistence.Permanent)
+                    player.IsPermanentLocked.Value = true;
             }
             else
             {
