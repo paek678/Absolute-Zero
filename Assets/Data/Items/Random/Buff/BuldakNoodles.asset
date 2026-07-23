@@ -24,7 +24,7 @@ MonoBehaviour:
   AnimTrigger: eat
   OpponentAnimTrigger: eat
   AnimDuration: 1.5
-  EffectDelay: 0.7
+  EffectDelay: 0.75
   EffectHitCount: 3
   EffectInterval: 0.2
   RequiresMiniGame: 1

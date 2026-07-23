@@ -12,22 +12,17 @@ namespace AbsoluteZero.Core.Item
         SpriteRenderer _mainSprite;
         SpriteRenderer _bannedOverlay;
         TextMesh _label;
-        Material _litMat;
 
         public void Initialize(int slotIndex, string itemName, Color itemColor)
         {
             SlotIndex = slotIndex;
             gameObject.name = $"Item_{slotIndex}_{itemName}";
 
-            _litMat = Resources.Load<Material>("sprite3DMat");
-
             var cardGO = new GameObject("Card");
             cardGO.transform.SetParent(transform, false);
             _mainSprite = cardGO.AddComponent<SpriteRenderer>();
             var itemSprite = GameSprites.GetItemSprite(itemName);
             _mainSprite.sprite = itemSprite != null ? itemSprite : CreateFallbackSprite();
-            if (_litMat != null)
-                _mainSprite.material = _litMat;
             _mainSprite.sortingOrder = 5;
 
             var labelGO = new GameObject("Label");
@@ -60,7 +55,6 @@ namespace AbsoluteZero.Core.Item
             _bannedOverlay = bannedGO.AddComponent<SpriteRenderer>();
             var bannedTex = Resources.Load<Sprite>("banned_tape");
             if (bannedTex != null) _bannedOverlay.sprite = bannedTex;
-            if (_litMat != null) _bannedOverlay.material = _litMat;
             _bannedOverlay.sortingOrder = 7;
             bannedGO.SetActive(false);
         }

@@ -217,7 +217,7 @@ Appears at **2nd prep phase** of each round. Random. Resets per round.
 | **Cool Breeze** (바람선선) | Fan-off recovery: 0°/sec | Recovery items critical |
 | **Cicada Song** (매미울음) | Audio/visual distraction | Pure chaos |
 | **Kids** (잼민이들) | Steal 1 unused random item | Can't hoard items |
-| **Ambulance** (앰뷸런스) | Turn 4: lower-temp player +10° | Comeback mechanic |
+| **Ambulance** (앰뷸런스) | Turn 3: lower-temp player +10° | Comeback mechanic |
 | **Summer Vacation** (여름방학) | Prep time: 20s → 10s | Less decision time |
 | **Heat Wave** (폭염경보) | Lower-temp player acts first | Overrides Ready-order |
 
@@ -234,7 +234,7 @@ Appears at **2nd prep phase** of each round. Random. Resets per round.
 | **Sunny Day** | "햇살이 더 쨍쨍해집니다." | All Light color → yellow tint, intensity UP | SFX_cicada |
 | **Cool Breeze** | "시원한 바람이 불어옵니다." | Wind particle effect appears around scene | SFX_wind |
 | **Kids** | "근처에 어린 친구들이 서성거립니다." | Kid sprite rises from below on LEFT side of pavilion | SFX_kidWhistle |
-| **Ambulance** | "근처에 응급구조원이 대기중입니다." | Ambulance sprite enters from off-screen LEFT → into view | SFX_siren |
+| **Ambulance** | "근처에 응급구조원이 대기중입니다." | Ambulance sprite enters from off-screen LEFT → position (2.47, 1.4, 14) behind pavilion (정자 뒷편) | SFX_siren |
 | **Summer Vacation** | "여름방학이 얼마 남지 않았습니다." | Timer shakes on X/Y, clock-inner SpriteRenderer color → RED | SFX_clock |
 | **Heat Wave** | "폭염경보가 발생했습니다." | All Light color → red tint, intensity UP | SFX_cicada |
 
@@ -244,7 +244,10 @@ Appears at **2nd prep phase** of each round. Random. Resets per round.
 3. Animation → `steal`, play SFX_kidSteal, 1 random item consumed from BOTH players
 4. Kid sprite sinks down and disappears
 
-#### Ambulance — Turn 4 Special Staging
+#### Ambulance — Turn 3 Special Staging
+
+> Ambulance spawn position: (2.47, 1.4, 14) — z=14 is behind the pavilion (정자 뒷편). After effect triggers, the rescue worker sinks down and is removed.
+
 **If MY temperature is lower:**
 1. Full-screen blanket drops from top → covers view (SFX_wear)
 2. Temperature recovers, blanket alpha fades to 0

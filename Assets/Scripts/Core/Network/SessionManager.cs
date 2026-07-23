@@ -1,4 +1,5 @@
 using System;
+using AbsoluteZero.UI.Loading;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -149,6 +150,7 @@ namespace AbsoluteZero.Core.Network
 
             Debug.Log("[SessionManager] Starting game scene transition");
             LobbyManager.Instance?.SetGameSessionActive(true);
+            LoadingScreenManager.Instance?.Show();
 
             RegisterSceneLoadCallback();
             var status = nm.SceneManager.LoadScene(gameSceneName, LoadSceneMode.Single);
@@ -157,6 +159,7 @@ namespace AbsoluteZero.Core.Network
                 Debug.LogError($"[SessionManager] Scene load failed: {status}");
                 UnregisterSceneLoadCallback();
                 LobbyManager.Instance?.SetGameSessionActive(false);
+                LoadingScreenManager.Instance?.ForceHide();
             }
         }
 
@@ -171,6 +174,7 @@ namespace AbsoluteZero.Core.Network
 
             try
             {
+                LoadingScreenManager.Instance?.ForceHide();
                 UnregisterSceneLoadCallback();
 
                 if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)

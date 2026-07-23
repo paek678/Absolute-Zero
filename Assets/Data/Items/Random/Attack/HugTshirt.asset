@@ -24,7 +24,7 @@ MonoBehaviour:
   AnimTrigger: hug
   OpponentAnimTrigger: hug
   AnimDuration: 1.5
-  EffectDelay: 0.5
+  EffectDelay: 0.75
   EffectHitCount: 1
   EffectInterval: 0
   RequiresMiniGame: 1

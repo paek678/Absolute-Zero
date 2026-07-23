@@ -19,9 +19,6 @@ namespace AbsoluteZero.Core.Turn
         [Header("Settings")]
         [SerializeField] float prepDuration = 20f;
 
-        static bool _debugPaused;
-        public static bool DebugPaused => _debugPaused;
-
         public readonly NetworkVariable<TurnPhase> CurrentPhase = new(
             TurnPhase.WaitingForPlayers, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
@@ -57,6 +54,10 @@ namespace AbsoluteZero.Core.Turn
 
         float _p1TempAtTurnStart;
         float _p2TempAtTurnStart;
+
+        const float EMOTE_DISPLAY_SEC = 1.0f;
+        bool _emoteWindowClosed;
+        public bool AcceptEmotes => IsSpawned && CurrentPhase.Value == TurnPhase.PrepPhase && !_emoteWindowClosed;
 
         static readonly WaitForSeconds _waitHalf = new(0.5f);
         static readonly WaitForSeconds _waitOne = new(1f);
@@ -103,46 +104,7 @@ namespace AbsoluteZero.Core.Turn
             OnCombatResult = null;
             OnEnvironmentAnnounced = null;
             if (Instance == this) Instance = null;
-            _debugPaused = false;
-            Time.timeScale = 1f;
             base.OnNetworkDespawn();
-        }
-
-        void Update()
-        {
-            if (UnityEngine.InputSystem.Keyboard.current != null
-                && UnityEngine.InputSystem.Keyboard.current.f5Key.wasPressedThisFrame)
-            {
-                if (IsServer)
-                {
-                    SetDebugPause(!_debugPaused);
-                    SyncDebugPauseClientRpc(_debugPaused);
-                }
-                else
-                {
-                    RequestDebugPauseServerRpc();
-                }
-            }
-        }
-
-        [Rpc(SendTo.Server)]
-        void RequestDebugPauseServerRpc(RpcParams rpcParams = default)
-        {
-            SetDebugPause(!_debugPaused);
-            SyncDebugPauseClientRpc(_debugPaused);
-        }
-
-        [Rpc(SendTo.NotServer)]
-        void SyncDebugPauseClientRpc(bool paused)
-        {
-            SetDebugPause(paused);
-        }
-
-        void SetDebugPause(bool paused)
-        {
-            _debugPaused = paused;
-            Time.timeScale = paused ? 0f : 1f;
-            Debug.Log($"[DEBUG] Game {(paused ? "PAUSED" : "RESUMED")} (timeScale={Time.timeScale})");
         }
 
         IEnumerator WaitForPlayersRoutine()
@@ -234,9 +196,9 @@ namespace AbsoluteZero.Core.Turn
                 RemoveRandomUnusedItem(_p2.GetInventory());
             }
 
-            if (ActiveEnvironment.Value == EnvironmentType.Ambulance && TurnNumber.Value == 4)
+            if (ActiveEnvironment.Value == EnvironmentType.Ambulance && TurnNumber.Value == 3)
             {
-                Debug.Log($"[ENV] Ambulance: Turn 4 triggered — P0={_p1.Temperature.Value:F1}° P1={_p2.Temperature.Value:F1}°");
+                Debug.Log($"[ENV] Ambulance: Turn 3 triggered — P0={_p1.Temperature.Value:F1}° P1={_p2.Temperature.Value:F1}°");
                 bool p1Lower = _p1.Temperature.Value < _p2.Temperature.Value;
                 bool p2Lower = _p2.Temperature.Value < _p1.Temperature.Value;
                 if (p1Lower || p2Lower)
@@ -264,6 +226,7 @@ namespace AbsoluteZero.Core.Turn
             PrepStartServerTime.Value = NetworkManager.ServerTime.Time;
             PrepDuration.Value = currentPrepDuration;
 
+            _emoteWindowClosed = false;
             CurrentPhase.Value = TurnPhase.PrepPhase;
             OnPhaseChangedClientRpc(TurnPhase.PrepPhase, TurnNumber.Value);
 
@@ -322,6 +285,12 @@ namespace AbsoluteZero.Core.Turn
 
             RevertFanUpgrade(_p1);
             RevertFanUpgrade(_p2);
+
+            _emoteWindowClosed = true;
+            double lastEmote = System.Math.Max(_p1.LastEmoteServerTime, _p2.LastEmoteServerTime);
+            float emoteRemain = (float)(EMOTE_DISPLAY_SEC - (NetworkManager.ServerTime.Time - lastEmote));
+            for (float t = 0f; t < emoteRemain; t += Time.deltaTime)
+                yield return null;
 
             yield return StartCoroutine(AttackPhaseRoutine());
         }
@@ -464,6 +433,12 @@ namespace AbsoluteZero.Core.Turn
             if (!IsSpawned) yield break;
             LastRoundWinner.Value = winnerIndex;
 
+            if (winnerIndex >= 0)
+            {
+                int loserIdx = 1 - winnerIndex;
+                TriggerDeathSequenceRpc(loserIdx);
+            }
+
             if (winnerIndex >= 0 && _matchManager != null)
                 _matchManager.EndRound(winnerIndex);
 
@@ -567,9 +542,14 @@ namespace AbsoluteZero.Core.Turn
 
         IEnumerator EnvironmentAnnouncementRoutine()
         {
-            // TODO: 테스트용 — Kids/Ambulance/CoolBreeze만 출현. 테스트 후 원래 풀로 복원할 것
             var pool = new[] {
-                EnvironmentType.Kids, EnvironmentType.Ambulance, EnvironmentType.CoolBreeze
+                EnvironmentType.SunnyDay,
+                EnvironmentType.CoolBreeze,
+                EnvironmentType.CicadaSong,
+                EnvironmentType.Kids,
+                EnvironmentType.Ambulance,
+                EnvironmentType.SummerVacation,
+                EnvironmentType.HeatWaveWarning
             };
             ActiveEnvironment.Value = pool[Random.Range(0, pool.Length)];
 
@@ -688,6 +668,25 @@ namespace AbsoluteZero.Core.Turn
         public void RevealOpponentItemClientRpc(byte forPlayerIndex, short opponentItemId)
         {
             OnOpponentRevealed?.Invoke(forPlayerIndex, opponentItemId);
+        }
+
+        [Rpc(SendTo.Everyone)]
+        void TriggerDeathSequenceRpc(int loserIndex)
+        {
+            var nm = NetworkManager.Singleton;
+            if (nm == null) return;
+            foreach (var kvp in nm.SpawnManager.SpawnedObjects)
+            {
+                var netObj = kvp.Value;
+                if (netObj == null || !netObj.IsPlayerObject) continue;
+                var ps = netObj.GetComponent<PlayerState>();
+                if (ps != null && ps.PlayerIndex == loserIndex)
+                {
+                    var visual = netObj.GetComponent<AZPlayerVisual>();
+                    if (visual != null) visual.PlayDeathSequence();
+                    return;
+                }
+            }
         }
 
         [Rpc(SendTo.Everyone)]

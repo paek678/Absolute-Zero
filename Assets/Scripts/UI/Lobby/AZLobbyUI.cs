@@ -18,6 +18,7 @@ namespace AbsoluteZero.UI.LobbyUI
         private RelayManager relayManager;
         private SessionManager sessionManager;
 
+        private Canvas mainCanvas;
         private GameObject mainPanel;
         private GameObject lobbyPanel;
 
@@ -69,7 +70,7 @@ namespace AbsoluteZero.UI.LobbyUI
             if (sessionManager != null)
                 sessionManager.OnGameStarted += OnGameStarted;
 
-            SetStatus("Ready. Create or join a lobby.");
+            SetStatus("준비 완료");
         }
 
         private void OnDestroy()
@@ -112,12 +113,17 @@ namespace AbsoluteZero.UI.LobbyUI
 
         #region Button Handlers
 
+        private void OnArenaClicked()
+        {
+            ShowLobbyPanel();
+        }
+
         private async void OnCreateClicked()
         {
             if (lobbyManager == null) return;
 
             createBtn.interactable = false;
-            SetStatus("Creating lobby...");
+            SetStatus("로비 생성 중...");
 
             string lobbyName = $"AZ_{UnityEngine.Random.Range(1000, 9999)}";
             var lobby = await lobbyManager.CreateLobbyAsync(lobbyName);
@@ -125,7 +131,7 @@ namespace AbsoluteZero.UI.LobbyUI
             if (lobby == null)
             {
                 createBtn.interactable = true;
-                SetStatus("Failed to create lobby. Try again.");
+                SetStatus("로비 생성 실패");
             }
         }
 
@@ -136,20 +142,20 @@ namespace AbsoluteZero.UI.LobbyUI
             string code = joinCodeInput.text.ToUpper().Trim();
             if (string.IsNullOrEmpty(code))
             {
-                SetStatus("Enter a lobby code first.");
+                SetStatus("코드를 입력하세요");
                 return;
             }
 
             joinBtn.interactable = false;
             joinCodeInput.interactable = false;
-            SetStatus($"Joining lobby ({code})...");
+            SetStatus($"로비 참가 중 ({code})...");
 
             try
             {
                 var lobby = await lobbyManager.JoinLobbyByCodeAsync(code);
                 if (lobby == null)
                 {
-                    SetStatus("Invalid lobby code. Try again.");
+                    SetStatus("잘못된 코드입니다");
                     joinCodeInput.text = "";
                     joinCodeInput.interactable = true;
                     joinBtn.interactable = true;
@@ -157,7 +163,7 @@ namespace AbsoluteZero.UI.LobbyUI
             }
             catch (Exception e)
             {
-                SetStatus($"Join failed: {e.Message}");
+                SetStatus($"참가 실패: {e.Message}");
                 joinCodeInput.text = "";
                 joinCodeInput.interactable = true;
                 joinBtn.interactable = true;
@@ -167,7 +173,7 @@ namespace AbsoluteZero.UI.LobbyUI
         private async void OnLeaveClicked()
         {
             if (lobbyManager == null) return;
-            SetLobbyStatus("Leaving lobby...");
+            SetLobbyStatus("로비 퇴장 중...");
             await lobbyManager.LeaveLobbyAsync();
         }
 
@@ -179,7 +185,7 @@ namespace AbsoluteZero.UI.LobbyUI
 
             isConnectingToRelay = true;
             startBtn.interactable = false;
-            SetLobbyStatus("Starting Relay...");
+            SetLobbyStatus("릴레이 시작 중...");
 
             try
             {
@@ -187,21 +193,21 @@ namespace AbsoluteZero.UI.LobbyUI
 
                 if (string.IsNullOrEmpty(relayJoinCode))
                 {
-                    SetLobbyStatus("Relay start failed.");
+                    SetLobbyStatus("릴레이 시작 실패");
                     isConnectingToRelay = false;
                     startBtn.interactable = true;
                     return;
                 }
 
                 await lobbyManager.SetRelayJoinCodeAsync(relayJoinCode);
-                SetLobbyStatus($"Relay ready: {relayJoinCode}");
+                SetLobbyStatus($"릴레이 준비: {relayJoinCode}");
 
                 await lobbyManager.SetGameStartedAsync(true);
                 sessionManager.StartGame();
             }
             catch (Exception e)
             {
-                SetLobbyStatus($"Start failed: {e.Message}");
+                SetLobbyStatus($"시작 실패: {e.Message}");
                 isConnectingToRelay = false;
                 startBtn.interactable = true;
             }
@@ -223,8 +229,8 @@ namespace AbsoluteZero.UI.LobbyUI
             UpdatePlayerList(lobby);
             ShowLobbyPanel();
 
-            string hostTag = lobbyManager.IsHost ? " (Host)" : "";
-            SetLobbyStatus($"Joined lobby{hostTag}. Code: {lobby.LobbyCode}");
+            string hostTag = lobbyManager.IsHost ? " (호스트)" : "";
+            SetLobbyStatus($"로비 참가{hostTag} — 코드: {lobby.LobbyCode}");
         }
 
         private void OnLobbyUpdated(Unity.Services.Lobbies.Models.Lobby lobby)
@@ -245,20 +251,20 @@ namespace AbsoluteZero.UI.LobbyUI
             if (string.IsNullOrEmpty(relayJoinCode)) return;
 
             isConnectingToRelay = true;
-            SetLobbyStatus($"Game starting... Connecting to Relay ({relayJoinCode})");
+            SetLobbyStatus($"게임 시작 중... 릴레이 연결 ({relayJoinCode})");
 
             try
             {
                 bool success = await relayManager.JoinRelayAsync(relayJoinCode);
                 if (!success)
                 {
-                    SetLobbyStatus("Relay connection failed.");
+                    SetLobbyStatus("릴레이 연결 실패");
                     isConnectingToRelay = false;
                 }
             }
             catch (Exception e)
             {
-                SetLobbyStatus($"Relay error: {e.Message}");
+                SetLobbyStatus($"릴레이 오류: {e.Message}");
                 isConnectingToRelay = false;
             }
         }
@@ -272,12 +278,12 @@ namespace AbsoluteZero.UI.LobbyUI
             joinCodeInput.text = "";
             ClearPlayerList();
             ShowMainPanel();
-            SetStatus("Left lobby.");
+            SetStatus("준비 완료");
         }
 
         private void OnError(string error)
         {
-            SetStatus($"Error: {error}");
+            SetStatus($"오류: {error}");
             createBtn.interactable = true;
             joinBtn.interactable = true;
             joinCodeInput.interactable = true;
@@ -289,23 +295,23 @@ namespace AbsoluteZero.UI.LobbyUI
 
         private void OnRelayCreated(string joinCode)
         {
-            SetLobbyStatus($"Relay created: {joinCode}");
+            SetLobbyStatus($"릴레이 생성: {joinCode}");
         }
 
         private void OnRelayJoined()
         {
-            SetLobbyStatus("Relay connected. Transitioning...");
+            SetLobbyStatus("릴레이 연결 완료");
             isConnectingToRelay = false;
         }
 
         private void OnGameStarted()
         {
-            SetLobbyStatus("Game started!");
+            SetLobbyStatus("게임 시작!");
         }
 
         private void OnRelayError(string error)
         {
-            SetLobbyStatus($"Relay error: {error}");
+            SetLobbyStatus($"릴레이 오류: {error}");
             isConnectingToRelay = false;
             startBtn.interactable = true;
         }
@@ -325,8 +331,8 @@ namespace AbsoluteZero.UI.LobbyUI
                 bool isHost = player.Id == lobby.HostId;
 
                 string label = playerName;
-                if (isHost) label += " [HOST]";
-                if (isMe) label += " (You)";
+                if (isHost) label += " [호스트]";
+                if (isMe) label += " (나)";
 
                 Color bgColor = isHost
                     ? new Color(0.6f, 0.5f, 0.2f, 0.8f)
@@ -341,7 +347,7 @@ namespace AbsoluteZero.UI.LobbyUI
             int emptySlots = lobby.MaxPlayers - lobby.Players.Count;
             for (int i = 0; i < emptySlots; i++)
             {
-                var slotGO = CreatePlayerSlot(playerListContainer, "Empty",
+                var slotGO = CreatePlayerSlot(playerListContainer, "대기 중...",
                     new Color(0.3f, 0.3f, 0.3f, 0.5f));
                 playerSlotObjects.Add(slotGO);
             }
@@ -381,11 +387,11 @@ namespace AbsoluteZero.UI.LobbyUI
             string code = lobbyCodeText != null ? lobbyCodeText.text : "";
             if (string.IsNullOrEmpty(code) || code == "------")
             {
-                SetLobbyStatus("No lobby code to copy yet.");
+                SetLobbyStatus("복사할 코드 없음");
                 return;
             }
             GUIUtility.systemCopyBuffer = code;
-            SetLobbyStatus($"Copied lobby code: {code}");
+            SetLobbyStatus($"코드 복사됨: {code}");
         }
 
         private void AppendLog(string msg)
@@ -408,17 +414,32 @@ namespace AbsoluteZero.UI.LobbyUI
 
         private void BuildUI()
         {
-            var canvasGO = new GameObject("LobbyCanvas");
-            var canvas = canvasGO.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 10;
-
-            var scaler = canvasGO.AddComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920, 1080);
-            scaler.matchWidthOrHeight = 0.5f;
-
-            canvasGO.AddComponent<GraphicRaycaster>();
+            var mainUIGO = GameObject.Find("MainUI");
+            if (mainUIGO != null)
+            {
+                mainCanvas = mainUIGO.GetComponent<Canvas>();
+                var scaler = mainUIGO.GetComponent<CanvasScaler>();
+                if (scaler != null)
+                {
+                    scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+                    scaler.referenceResolution = new Vector2(1920, 1080);
+                    scaler.matchWidthOrHeight = 0.5f;
+                }
+                if (mainUIGO.GetComponent<GraphicRaycaster>() == null)
+                    mainUIGO.AddComponent<GraphicRaycaster>();
+            }
+            else
+            {
+                mainUIGO = new GameObject("MainUI");
+                mainCanvas = mainUIGO.AddComponent<Canvas>();
+                mainCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                mainCanvas.sortingOrder = 10;
+                var scaler = mainUIGO.AddComponent<CanvasScaler>();
+                scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+                scaler.referenceResolution = new Vector2(1920, 1080);
+                scaler.matchWidthOrHeight = 0.5f;
+                mainUIGO.AddComponent<GraphicRaycaster>();
+            }
 
             if (FindAnyObjectByType<EventSystem>() == null)
             {
@@ -427,7 +448,7 @@ namespace AbsoluteZero.UI.LobbyUI
                 esGO.AddComponent<InputSystemUIInputModule>();
             }
 
-            Transform root = canvasGO.transform;
+            Transform root = mainUIGO.transform;
 
             BuildMainPanel(root);
             BuildLobbyPanel(root);
@@ -445,36 +466,100 @@ namespace AbsoluteZero.UI.LobbyUI
             rt.offsetMin = Vector2.zero;
             rt.offsetMax = Vector2.zero;
 
-            CreatePanel(mainPanel.transform, "BG", Vector2.zero,
-                new Vector2(500, 450), new Color(0.08f, 0.08f, 0.12f, 0.92f));
+            var sprites = Resources.LoadAll<Sprite>("로비화면");
+            Sprite nickSprite = null, arenaSprite = null, closetSprite = null;
+            foreach (var s in sprites)
+            {
+                if (s.name == "lobby_nickname") nickSprite = s;
+                else if (s.name == "lobby_arena") arenaSprite = s;
+                else if (s.name == "lobby_closet") closetSprite = s;
+            }
 
-            CreateText(mainPanel.transform, "Title",
-                new Vector2(0, 160), new Vector2(400, 60), "ABSOLUTE ZERO", 42);
+            // --- 닉네임 바: 좌상단 (비율 507:126 ≈ 4:1) ---
+            if (nickSprite != null)
+            {
+                var nickGO = new GameObject("NicknameBar");
+                nickGO.transform.SetParent(mainPanel.transform, false);
+                var nickRT = nickGO.AddComponent<RectTransform>();
+                nickRT.anchorMin = new Vector2(0, 1);
+                nickRT.anchorMax = new Vector2(0, 1);
+                nickRT.pivot = new Vector2(0, 1);
+                nickRT.anchoredPosition = new Vector2(30, -25);
+                nickRT.sizeDelta = new Vector2(340, 85);
 
-            CreateText(mainPanel.transform, "Subtitle",
-                new Vector2(0, 110), new Vector2(400, 30), "1v1 Temperature Deathmatch", 18,
-                new Color(0.6f, 0.6f, 0.7f));
+                var nickImg = nickGO.AddComponent<Image>();
+                nickImg.sprite = nickSprite;
+                nickImg.preserveAspect = true;
 
-            createBtn = CreateButton(mainPanel.transform, "CreateBtn",
-                new Vector2(0, 40), new Vector2(300, 55), "CREATE LOBBY",
-                new Color(0.2f, 0.5f, 0.8f));
-            createBtn.onClick.AddListener(OnCreateClicked);
+                var nickText = CreateText(nickGO.transform, "NickText",
+                    Vector2.zero, Vector2.zero, "Player", 22, Color.black);
+                var nickTextRT = nickText.GetComponent<RectTransform>();
+                nickTextRT.anchorMin = Vector2.zero;
+                nickTextRT.anchorMax = Vector2.one;
+                nickTextRT.offsetMin = new Vector2(15, 0);
+                nickTextRT.offsetMax = new Vector2(-55, 0);
+                nickText.alignment = TextAlignmentOptions.MidlineLeft;
+            }
 
-            CreateText(mainPanel.transform, "OrText",
-                new Vector2(0, -10), new Vector2(100, 25), "— or —", 16,
-                new Color(0.5f, 0.5f, 0.5f));
+            // --- 버튼 그룹: 좌하단 (버튼 비율 476:256 ≈ 1.86:1) ---
+            // 결투장 버튼
+            if (arenaSprite != null)
+            {
+                var arenaGO = new GameObject("ArenaBtn");
+                arenaGO.transform.SetParent(mainPanel.transform, false);
+                var arenaRT = arenaGO.AddComponent<RectTransform>();
+                arenaRT.anchorMin = new Vector2(0, 0);
+                arenaRT.anchorMax = new Vector2(0, 0);
+                arenaRT.pivot = new Vector2(0, 0);
+                arenaRT.anchoredPosition = new Vector2(30, 185);
+                arenaRT.sizeDelta = new Vector2(340, 183);
 
-            joinCodeInput = CreateInputField(mainPanel.transform, "JoinCodeInput",
-                new Vector2(-55, -55), new Vector2(190, 50), "Enter code...");
+                var arenaImg = arenaGO.AddComponent<Image>();
+                arenaImg.sprite = arenaSprite;
+                arenaImg.preserveAspect = true;
 
-            joinBtn = CreateButton(mainPanel.transform, "JoinBtn",
-                new Vector2(115, -55), new Vector2(110, 50), "JOIN",
-                new Color(0.3f, 0.6f, 0.3f));
-            joinBtn.onClick.AddListener(OnJoinClicked);
+                var arenaBtn = arenaGO.AddComponent<Button>();
+                var colors = arenaBtn.colors;
+                colors.highlightedColor = new Color(0.9f, 0.95f, 1f);
+                colors.pressedColor = new Color(0.75f, 0.75f, 0.75f);
+                arenaBtn.colors = colors;
+                arenaBtn.onClick.AddListener(OnArenaClicked);
+            }
 
+            // 옷장 버튼
+            if (closetSprite != null)
+            {
+                var closetGO = new GameObject("ClosetBtn");
+                closetGO.transform.SetParent(mainPanel.transform, false);
+                var closetRT = closetGO.AddComponent<RectTransform>();
+                closetRT.anchorMin = new Vector2(0, 0);
+                closetRT.anchorMax = new Vector2(0, 0);
+                closetRT.pivot = new Vector2(0, 0);
+                closetRT.anchoredPosition = new Vector2(30, 15);
+                closetRT.sizeDelta = new Vector2(340, 160);
+
+                var closetImg = closetGO.AddComponent<Image>();
+                closetImg.sprite = closetSprite;
+                closetImg.preserveAspect = true;
+
+                var closetBtn = closetGO.AddComponent<Button>();
+                closetBtn.interactable = false;
+                var colors = closetBtn.colors;
+                colors.disabledColor = new Color(0.7f, 0.7f, 0.7f, 0.8f);
+                closetBtn.colors = colors;
+            }
+
+            // 상태 텍스트 (좌하단 버튼 아래)
             statusText = CreateText(mainPanel.transform, "Status",
-                new Vector2(0, -130), new Vector2(400, 30), "Initializing...", 16,
-                new Color(0.7f, 0.7f, 0.7f));
+                Vector2.zero, Vector2.zero, "준비 완료", 20,
+                new Color(0.3f, 0.3f, 0.3f));
+            var stRT = statusText.GetComponent<RectTransform>();
+            stRT.anchorMin = new Vector2(0, 0);
+            stRT.anchorMax = new Vector2(0, 0);
+            stRT.pivot = new Vector2(0, 0);
+            stRT.anchoredPosition = new Vector2(45, 10);
+            stRT.sizeDelta = new Vector2(400, 30);
+            statusText.alignment = TextAlignmentOptions.BottomLeft;
         }
 
         private void BuildLobbyPanel(Transform root)
@@ -487,18 +572,35 @@ namespace AbsoluteZero.UI.LobbyUI
             rt.offsetMin = Vector2.zero;
             rt.offsetMax = Vector2.zero;
 
-            CreatePanel(lobbyPanel.transform, "BG", Vector2.zero,
-                new Vector2(600, 650), new Color(0.08f, 0.08f, 0.12f, 0.92f));
+            // 반투명 배경 딤
+            var dimGO = new GameObject("Dim");
+            dimGO.transform.SetParent(lobbyPanel.transform, false);
+            var dimRT = dimGO.AddComponent<RectTransform>();
+            dimRT.anchorMin = Vector2.zero;
+            dimRT.anchorMax = Vector2.one;
+            dimRT.offsetMin = Vector2.zero;
+            dimRT.offsetMax = Vector2.zero;
+            var dimImg = dimGO.AddComponent<Image>();
+            dimImg.color = new Color(0, 0, 0, 0.5f);
+            dimImg.raycastTarget = true;
 
-            CreateText(lobbyPanel.transform, "LobbyTitle",
-                new Vector2(0, 280), new Vector2(400, 40), "LOBBY", 32);
+            // 메인 패널
+            var panelBG = CreatePanel(lobbyPanel.transform, "PanelBG", Vector2.zero,
+                new Vector2(720, 780), new Color(0.12f, 0.12f, 0.18f, 0.96f));
 
-            CreateText(lobbyPanel.transform, "CodeLabel",
-                new Vector2(0, 235), new Vector2(300, 25), "Lobby Code (click to copy):", 16,
+            Transform panel = panelBG.transform;
+
+            // 타이틀
+            CreateText(panel, "Title",
+                new Vector2(0, 340), new Vector2(500, 60), "결투장", 48);
+
+            // 로비 코드
+            CreateText(panel, "CodeLabel",
+                new Vector2(0, 285), new Vector2(400, 30), "로비 코드 (클릭하여 복사)", 18,
                 new Color(0.6f, 0.6f, 0.7f));
 
-            lobbyCodeText = CreateText(lobbyPanel.transform, "LobbyCode",
-                new Vector2(0, 200), new Vector2(300, 50), "------", 40);
+            lobbyCodeText = CreateText(panel, "LobbyCode",
+                new Vector2(0, 240), new Vector2(400, 60), "------", 48);
             lobbyCodeText.color = new Color(1f, 0.9f, 0.4f);
 
             var codeBtn = lobbyCodeText.gameObject.AddComponent<Button>();
@@ -506,49 +608,70 @@ namespace AbsoluteZero.UI.LobbyUI
             codeBtn.transition = Selectable.Transition.None;
             codeBtn.onClick.AddListener(CopyLobbyCode);
 
-            CreateText(lobbyPanel.transform, "PlayersLabel",
-                new Vector2(0, 155), new Vector2(200, 25), "Players:", 18,
+            // 플레이어 목록
+            CreateText(panel, "PlayersLabel",
+                new Vector2(0, 185), new Vector2(200, 30), "플레이어", 22,
                 new Color(0.6f, 0.6f, 0.7f));
 
             var listGO = new GameObject("PlayerList");
-            listGO.transform.SetParent(lobbyPanel.transform, false);
+            listGO.transform.SetParent(panel, false);
             var listRT = listGO.AddComponent<RectTransform>();
-            listRT.anchoredPosition = new Vector2(0, 85);
-            listRT.sizeDelta = new Vector2(400, 120);
+            listRT.anchoredPosition = new Vector2(0, 105);
+            listRT.sizeDelta = new Vector2(500, 140);
             var vlg = listGO.AddComponent<VerticalLayoutGroup>();
-            vlg.spacing = 6;
+            vlg.spacing = 8;
             vlg.childForceExpandWidth = true;
             vlg.childForceExpandHeight = false;
             vlg.childAlignment = TextAnchor.UpperCenter;
             vlg.padding = new RectOffset(10, 10, 5, 5);
             playerListContainer = listGO.transform;
 
-            var buttonArea = new GameObject("ButtonArea");
-            buttonArea.transform.SetParent(lobbyPanel.transform, false);
-            var baRT = buttonArea.AddComponent<RectTransform>();
-            baRT.anchoredPosition = new Vector2(0, -40);
-            baRT.sizeDelta = new Vector2(400, 55);
+            // 생성/참가 영역
+            createBtn = CreateButton(panel, "CreateBtn",
+                new Vector2(0, 10), new Vector2(400, 60), "로비 생성",
+                new Color(0.2f, 0.5f, 0.8f), 24);
+            createBtn.onClick.AddListener(OnCreateClicked);
 
-            startBtn = CreateButton(buttonArea.transform, "StartBtn",
-                new Vector2(-80, 0), new Vector2(150, 50), "START GAME",
-                new Color(0.8f, 0.4f, 0.1f));
+            CreateText(panel, "OrText",
+                new Vector2(0, -40), new Vector2(100, 25), "— 또는 —", 16,
+                new Color(0.5f, 0.5f, 0.5f));
+
+            joinCodeInput = CreateInputField(panel, "JoinCodeInput",
+                new Vector2(-70, -85), new Vector2(260, 55), "코드 입력...");
+
+            joinBtn = CreateButton(panel, "JoinBtn",
+                new Vector2(145, -85), new Vector2(130, 55), "참가",
+                new Color(0.3f, 0.6f, 0.3f), 22);
+            joinBtn.onClick.AddListener(OnJoinClicked);
+
+            // 시작/퇴장 버튼
+            startBtn = CreateButton(panel, "StartBtn",
+                new Vector2(-100, -165), new Vector2(190, 55), "게임 시작",
+                new Color(0.8f, 0.4f, 0.1f), 22);
             startBtn.onClick.AddListener(OnStartClicked);
             startBtn.gameObject.SetActive(false);
 
-            leaveBtn = CreateButton(buttonArea.transform, "LeaveBtn",
-                new Vector2(80, 0), new Vector2(150, 50), "LEAVE",
-                new Color(0.6f, 0.2f, 0.2f));
+            leaveBtn = CreateButton(panel, "LeaveBtn",
+                new Vector2(100, -165), new Vector2(190, 55), "나가기",
+                new Color(0.6f, 0.2f, 0.2f), 22);
             leaveBtn.onClick.AddListener(OnLeaveClicked);
 
-            lobbyStatusText = CreateText(lobbyPanel.transform, "LobbyStatus",
-                new Vector2(0, -95), new Vector2(500, 25), "", 16,
+            // 상태
+            lobbyStatusText = CreateText(panel, "LobbyStatus",
+                new Vector2(0, -220), new Vector2(600, 30), "", 18,
                 new Color(0.7f, 0.7f, 0.7f));
 
+            // 로그
+            BuildLogScroll(panel, new Vector2(0, -310), new Vector2(600, 130));
+        }
+
+        private void BuildLogScroll(Transform parent, Vector2 pos, Vector2 size)
+        {
             var logScrollGO = new GameObject("LogScroll");
-            logScrollGO.transform.SetParent(lobbyPanel.transform, false);
+            logScrollGO.transform.SetParent(parent, false);
             var logScrollRT = logScrollGO.AddComponent<RectTransform>();
-            logScrollRT.anchoredPosition = new Vector2(0, -200);
-            logScrollRT.sizeDelta = new Vector2(500, 150);
+            logScrollRT.anchoredPosition = pos;
+            logScrollRT.sizeDelta = size;
 
             var logBG = logScrollGO.AddComponent<Image>();
             logBG.color = new Color(0.05f, 0.05f, 0.08f, 0.8f);
@@ -562,8 +685,8 @@ namespace AbsoluteZero.UI.LobbyUI
             var vpRT = viewport.AddComponent<RectTransform>();
             vpRT.anchorMin = Vector2.zero;
             vpRT.anchorMax = Vector2.one;
-            vpRT.offsetMin = new Vector2(5, 5);
-            vpRT.offsetMax = new Vector2(-5, -5);
+            vpRT.offsetMin = new Vector2(8, 5);
+            vpRT.offsetMax = new Vector2(-8, -5);
             var vpMask = viewport.AddComponent<Mask>();
             vpMask.showMaskGraphic = false;
             var vpImg = viewport.AddComponent<Image>();
@@ -575,14 +698,14 @@ namespace AbsoluteZero.UI.LobbyUI
             cRT.anchorMin = new Vector2(0, 1);
             cRT.anchorMax = new Vector2(1, 1);
             cRT.pivot = new Vector2(0.5f, 1);
-            cRT.offsetMin = new Vector2(0, 0);
-            cRT.offsetMax = new Vector2(0, 0);
+            cRT.offsetMin = Vector2.zero;
+            cRT.offsetMax = Vector2.zero;
 
             var csf = content.AddComponent<ContentSizeFitter>();
             csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
             logText = content.AddComponent<TextMeshProUGUI>();
-            logText.fontSize = 13;
+            logText.fontSize = 14;
             logText.color = new Color(0.7f, 0.8f, 0.7f);
             logText.alignment = TextAlignmentOptions.TopLeft;
             logText.text = "";
@@ -626,7 +749,7 @@ namespace AbsoluteZero.UI.LobbyUI
         }
 
         private static Button CreateButton(Transform parent, string name,
-            Vector2 pos, Vector2 size, string label, Color bgColor)
+            Vector2 pos, Vector2 size, string label, Color bgColor, int fontSize = 20)
         {
             var go = new GameObject(name);
             go.transform.SetParent(parent, false);
@@ -653,7 +776,7 @@ namespace AbsoluteZero.UI.LobbyUI
             labelRT.offsetMax = Vector2.zero;
             var tmp = labelGO.AddComponent<TextMeshProUGUI>();
             tmp.text = label;
-            tmp.fontSize = 20;
+            tmp.fontSize = fontSize;
             tmp.alignment = TextAlignmentOptions.Center;
             tmp.color = Color.white;
 
@@ -677,8 +800,8 @@ namespace AbsoluteZero.UI.LobbyUI
             var taRT = textArea.AddComponent<RectTransform>();
             taRT.anchorMin = Vector2.zero;
             taRT.anchorMax = Vector2.one;
-            taRT.offsetMin = new Vector2(10, 5);
-            taRT.offsetMax = new Vector2(-10, -5);
+            taRT.offsetMin = new Vector2(12, 5);
+            taRT.offsetMax = new Vector2(-12, -5);
             textArea.AddComponent<RectMask2D>();
 
             var placeholderGO = new GameObject("Placeholder");
@@ -690,7 +813,7 @@ namespace AbsoluteZero.UI.LobbyUI
             phRT.offsetMax = Vector2.zero;
             var phText = placeholderGO.AddComponent<TextMeshProUGUI>();
             phText.text = placeholder;
-            phText.fontSize = 18;
+            phText.fontSize = 20;
             phText.fontStyle = FontStyles.Italic;
             phText.color = new Color(0.5f, 0.5f, 0.5f, 0.7f);
             phText.alignment = TextAlignmentOptions.MidlineLeft;
@@ -703,7 +826,7 @@ namespace AbsoluteZero.UI.LobbyUI
             itRT.offsetMin = Vector2.zero;
             itRT.offsetMax = Vector2.zero;
             var inputTMP = inputTextGO.AddComponent<TextMeshProUGUI>();
-            inputTMP.fontSize = 20;
+            inputTMP.fontSize = 22;
             inputTMP.color = Color.white;
             inputTMP.alignment = TextAlignmentOptions.MidlineLeft;
 
@@ -713,7 +836,7 @@ namespace AbsoluteZero.UI.LobbyUI
             inputField.placeholder = phText;
             inputField.characterLimit = 8;
             inputField.contentType = TMP_InputField.ContentType.Alphanumeric;
-            inputField.pointSize = 20;
+            inputField.pointSize = 22;
 
             return inputField;
         }
@@ -723,10 +846,10 @@ namespace AbsoluteZero.UI.LobbyUI
             var go = new GameObject("Slot");
             go.transform.SetParent(parent, false);
             var rt = go.AddComponent<RectTransform>();
-            rt.sizeDelta = new Vector2(380, 45);
+            rt.sizeDelta = new Vector2(480, 55);
 
             var le = go.AddComponent<LayoutElement>();
-            le.preferredHeight = 45;
+            le.preferredHeight = 55;
 
             var img = go.AddComponent<Image>();
             img.color = bgColor;
@@ -736,11 +859,11 @@ namespace AbsoluteZero.UI.LobbyUI
             var trt = textGO.AddComponent<RectTransform>();
             trt.anchorMin = Vector2.zero;
             trt.anchorMax = Vector2.one;
-            trt.offsetMin = new Vector2(15, 0);
-            trt.offsetMax = new Vector2(-15, 0);
+            trt.offsetMin = new Vector2(20, 0);
+            trt.offsetMax = new Vector2(-20, 0);
             var tmp = textGO.AddComponent<TextMeshProUGUI>();
             tmp.text = label;
-            tmp.fontSize = 18;
+            tmp.fontSize = 22;
             tmp.alignment = TextAlignmentOptions.MidlineLeft;
             tmp.color = Color.white;
 

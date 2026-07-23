@@ -1,4 +1,5 @@
 using AbsoluteZero.Core.Common;
+using AbsoluteZero.Core.Emote;
 using AbsoluteZero.Core.Item;
 using AbsoluteZero.Core.Item.Data;
 using Unity.Netcode;
@@ -262,6 +263,35 @@ namespace AbsoluteZero.Core.Player
             IsFanActive.Value = false;
 
             Debug.Log($"[PlayerState P{SyncedPlayerIndex.Value}] Ready pressed (hasItem={HasSelectedItem.Value})");
+        }
+
+        // ─── 도발 이모티콘 ──────────────────────────────────────
+
+        double _lastEmoteServerTime = -100.0;
+        public double LastEmoteServerTime => _lastEmoteServerTime;
+
+        [Rpc(SendTo.Server)]
+        public void SendEmoteServerRpc(byte emoteId, RpcParams rpcParams = default)
+        {
+            if (!IsServer) return;
+            var tm = Turn.TurnManager.Instance;
+            if (tm == null || !tm.AcceptEmotes) return;
+            if (emoteId >= EmoteCatalog.Count) return;
+
+            _lastEmoteServerTime = NetworkManager.ServerTime.Time;
+            ShowEmoteClientRpc(emoteId);
+        }
+
+        [Rpc(SendTo.Everyone)]
+        void ShowEmoteClientRpc(byte emoteId)
+        {
+            if (IsOwner) return;
+
+            var visual = GetComponent<AZPlayerVisual>();
+            Transform root = visual != null ? visual.GetVisualRoot() : null;
+            if (root == null) return;
+
+            EmoteBubble.Show(root, root.position, emoteId);
         }
     }
 }

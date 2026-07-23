@@ -98,7 +98,7 @@ namespace AbsoluteZero.Core.Inventory
                 RebuildLocalViews();
             }
 
-            if (_needsOpponentRebuild)
+            if (_needsOpponentRebuild && CanRebuild())
             {
                 _needsOpponentRebuild = false;
                 RebuildOpponentItems();
@@ -229,6 +229,11 @@ namespace AbsoluteZero.Core.Inventory
                 _needsLocalRebuild = false;
                 RebuildLocalViews();
             }
+            if (_needsOpponentRebuild)
+            {
+                _needsOpponentRebuild = false;
+                RebuildOpponentItems();
+            }
         }
 
         // E3: combined guard
@@ -270,11 +275,32 @@ namespace AbsoluteZero.Core.Inventory
 
         void HandleLocalSlotValueChange(int index)
         {
-            if (_localViews == null || index < 0 || index >= _localViews.Length || _localViews[index] == null)
+            if (_localViews == null || index < 0 || index >= _localViews.Length)
                 return;
 
             var slot = _localInventory.SlotStates[index];
+
+            if (slot.IsEmpty)
+            {
+                _needsLocalRebuild = true;
+                return;
+            }
+
+            if (_localViews[index] == null)
+            {
+                _needsLocalRebuild = true;
+                return;
+            }
+
             var itemData = _localInventory.GetItemData(index);
+            string currentName = _localViews[index].gameObject.name;
+            string expectedName = itemData != null ? $"Item_{index}_{itemData.ItemName}" : "";
+            if (currentName != expectedName)
+            {
+                _needsLocalRebuild = true;
+                return;
+            }
+
             string name = itemData != null ? itemData.ItemName : "Empty";
             string uses = slot.IsUnlimited ? "∞" : $"{slot.RemainingUses}";
             _localViews[index].UpdateDisplay(name, uses, slot.IsUsable);
@@ -406,8 +432,10 @@ namespace AbsoluteZero.Core.Inventory
             DestroyOpponentViews();
 
             int slotCount = _opponentInventory.SlotStates.Count;
-            var litMat = Resources.Load<Material>("sprite3DMat");
             var activeItems = new List<GameObject>();
+
+            int randomMarker = 0;
+            int basicMarker = 0;
 
             for (int i = 0; i < slotCount; i++)
             {
@@ -417,22 +445,30 @@ namespace AbsoluteZero.Core.Inventory
                 var itemData = _opponentInventory.GetItemData(i);
                 if (itemData == null) continue;
 
+                string markerName;
+                if (itemData.Persistence == ItemPersistence.RandomConsumable)
+                {
+                    markerName = $"EnemyItem{randomMarker + 1}";
+                    randomMarker++;
+                }
+                else
+                {
+                    markerName = $"EnemyItem{9 + basicMarker}";
+                    basicMarker++;
+                }
+
                 string itemName = itemData.ItemName;
-                var go = new GameObject($"OppItem_{activeItems.Count}_{itemName}");
+                var go = new GameObject($"OppItem_{i}_{itemName}");
 
                 var sr = go.AddComponent<SpriteRenderer>();
                 sr.sprite = GameSprites.GetItemSprite(itemName);
-                if (litMat != null) sr.material = litMat;
                 sr.sortingOrder = 5;
 
-                activeItems.Add(go);
-            }
-
-            for (int i = 0; i < activeItems.Count; i++)
-            {
-                var marker = GameObject.Find($"EnemyItem{i + 1}");
+                var marker = GameObject.Find(markerName);
                 if (marker != null)
-                    activeItems[i].transform.position = marker.transform.position;
+                    go.transform.position = marker.transform.position;
+
+                activeItems.Add(go);
             }
 
             _opponentItemObjects = activeItems.ToArray();

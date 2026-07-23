@@ -6,6 +6,7 @@ using AbsoluteZero.Core.Item.Data;
 using AbsoluteZero.Core.Player;
 using AbsoluteZero.Core.Turn;
 using AbsoluteZero.Core.Inventory;
+using AbsoluteZero.UI.Game;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -59,8 +60,10 @@ namespace AbsoluteZero.Core.Combat
         IEnumerator PlayCombatVFXSequence(CombatResultData result)
         {
             IsPlaying = true;
+            InventoryPresenter.Instance?.LockRebuild();
+            AZGameUI.Instance?.OverrideTempTargets(result.P1TempBeforeCombat, result.P2TempBeforeCombat);
             var nm = NetworkManager.Singleton;
-            if (nm == null) { IsPlaying = false; yield break; }
+            if (nm == null) { InventoryPresenter.Instance?.UnlockRebuild(); AZGameUI.Instance?.ClearTempOverrides(); IsPlaying = false; yield break; }
 
             int firstIdx = result.FirstPlayerIndex;
             int secondIdx = 1 - firstIdx;
@@ -87,7 +90,7 @@ namespace AbsoluteZero.Core.Combat
             if (firstItemId >= 0)
             {
                 Debug.Log($"[CombatVFX] Playing FIRST item sequence: P{firstIdx} item={firstItemId}, targetDefending={secondIsDefending}");
-                yield return StartCoroutine(PlayItemSequence(firstIdx, firstItemId, nm, secondIsDefending));
+                yield return StartCoroutine(PlayItemSequence(firstIdx, firstItemId, nm, secondIsDefending, result));
             }
 
             if (firstActionKilled && deadIdx >= 0)
@@ -96,6 +99,8 @@ namespace AbsoluteZero.Core.Combat
                 var deadVisual = GetPlayerVisual(deadIdx, nm);
                 if (deadVisual != null) deadVisual.PlayDeathSequence();
                 yield return _waitDeathSequence;
+                InventoryPresenter.Instance?.UnlockRebuild();
+                AZGameUI.Instance?.ClearTempOverrides();
                 IsPlaying = false;
                 yield break;
             }
@@ -106,7 +111,7 @@ namespace AbsoluteZero.Core.Combat
             if (secondItemId >= 0)
             {
                 Debug.Log($"[CombatVFX] Playing SECOND item sequence: P{secondIdx} item={secondItemId}, targetDefending={firstIsDefending}");
-                yield return StartCoroutine(PlayItemSequence(secondIdx, secondItemId, nm, firstIsDefending));
+                yield return StartCoroutine(PlayItemSequence(secondIdx, secondItemId, nm, firstIsDefending, result));
             }
 
             if (!firstActionKilled && deadIdx >= 0)
@@ -117,10 +122,12 @@ namespace AbsoluteZero.Core.Combat
                 yield return _waitDeathSequence;
             }
 
+            InventoryPresenter.Instance?.UnlockRebuild();
+            AZGameUI.Instance?.ClearTempOverrides();
             IsPlaying = false;
         }
 
-        IEnumerator PlayItemSequence(int userIdx, short itemId, NetworkManager nm, bool targetDefending = false)
+        IEnumerator PlayItemSequence(int userIdx, short itemId, NetworkManager nm, bool targetDefending, CombatResultData result)
         {
             var itemData = ItemManager.Instance?.GetItemData(itemId);
             if (itemData == null)
@@ -179,6 +186,7 @@ namespace AbsoluteZero.Core.Combat
                 if (itemData.EffectHitCount > 0 && itemData.EffectDelay > 0f)
                 {
                     yield return new WaitForSeconds(itemData.EffectDelay);
+                    ApplyEventTemps(userIdx, result);
                     float remaining = animLen - itemData.EffectDelay;
 
                     for (int h = 0; h < itemData.EffectHitCount; h++)
@@ -222,7 +230,9 @@ namespace AbsoluteZero.Core.Combat
                 }
                 else
                 {
-                    yield return new WaitForSeconds(animLen);
+                    yield return new WaitForSeconds(animLen * 0.5f);
+                    ApplyEventTemps(userIdx, result);
+                    yield return new WaitForSeconds(animLen * 0.5f);
                 }
 
                 Debug.Log($"[CombatVFX] → userVisual.ReturnToIdle()");
@@ -241,11 +251,13 @@ namespace AbsoluteZero.Core.Combat
             }
             else if (itemData.ItemName == "Cat")
             {
+                ApplyEventTemps(userIdx, result);
                 float catMinDur = itemData.AnimDuration > 0f ? itemData.AnimDuration : 1.5f;
                 yield return StartCoroutine(PlayCatSpriteSequence(userIdx, targetIdx, isLocalUser, catMinDur));
             }
             else if ((isAttack || isRecovery) && itemData.EffectHitCount > 0)
             {
+                ApplyEventTemps(userIdx, result);
                 if (isAttack && targetVisual != null)
                 {
                     if (targetDefending)
@@ -296,6 +308,21 @@ namespace AbsoluteZero.Core.Combat
             }
 
             Debug.Log($"[CombatVFX] PlayItemSequence DONE: P{userIdx} '{itemData.ItemName}'");
+        }
+
+        void ApplyEventTemps(int userIdx, CombatResultData result)
+        {
+            if (result.EventCount > 0 && result.Event0Source == (byte)userIdx)
+            {
+                AZGameUI.Instance?.OverridePlayerTemp(result.Event0Source, result.Event0UserTemp);
+                AZGameUI.Instance?.OverridePlayerTemp(result.Event0Target, result.Event0TargetTemp);
+                return;
+            }
+            if (result.EventCount > 1 && result.Event1Source == (byte)userIdx)
+            {
+                AZGameUI.Instance?.OverridePlayerTemp(result.Event1Source, result.Event1UserTemp);
+                AZGameUI.Instance?.OverridePlayerTemp(result.Event1Target, result.Event1TargetTemp);
+            }
         }
 
         void LogAttackTimingSummary(int firstIdx, short firstItemId, int secondIdx, short secondItemId, int deadIdx)
@@ -461,6 +488,22 @@ namespace AbsoluteZero.Core.Combat
             }
             go.transform.position = destPos;
 
+            if (catItemTransform != null)
+            {
+                var tempGO = new GameObject("CatAnimTemp");
+                var tempSR = tempGO.AddComponent<SpriteRenderer>();
+                tempSR.sprite = sr.sprite;
+                tempSR.sortingOrder = sr.sortingOrder;
+                tempSR.material = sr.material;
+                tempGO.transform.position = go.transform.position;
+                tempGO.transform.localScale = go.transform.localScale;
+                go = tempGO;
+                sr = tempSR;
+                catItemTransform = null;
+            }
+
+            InventoryPresenter.Instance?.UnlockRebuild();
+
             sr.sprite = spRummage;
 
             float rumbleDur = minDuration;
@@ -602,8 +645,6 @@ namespace AbsoluteZero.Core.Combat
                 var sr = feedSpriteGO.AddComponent<SpriteRenderer>();
                 sr.sprite = sprite;
                 sr.sortingOrder = 90;
-                var litMat = Resources.Load<Material>("sprite3DMat");
-                if (litMat != null) sr.material = litMat;
                 feedSpriteGO.transform.position = GetPlayerWorldPos(targetIdx) + new Vector3(0.3f, 0.5f, 0f);
                 feedSpriteGO.transform.localScale = Vector3.one * 0.8f;
             }

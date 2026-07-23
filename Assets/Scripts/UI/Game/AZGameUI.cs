@@ -1,25 +1,26 @@
 using System.Collections;
 using AbsoluteZero.Core.Audio;
-using AbsoluteZero.Core.Combat;
 using AbsoluteZero.Core.Common;
 using AbsoluteZero.Core.Inventory;
 using AbsoluteZero.Core.Item;
 using AbsoluteZero.Core.Match;
 using AbsoluteZero.Core.Player;
 using AbsoluteZero.Core.Turn;
+using AbsoluteZero.UI.Emote;
 using AbsoluteZero.UI.MiniGame;
 using TMPro;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
-using UnityEngine.Rendering;
 using UnityEngine.UI;
 
 namespace AbsoluteZero.UI.Game
 {
     public class AZGameUI : MonoBehaviour
     {
+        public static AZGameUI Instance { get; private set; }
+
         TurnManager _tm;
         MatchManager _mm;
         PlayerState _localPlayer;
@@ -57,14 +58,6 @@ namespace AbsoluteZero.UI.Game
 
         InventoryPresenter _presenter;
 
-        TextMeshProUGUI _stackText;
-        string _selectedMainName;
-        string _selectedSubName;
-
-        GameObject _resultPanel;
-        TextMeshProUGUI _resultText;
-        Coroutine _resultHideCoroutine;
-
         GameObject _envPanel;
         TextMeshProUGUI _envText;
 
@@ -76,6 +69,12 @@ namespace AbsoluteZero.UI.Game
         bool _oppBarAttached;
 
         bool _uiBuilt;
+
+        float _displayedMyTemp = 37f;
+        float _displayedOppTemp = 37f;
+        float? _myTempOverride;
+        float? _oppTempOverride;
+        const float HP_LERP_SPEED = 6f;
 
         static readonly WaitForSeconds _waitEnvHide = new(3.5f);
         static readonly WaitForSeconds _waitAlarmShake = new(0.05f);
@@ -91,6 +90,11 @@ namespace AbsoluteZero.UI.Game
         const float WORLD_CANVAS_SCALE = 0.005f;
         const float OPP_BAR_SCALE = 0.007f;
         const int ALARM_TIME_THRESHOLD = 5;
+
+        void Awake()
+        {
+            Instance = this;
+        }
 
         void Start()
         {
@@ -110,11 +114,6 @@ namespace AbsoluteZero.UI.Game
             var hubGO = new GameObject("MiniGameHub");
             hubGO.AddComponent<MiniGameHub>();
             MiniGameHub.OnFinishedLocal += OnMiniGameFinished;
-
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            var debugGranterGO = new GameObject("DebugItemGranter");
-            debugGranterGO.AddComponent<Core.Game.DebugItemGranter>();
-#endif
 
             SpawnStayItemFans();
             EnsureAudioManager();
@@ -137,27 +136,19 @@ namespace AbsoluteZero.UI.Game
             var bladesSprite = Resources.Load<Sprite>("Fan/fan_blades");
             var grilleSprite = Resources.Load<Sprite>("Fan/fan_grille");
             var fallback = GameSprites.GetStayItemSprite();
-            var litMat = Resources.Load<Material>("sprite3DMat");
 
-            SpawnFanAt("PlayerStayItem", true, bodySprite, bladesSprite, grilleSprite, fallback, litMat);
-            SpawnFanAt("EnemyStayItem", false, bodySprite, bladesSprite, grilleSprite, fallback, litMat);
+            SpawnFanAt("PlayerStayItem", true, bodySprite, bladesSprite, grilleSprite, fallback);
+            SpawnFanAt("EnemyStayItem", false, bodySprite, bladesSprite, grilleSprite, fallback);
         }
 
         void SpawnFanAt(string markerName, bool isPlayer,
-            Sprite bodySprite, Sprite bladesSprite, Sprite grilleSprite, Sprite fallback, Material litMat)
+            Sprite bodySprite, Sprite bladesSprite, Sprite grilleSprite, Sprite fallback)
         {
             var marker = GameObject.Find(markerName);
             if (marker == null) return;
 
             float s = isPlayer ? playerFanScale : enemyFanScale;
             int playerIndex = isPlayer ? -1 : -2;
-
-            Material mat = litMat;
-            if (!isPlayer && litMat != null)
-            {
-                mat = new Material(litMat);
-                mat.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Off);
-            }
 
             var go = new GameObject($"{markerName}_Fan");
             go.transform.SetParent(marker.transform, false);
@@ -167,7 +158,6 @@ namespace AbsoluteZero.UI.Game
             var bodySr = go.AddComponent<SpriteRenderer>();
             bodySr.sprite = bodySprite != null ? bodySprite : fallback;
             bodySr.sortingOrder = 3;
-            if (mat != null) bodySr.material = mat;
 
             if (bodySprite == null || bladesSprite == null) return;
 
@@ -184,7 +174,6 @@ namespace AbsoluteZero.UI.Game
                 var grilleSr = grille.AddComponent<SpriteRenderer>();
                 grilleSr.sprite = grilleSprite;
                 grilleSr.sortingOrder = 5;
-                if (mat != null) grilleSr.material = mat;
             }
 
             var pivot = new GameObject("BladePivot");
@@ -198,7 +187,6 @@ namespace AbsoluteZero.UI.Game
             var bladeSr = blades.AddComponent<SpriteRenderer>();
             bladeSr.sprite = bladesSprite;
             bladeSr.sortingOrder = 4;
-            if (mat != null) bladeSr.material = mat;
 
             var spinner = go.AddComponent<FanBladeSpinner>();
             spinner.Bind(blades.transform, playerIndex);
@@ -285,7 +273,7 @@ namespace AbsoluteZero.UI.Game
 
         void OnDestroy()
         {
-            TurnManager.OnCombatResult -= OnCombatResultReceived;
+            if (Instance == this) Instance = null;
             TurnManager.OnOpponentRevealed -= OnOpponentRevealed;
             TurnManager.OnEnvironmentAnnounced -= OnEnvironmentAnnounced;
             if (_tm != null)
@@ -359,7 +347,6 @@ namespace AbsoluteZero.UI.Game
         {
             _tm.CurrentPhase.OnValueChanged += OnPhaseChanged;
             _tm.LastRoundWinner.OnValueChanged += OnWinnerChanged;
-            TurnManager.OnCombatResult += OnCombatResultReceived;
             TurnManager.OnOpponentRevealed += OnOpponentRevealed;
             TurnManager.OnEnvironmentAnnounced += OnEnvironmentAnnounced;
             OnPhaseChanged(TurnPhase.WaitingForPlayers, _tm.CurrentPhase.Value);
@@ -392,12 +379,9 @@ namespace AbsoluteZero.UI.Game
 
             if (newPhase == TurnPhase.PrepPhase)
             {
+                SnapTempDisplay();
                 _statusText.text = "Select an item!";
                 _gameOverPanel.SetActive(false);
-                if (_resultPanel != null) _resultPanel.SetActive(false);
-                _selectedMainName = null;
-                _selectedSubName = null;
-                UpdateStackDisplay();
                 GameAudioManager.Instance?.StartFanLoop();
             }
             else if (newPhase == TurnPhase.AttackPhase)
@@ -521,26 +505,62 @@ namespace AbsoluteZero.UI.Game
 
         void UpdateTempDisplay()
         {
+            float dt = Time.deltaTime;
+
             if (_localPlayer != null)
             {
-                float myT = _localPlayer.Temperature.Value;
-                _myTempText.text = $"{myT:F0}°";
+                float myTarget = _myTempOverride ?? _localPlayer.Temperature.Value;
+                _displayedMyTemp = Mathf.MoveTowards(_displayedMyTemp, myTarget, HP_LERP_SPEED * dt);
+                _myTempText.text = $"{_displayedMyTemp:F0}°";
                 if (_myHpSlider != null)
-                    _myHpSlider.value = Mathf.Clamp01(myT / 37f);
+                    _myHpSlider.value = Mathf.Clamp01(_displayedMyTemp / 37f);
                 if (_myHpFillImage != null)
-                    _myHpFillImage.color = GetTempColor(myT);
+                    _myHpFillImage.color = GetTempColor(_displayedMyTemp);
             }
 
             var opp = GetOpponentPlayer();
             if (opp != null)
             {
-                float oppT = opp.Temperature.Value;
-                _oppTempText.text = $"{oppT:F0}°";
+                float oppTarget = _oppTempOverride ?? opp.Temperature.Value;
+                _displayedOppTemp = Mathf.MoveTowards(_displayedOppTemp, oppTarget, HP_LERP_SPEED * dt);
+                _oppTempText.text = $"{_displayedOppTemp:F0}°";
                 if (_oppHpSlider != null)
-                    _oppHpSlider.value = Mathf.Clamp01(oppT / 37f);
+                    _oppHpSlider.value = Mathf.Clamp01(_displayedOppTemp / 37f);
                 if (_oppHpFillImage != null)
-                    _oppHpFillImage.color = GetTempColor(oppT);
+                    _oppHpFillImage.color = GetTempColor(_displayedOppTemp);
             }
+        }
+
+        public void OverrideTempTargets(float p0Temp, float p1Temp)
+        {
+            if (_localPlayer == null) return;
+            int myIdx = _localPlayer.PlayerIndex;
+            _myTempOverride = myIdx == 0 ? p0Temp : p1Temp;
+            _oppTempOverride = myIdx == 0 ? p1Temp : p0Temp;
+        }
+
+        public void OverridePlayerTemp(int playerIndex, float temp)
+        {
+            if (_localPlayer == null) return;
+            if (playerIndex == _localPlayer.PlayerIndex)
+                _myTempOverride = temp;
+            else
+                _oppTempOverride = temp;
+        }
+
+        public void SnapTempDisplay()
+        {
+            if (_localPlayer != null)
+                _displayedMyTemp = _localPlayer.Temperature.Value;
+            var opp = GetOpponentPlayer();
+            if (opp != null)
+                _displayedOppTemp = opp.Temperature.Value;
+        }
+
+        public void ClearTempOverrides()
+        {
+            _myTempOverride = null;
+            _oppTempOverride = null;
         }
 
         static Color GetTempColor(float temp)
@@ -626,10 +646,6 @@ namespace AbsoluteZero.UI.Game
             _localPlayer.SelectItemServerRpc((byte)slotIndex);
             _presenter.NotifyItemConfirmed(slotIndex);
 
-            _selectedMainName = itemData.ItemName;
-
-            UpdateStackDisplay();
-
             _statusText.text = $"Selected: {itemData.ItemName}";
         }
 
@@ -698,9 +714,6 @@ namespace AbsoluteZero.UI.Game
             _scoreText.color = new Color(0.9f, 0.9f, 0.6f);
             AnchorTopCenter(_scoreText.GetComponent<RectTransform>());
 
-            // === RIGHT: Item Stack ===
-            BuildItemStack(root);
-
             // === BOTTOM: Status ===
             _statusText = CreateText(root, "StatusText",
                 new Vector2(0, 30), new Vector2(600, 35), "Waiting for players...", 20);
@@ -726,7 +739,6 @@ namespace AbsoluteZero.UI.Game
 
             _gameOverPanel.SetActive(false);
 
-            BuildResultPanel(root);
             BuildEnvironmentPanel(root);
         }
 
@@ -1086,71 +1098,8 @@ namespace AbsoluteZero.UI.Game
             _readyButton = btnGO.AddComponent<Button>();
             _readyButton.targetGraphic = btnImg;
             _readyButton.onClick.AddListener(OnReadyClicked);
+            btnGO.AddComponent<EmoteWheel>();
             _readyCanvas.gameObject.SetActive(false);
-        }
-
-        void BuildItemStack(Transform root)
-        {
-            var container = new GameObject("ItemStack");
-            container.transform.SetParent(root, false);
-            var cRect = container.AddComponent<RectTransform>();
-            cRect.anchoredPosition = new Vector2(-20, -150);
-            cRect.sizeDelta = new Vector2(200, 200);
-            AnchorTopRight(cRect);
-
-            var bg = CreatePanel(container.transform, "StackBg",
-                Vector2.zero, new Vector2(200, 200),
-                new Color(0.05f, 0.05f, 0.1f, 0.7f));
-
-            var title = CreateText(container.transform, "StackTitle",
-                new Vector2(0, 85), new Vector2(180, 24), "ACTION", 16);
-            title.fontStyle = FontStyles.Bold;
-            title.color = new Color(0.8f, 0.8f, 0.6f);
-
-            _stackText = CreateText(container.transform, "StackContent",
-                new Vector2(0, 10), new Vector2(180, 140), "", 16);
-            _stackText.alignment = TextAlignmentOptions.TopLeft;
-            _stackText.color = new Color(0.9f, 0.9f, 0.9f);
-        }
-
-        void UpdateStackDisplay()
-        {
-            if (_stackText == null) return;
-
-            string text = "";
-            if (_selectedMainName != null)
-                text += $"Main: {_selectedMainName}\n";
-            if (_selectedSubName != null)
-                text += $"Sub: {_selectedSubName}\n";
-            if (text == "")
-                text = "—";
-
-            _stackText.text = text;
-        }
-
-        void BuildResultPanel(Transform root)
-        {
-            _resultPanel = new GameObject("ResultPanel");
-            _resultPanel.transform.SetParent(root, false);
-            var rect = _resultPanel.AddComponent<RectTransform>();
-            rect.anchoredPosition = Vector2.zero;
-            rect.sizeDelta = new Vector2(500, 280);
-
-            CreatePanel(_resultPanel.transform, "ResultBg",
-                Vector2.zero, new Vector2(500, 280),
-                new Color(0.05f, 0.05f, 0.1f, 0.9f));
-
-            var title = CreateText(_resultPanel.transform, "ResultTitle",
-                new Vector2(0, 115), new Vector2(460, 36), "턴 결과", 26);
-            title.fontStyle = FontStyles.Bold;
-            title.color = new Color(1f, 0.9f, 0.5f);
-
-            _resultText = CreateText(_resultPanel.transform, "ResultBody",
-                new Vector2(0, -15), new Vector2(460, 200), "", 18);
-            _resultText.alignment = TextAlignmentOptions.TopLeft;
-            _resultText.color = new Color(0.95f, 0.95f, 0.95f);
-
-            _resultPanel.SetActive(false);
         }
 
         void BuildEnvironmentPanel(Transform root)
@@ -1240,53 +1189,6 @@ namespace AbsoluteZero.UI.Game
             yield return _waitEnvHide;
             if (_envPanel != null)
                 _envPanel.SetActive(false);
-        }
-
-        void OnCombatResultReceived(CombatResultData data)
-        {
-            if (_resultPanel == null || _resultText == null) return;
-
-            string GetItemName(short itemId)
-            {
-                if (itemId < 0) return "—";
-                var item = ItemManager.Instance?.GetItemData(itemId);
-                return item != null ? item.ItemName : "—";
-            }
-
-            string p1Main = GetItemName(data.P1MainItemId);
-            string p2Main = GetItemName(data.P2MainItemId);
-            string p1Sub = GetItemName(data.P1SubItemId);
-            string p2Sub = GetItemName(data.P2SubItemId);
-
-            float p1TickDelta = data.P1TempBeforeCombat - data.P1TempAtTurnStart;
-            float p2TickDelta = data.P2TempBeforeCombat - data.P2TempAtTurnStart;
-            float p1ItemDelta = data.P1TempAfterCombat - data.P1TempBeforeCombat;
-            float p2ItemDelta = data.P2TempAfterCombat - data.P2TempBeforeCombat;
-
-            string FormatDelta(float d) => d >= 0 ? $"+{d:F1}°" : $"{d:F1}°";
-
-            string text = $"P1:\n" +
-                          $"  Main: {p1Main}  |  Sub: {p1Sub}\n" +
-                          $"  Tick: {FormatDelta(p1TickDelta)}  |  Item: {FormatDelta(p1ItemDelta)}\n\n" +
-                          $"P2:\n" +
-                          $"  Main: {p2Main}  |  Sub: {p2Sub}\n" +
-                          $"  Tick: {FormatDelta(p2TickDelta)}  |  Item: {FormatDelta(p2ItemDelta)}";
-
-            _resultText.text = text;
-            _resultPanel.SetActive(true);
-
-            if (_resultHideCoroutine != null)
-                StopCoroutine(_resultHideCoroutine);
-            _resultHideCoroutine = StartCoroutine(HideResultAfterDelay());
-        }
-
-        static readonly WaitForSeconds _waitResultHide = new(4f);
-
-        IEnumerator HideResultAfterDelay()
-        {
-            yield return _waitResultHide;
-            if (_resultPanel != null)
-                _resultPanel.SetActive(false);
         }
 
         void OnOpponentRevealed(byte forPlayerIndex, short opponentItemId)

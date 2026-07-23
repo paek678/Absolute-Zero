@@ -1,9 +1,11 @@
 using System.Collections;
+using System.Collections.Generic;
 using AbsoluteZero.Core.Audio;
 using AbsoluteZero.Core.Common;
 using AbsoluteZero.Core.Item;
 using AbsoluteZero.Core.Turn;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace AbsoluteZero.Core.Combat
 {
@@ -22,6 +24,9 @@ namespace AbsoluteZero.Core.Combat
 
         static readonly WaitForSeconds _waitStealPause = new(0.4f);
         static readonly WaitForSeconds _waitBlanketHold = new(0.6f);
+        static readonly WaitForSeconds _waitSink = new(SINK_DURATION);
+
+        bool _kidsUsed;
 
         GameObject _kidGroup;
         GameObject _ambulanceGroup;
@@ -123,6 +128,7 @@ namespace AbsoluteZero.Core.Combat
             if (_windObj != null) _windObj.SetActive(false);
 
             _currentEnv = EnvironmentType.None;
+            _kidsUsed = false;
         }
 
         IEnumerator LerpLight(Color targetColor, float targetIntensity)
@@ -197,8 +203,8 @@ namespace AbsoluteZero.Core.Combat
 
         public void PlayKidsStealStaging()
         {
-            Debug.Log($"[EnvVFX] PlayKidsStealStaging — kidGroup={(_kidGroup != null)}");
-            if (_kidGroup == null) return;
+            Debug.Log($"[EnvVFX] PlayKidsStealStaging — kidGroup={(_kidGroup != null)} kidsUsed={_kidsUsed}");
+            if (_kidGroup == null || _kidsUsed) return;
             StartCoroutine(KidsStealRoutine());
         }
 
@@ -215,10 +221,7 @@ namespace AbsoluteZero.Core.Combat
 
             yield return StartCoroutine(SinkTransform(leftKid, leftStart, SINK_DURATION));
 
-            var oppSpawnRoot = GameObject.Find("OppItemSpawnRoot");
-            Vector3 stealPos = oppSpawnRoot != null
-                ? oppSpawnRoot.transform.position + new Vector3(1.5f, 0f, 0.5f)
-                : new Vector3(1.5f, 0.5f, 7f);
+            Vector3 stealPos = new Vector3(2.47f, 1.4f, 14f);
 
             leftKid.position = stealPos + Vector3.down * RISE_OFFSET;
             leftKid.gameObject.SetActive(true);
@@ -231,10 +234,18 @@ namespace AbsoluteZero.Core.Combat
 
             yield return StartCoroutine(SinkTransform(leftKid, stealPos, SINK_DURATION));
 
-            leftKid.localPosition = leftStart;
-            leftKid.gameObject.SetActive(count > 0);
-            if (kidAnim != null) { kidAnim.SetTrigger("skew"); Debug.Log("[EnvVFX] KidsSteal: trigger 'skew'"); }
-            Debug.Log("[EnvVFX] KidsStealRoutine DONE");
+            for (int i = 1; i < count; i++)
+            {
+                var kid = _kidGroup.transform.GetChild(i);
+                if (kid.gameObject.activeSelf)
+                    StartCoroutine(SinkTransform(kid, kid.position, SINK_DURATION));
+            }
+            if (count > 1)
+                yield return _waitSink;
+
+            _kidGroup.SetActive(false);
+            _kidsUsed = true;
+            Debug.Log("[EnvVFX] KidsStealRoutine DONE — all kids removed");
         }
 
         public void PlayAmbulanceBlanketStaging(bool healSelf)
@@ -283,14 +294,16 @@ namespace AbsoluteZero.Core.Combat
                 }
 
                 yield return _waitBlanketHold;
-
-                if (_ambulanceGroup != null && _ambulanceGroup.transform.childCount > 0)
-                {
-                    var rescue = _ambulanceGroup.transform.GetChild(0);
-                    yield return StartCoroutine(SinkTransform(rescue, rescue.position, SINK_DURATION));
-                    rescue.localPosition = _ambulanceLocalPosition;
-                }
             }
+
+            if (_ambulanceGroup != null && _ambulanceGroup.transform.childCount > 0)
+            {
+                var rescue = _ambulanceGroup.transform.GetChild(0);
+                if (rescue.gameObject.activeSelf)
+                    yield return StartCoroutine(SinkTransform(rescue, rescue.position, SINK_DURATION));
+            }
+            _ambulanceGroup.SetActive(false);
+            Debug.Log("[EnvVFX] AmbulanceBlanketRoutine DONE — ambulance removed");
         }
 
         GameObject CreateBlanketOverlay()
@@ -362,45 +375,51 @@ namespace AbsoluteZero.Core.Combat
             _kidGroup = new GameObject("KidVFX");
             _kidGroup.transform.SetParent(transform);
 
-            var idleSprite = Resources.Load<Sprite>("Environment/kid_idle");
-            var robSprite = Resources.Load<Sprite>("Environment/kid_rob");
-            var skewSprite = Resources.Load<Sprite>("Environment/kid_skew");
+            var sprites = Resources.LoadAll<Sprite>("Environment/kid_idle");
             var kidCtrl = Resources.Load<RuntimeAnimatorController>("Environment/kidA");
 
-            Debug.Log($"[EnvVFX] BuildKidGroup LOAD: idle={idleSprite != null}, rob={robSprite != null}, skew={skewSprite != null}, ctrl={kidCtrl != null}");
-            if (kidCtrl != null)
+            if (sprites == null || sprites.Length < 9)
             {
-                foreach (var clip in kidCtrl.animationClips)
-                    Debug.Log($"[EnvVFX]   KidAnimClip: '{clip.name}' length={clip.length:F2}s wrapMode={clip.wrapMode}");
+                Debug.LogWarning($"[EnvVFX] BuildKidGroup: kid_idle sprites incomplete ({(sprites != null ? sprites.Length : 0)}/9)");
+                return;
             }
-            if (idleSprite == null) { Debug.LogWarning("[EnvVFX] BuildKidGroup: kid_idle sprite MISSING"); return; }
 
-            Vector3[] positions = { new(-3f, 0.5f, 6f), new(3.5f, 0.5f, 7f) };
+            var map = new Dictionary<string, Sprite>();
+            foreach (var s in sprites) map[s.name] = s;
+
+            Vector3[] positions = { new(-12.4f, 1.14f, 5.51f), new(-12.4f, 1.14f, 8.5f) };
             _kidLocalPositions = new Vector3[positions.Length];
 
             for (int i = 0; i < positions.Length; i++)
             {
-                var go = new GameObject($"Kid_{i}");
-                go.transform.SetParent(_kidGroup.transform);
-                go.transform.position = positions[i];
-                _kidLocalPositions[i] = go.transform.localPosition;
-                if (i == 1) go.transform.localScale = new Vector3(-1f, 1f, 1f);
+                var root = new GameObject($"Kid_{i}");
+                root.transform.SetParent(_kidGroup.transform);
+                root.transform.position = positions[i];
+                _kidLocalPositions[i] = root.transform.localPosition;
+                if (i == 1) root.transform.localScale = new Vector3(-1f, 1f, 1f);
 
-                var sr = go.AddComponent<SpriteRenderer>();
-                sr.sprite = idleSprite;
-                sr.sortingOrder = 2;
+                root.AddComponent<SortingGroup>();
+
+                var body = BuildPart("body", root.transform, Vector3.zero, map["kid_idle_6"], 3);
+                var head = BuildPart("head", body.transform, new Vector3(0f, 0.99f, 0f), map["kid_idle_1"], 4);
+                BuildPart("frontHair", head.transform, new Vector3(0f, 0.45f, 0f), map["kid_idle_0"], 5);
+                BuildPart("backHair", head.transform, new Vector3(0f, 0.06f, 0f), map["kid_idle_7"], 0);
+                BuildPart("arm1", body.transform, new Vector3(-0.29f, 0.167f, 0f), map["kid_idle_2"], 1);
+                BuildPart("arm2", body.transform, new Vector3(0.203f, 0.218f, 0f), map["kid_idle_3"], 3);
+                var lower = BuildPart("lowerBody", root.transform, new Vector3(-0.01f, -0.77f, 0f), map["kid_idle_8"], 2);
+                BuildPart("leg1", lower.transform, new Vector3(-0.286f, -0.339f, 0f), map["kid_idle_4"], 1);
+                BuildPart("leg2", lower.transform, new Vector3(0.291f, -0.37f, 0f), map["kid_idle_5"], 1);
 
                 if (kidCtrl != null)
                 {
-                    var anim = go.AddComponent<Animator>();
+                    var anim = root.AddComponent<Animator>();
                     anim.runtimeAnimatorController = kidCtrl;
                     anim.applyRootMotion = false;
                 }
-                Debug.Log($"[EnvVFX]   Kid_{i} created at {positions[i]}, scale={go.transform.localScale}, sprite={sr.sprite.name}, anim={kidCtrl != null}");
             }
 
             _kidGroup.SetActive(false);
-            Debug.Log($"[EnvVFX] BuildKidGroup DONE — {positions.Length} kids, hidden until Kids announced");
+            Debug.Log($"[EnvVFX] BuildKidGroup DONE — {positions.Length} kids (9-part hierarchy each)");
         }
 
         void BuildAmbulanceGroup()
@@ -408,54 +427,68 @@ namespace AbsoluteZero.Core.Combat
             _ambulanceGroup = new GameObject("AmbulanceVFX");
             _ambulanceGroup.transform.SetParent(transform);
 
-            var readySprite = Resources.Load<Sprite>("Environment/rescue_ready");
-            var saveSprite = Resources.Load<Sprite>("Environment/rescue_save");
+            var sprites = Resources.LoadAll<Sprite>("Environment/rescue_ready");
             var rescueCtrl = Resources.Load<RuntimeAnimatorController>("Environment/rescueA");
 
-            Debug.Log($"[EnvVFX] BuildAmbulanceGroup LOAD: ready={readySprite != null}, save={saveSprite != null}, ctrl={rescueCtrl != null}");
-            if (rescueCtrl != null)
+            if (sprites == null || sprites.Length < 7)
             {
-                foreach (var clip in rescueCtrl.animationClips)
-                    Debug.Log($"[EnvVFX]   RescueAnimClip: '{clip.name}' length={clip.length:F2}s wrapMode={clip.wrapMode}");
+                Debug.LogWarning($"[EnvVFX] BuildAmbulanceGroup: rescue_ready sprites incomplete ({(sprites != null ? sprites.Length : 0)}/7)");
+                return;
             }
-            if (readySprite == null) { Debug.LogWarning("[EnvVFX] BuildAmbulanceGroup: rescue_ready sprite MISSING"); return; }
 
-            var go = new GameObject("Rescue");
-            go.transform.SetParent(_ambulanceGroup.transform);
-            go.transform.position = new Vector3(4f, 0.5f, 8f);
-            _ambulanceLocalPosition = go.transform.localPosition;
+            var map = new Dictionary<string, Sprite>();
+            foreach (var s in sprites) map[s.name] = s;
 
-            var sr = go.AddComponent<SpriteRenderer>();
-            sr.sprite = readySprite;
-            sr.sortingOrder = 1;
+            var root = new GameObject("Rescue");
+            root.transform.SetParent(_ambulanceGroup.transform);
+            root.transform.position = new Vector3(2.47f, 1.4f, 14f);
+            _ambulanceLocalPosition = root.transform.localPosition;
+
+            root.AddComponent<SortingGroup>();
+
+            var body = BuildPart("body", root.transform, Vector3.zero, map["rescue_ready_3"], 2);
+            var head = BuildPart("head", body.transform, new Vector3(0f, 0.99f, 0f), map["rescue_ready_2"], 5);
+            BuildPart("frontHair", head.transform, new Vector3(0f, 0.45f, 0f), map["rescue_ready_4"], 6);
+            BuildPart("arm1", body.transform, new Vector3(-0.903f, 0.252f, 0f), map["rescue_ready_0"], 4);
+            BuildPart("arm2", body.transform, new Vector3(0.86f, 0.222f, 0f), map["rescue_ready_1"], 4);
+            BuildPart("lowerBody", root.transform, new Vector3(-0.01f, -1.41f, 0f), map["rescue_ready_5"], 0);
+            BuildPart("cloth", root.transform, new Vector3(-0.01f, -0.62f, 0f), map["rescue_ready_6"], 3);
 
             if (rescueCtrl != null)
             {
-                var anim = go.AddComponent<Animator>();
+                var anim = root.AddComponent<Animator>();
                 anim.runtimeAnimatorController = rescueCtrl;
                 anim.applyRootMotion = false;
             }
 
             _ambulanceGroup.SetActive(false);
-            Debug.Log($"[EnvVFX] BuildAmbulanceGroup DONE — Rescue at (4, 0.5, 8), sprite={readySprite.name}, anim={rescueCtrl != null}");
+            Debug.Log("[EnvVFX] BuildAmbulanceGroup DONE — Rescue (7-part hierarchy)");
+        }
+
+        static GameObject BuildPart(string name, Transform parent, Vector3 localPos, Sprite sprite, int sortOrder)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = localPos;
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = sprite;
+            sr.sortingOrder = sortOrder;
+            return go;
         }
 
         void BuildCooler()
         {
             var coolerCtrl = Resources.Load<RuntimeAnimatorController>("coolerA");
             var coolerSprite = GameSprites.Get(GameSprites.ITEM_FAN);
-            var litMat = Resources.Load<Material>("sprite3DMat");
 
             _coolerObj = new GameObject("Cooler");
             _coolerObj.transform.SetParent(transform);
             _coolerObj.transform.position = new Vector3(-0.19f, 1.39f, -4.18f);
             _coolerObj.transform.localScale = new Vector3(4f, 4f, 1f);
-            _coolerObj.transform.rotation = Quaternion.Euler(78.3f, 0f, -206.6f);
 
             var sr = _coolerObj.AddComponent<SpriteRenderer>();
             if (coolerSprite != null) sr.sprite = coolerSprite;
             sr.sortingOrder = 2;
-            if (litMat != null) sr.material = litMat;
 
             if (coolerCtrl != null)
             {
@@ -470,7 +503,6 @@ namespace AbsoluteZero.Core.Combat
         {
             var teaCtrl = Resources.Load<RuntimeAnimatorController>("teaA");
             var teaSprite = GameSprites.Get(GameSprites.ITEM_TEA);
-            var litMat = Resources.Load<Material>("sprite3DMat");
 
             _teaObj = new GameObject("Tea");
             _teaObj.transform.SetParent(transform);
@@ -480,7 +512,6 @@ namespace AbsoluteZero.Core.Combat
             var sr = _teaObj.AddComponent<SpriteRenderer>();
             if (teaSprite != null) sr.sprite = teaSprite;
             sr.sortingOrder = 2;
-            if (litMat != null) sr.material = litMat;
 
             if (teaCtrl != null)
             {
@@ -593,7 +624,6 @@ namespace AbsoluteZero.Core.Combat
         {
             var catCtrl = Resources.Load<RuntimeAnimatorController>("catA");
             var catSprite = GameSprites.Get(GameSprites.ITEM_CAT);
-            var litMat = Resources.Load<Material>("sprite3DMat");
 
             _catObj = new GameObject("Cat");
             _catObj.transform.SetParent(transform);
@@ -602,7 +632,6 @@ namespace AbsoluteZero.Core.Combat
             var sr = _catObj.AddComponent<SpriteRenderer>();
             if (catSprite != null) sr.sprite = catSprite;
             sr.sortingOrder = 2;
-            if (litMat != null) sr.material = litMat;
 
             if (catCtrl != null)
             {

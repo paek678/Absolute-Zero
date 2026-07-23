@@ -43,6 +43,9 @@ namespace AbsoluteZero.Core.Player
         Sprite _freeze2;
         Sprite _freeze3;
 
+        ParticleSystem _iceBreakParticle;
+        ParticleSystem _finalBreakParticle;
+
         readonly WaitForSeconds _waitFlashEnd = new(0.5f);
         readonly WaitForSeconds _waitAnimEnd = new(0.6f);
         static readonly WaitForSeconds _waitFreezeTick = new(0.167f);
@@ -50,6 +53,7 @@ namespace AbsoluteZero.Core.Player
         static readonly WaitForSeconds _waitBreakHide = new(0.4f);
         static readonly int FlashAmount = Shader.PropertyToID("_FlashAmount");
         static readonly int IsWindHash = Animator.StringToHash("isWind");
+        static readonly int DegreeHash = Animator.StringToHash("degree");
 
         public override void OnNetworkSpawn()
         {
@@ -98,6 +102,16 @@ namespace AbsoluteZero.Core.Player
             }
 
             BuildFreezeObject(_visualRoot);
+
+            var iceBreakT = _visualRoot.Find("IceBreakEffect");
+            if (iceBreakT != null)
+                _iceBreakParticle = iceBreakT.GetComponent<ParticleSystem>();
+
+            var finalBreakT = _visualRoot.Find("FinalBreakEffect");
+            if (finalBreakT != null)
+                _finalBreakParticle = finalBreakT.GetComponent<ParticleSystem>();
+
+            Debug.Log($"[PlayerVisual] Particles: iceBreak={(_iceBreakParticle != null)}, finalBreak={(_finalBreakParticle != null)}");
         }
 
         void BuildFreezeObject(Transform visual)
@@ -107,7 +121,7 @@ namespace AbsoluteZero.Core.Player
             _freeze3 = Resources.Load<Sprite>("freeze3");
             if (_freeze1 == null) return;
 
-            var existing = visual.Find("FreezeObject");
+            var existing = visual.Find("freezeice");
             if (existing != null)
             {
                 _freezeRenderer = existing.GetComponent<SpriteRenderer>();
@@ -115,7 +129,7 @@ namespace AbsoluteZero.Core.Player
                 return;
             }
 
-            var freezeGO = new GameObject("FreezeObject");
+            var freezeGO = new GameObject("freezeice");
             freezeGO.transform.SetParent(visual, false);
             freezeGO.transform.localPosition = new Vector3(0.18f, 0.08f, 0f);
 
@@ -219,7 +233,11 @@ namespace AbsoluteZero.Core.Player
                 _fanRenderer.color = new Color(0.4f, 0.6f, 1f);
 
             if (_animator != null)
+            {
                 _animator.SetBool(IsWindHash, _playerState.IsFanActive.Value);
+                float degree = temp >= 20f ? 0f : temp >= 10f ? 1f : 2f;
+                _animator.SetFloat(DegreeHash, degree);
+            }
 
             if (_freezeRenderer != null && _freezeRenderer.gameObject.activeSelf && temp >= 37f)
                 _freezeRenderer.gameObject.SetActive(false);
@@ -227,6 +245,7 @@ namespace AbsoluteZero.Core.Player
 
         public void PlayDeathSequence()
         {
+            if (_isDead) return;
             Debug.Log("[PlayerVisual] PlayDeathSequence START");
 
             if (_flashCoroutine != null)
@@ -242,7 +261,12 @@ namespace AbsoluteZero.Core.Player
             }
 
             if (_animator != null)
-                _animator.SetTrigger("end");
+            {
+                foreach (var p in _animator.parameters)
+                    if (p.type == AnimatorControllerParameterType.Trigger)
+                        _animator.ResetTrigger(p.nameHash);
+                _animator.Play("playerA_freeze 0", 0, 0f);
+            }
 
             _isDead = true;
             _deathCoroutine = StartCoroutine(DeathRoutine());
@@ -251,9 +275,6 @@ namespace AbsoluteZero.Core.Player
         IEnumerator DeathRoutine()
         {
             yield return null;
-
-            if (_animator != null)
-                _animator.SetTrigger("freeze");
 
             GameAudioManager.Instance?.PlayFreeze();
 
@@ -276,7 +297,7 @@ namespace AbsoluteZero.Core.Player
 
             GameAudioManager.Instance?.PlayIceBreak();
             CameraShake.Instance?.Shake(0.5f, 0.3f);
-            CombatVFXManager.Instance?.PlayFinalBreakAt(GetVisualPosition());
+            PlayBreakParticles();
 
             if (_freezeRenderer != null)
                 _freezeRenderer.gameObject.SetActive(false);
@@ -304,13 +325,49 @@ namespace AbsoluteZero.Core.Player
             if (_freezeRenderer != null)
                 _freezeRenderer.gameObject.SetActive(false);
 
+            StopBreakParticles();
+
             if (_visualRoot != null)
                 _visualRoot.position = _deathSavedPos;
 
             if (_animator != null)
-                _animator.SetTrigger("end");
+            {
+                foreach (var p in _animator.parameters)
+                    if (p.type == AnimatorControllerParameterType.Trigger)
+                        _animator.ResetTrigger(p.nameHash);
+                _animator.SetFloat(DegreeHash, 0f);
+                _animator.Play("Idle_Tree", 0, 0f);
+            }
 
             _isDead = false;
+        }
+
+        void PlayBreakParticles()
+        {
+            if (_iceBreakParticle != null)
+            {
+                _iceBreakParticle.gameObject.SetActive(true);
+                _iceBreakParticle.Play();
+            }
+            if (_finalBreakParticle != null)
+            {
+                _finalBreakParticle.gameObject.SetActive(true);
+                _finalBreakParticle.Play();
+            }
+        }
+
+        void StopBreakParticles()
+        {
+            if (_iceBreakParticle != null)
+            {
+                _iceBreakParticle.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                _iceBreakParticle.gameObject.SetActive(false);
+            }
+            if (_finalBreakParticle != null)
+            {
+                _finalBreakParticle.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                _finalBreakParticle.gameObject.SetActive(false);
+            }
         }
 
         public void SetItemSprite(Sprite sprite)
@@ -371,7 +428,12 @@ namespace AbsoluteZero.Core.Player
                 _animEndCoroutine = null;
             }
             if (_animator != null)
+            {
+                foreach (var p in _animator.parameters)
+                    if (p.type == AnimatorControllerParameterType.Trigger)
+                        _animator.ResetTrigger(p.nameHash);
                 _animator.SetTrigger("end");
+            }
             ClearItemSprite();
         }
 
