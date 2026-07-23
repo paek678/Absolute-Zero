@@ -2,6 +2,7 @@ using System.Collections;
 using AbsoluteZero.Core.Audio;
 using AbsoluteZero.Core.Combat;
 using AbsoluteZero.Core.Common;
+using AbsoluteZero.Core.Inventory;
 using AbsoluteZero.Core.Item;
 using AbsoluteZero.Core.Match;
 using AbsoluteZero.Core.Player;
@@ -12,6 +13,7 @@ using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
+using UnityEngine.Rendering;
 using UnityEngine.UI;
 
 namespace AbsoluteZero.UI.Game
@@ -53,10 +55,7 @@ namespace AbsoluteZero.UI.Game
         GameObject _gameOverPanel;
         TextMeshProUGUI _gameOverText;
 
-        ItemWorldDisplay _worldDisplay;
-        GameObject[] _oppItemObjects;
-        PlayerInventory _oppInventory;
-        bool _oppItemsSpawned;
+        InventoryPresenter _presenter;
 
         TextMeshProUGUI _stackText;
         string _selectedMainName;
@@ -101,12 +100,12 @@ namespace AbsoluteZero.UI.Game
             BuildReadyWorldUI();
             _uiBuilt = true;
 
-            var worldDisplayGO = new GameObject("ItemWorldDisplay");
+            var presenterGO = new GameObject("InventoryPresenter");
             var spawnRoot = GameObject.Find("MyItemSpawnRoot");
             if (spawnRoot != null)
-                worldDisplayGO.transform.position = spawnRoot.transform.position;
-            _worldDisplay = worldDisplayGO.AddComponent<ItemWorldDisplay>();
-            _worldDisplay.OnWorldItemClicked += OnItemClicked;
+                presenterGO.transform.position = spawnRoot.transform.position;
+            _presenter = presenterGO.AddComponent<InventoryPresenter>();
+            _presenter.OnWorldItemClicked += OnItemClicked;
 
             var hubGO = new GameObject("MiniGameHub");
             hubGO.AddComponent<MiniGameHub>();
@@ -121,36 +120,141 @@ namespace AbsoluteZero.UI.Game
             EnsureAudioManager();
         }
 
+        [Header("=== Fan Tuning (live-adjustable in Inspector during play) ===")]
+        [SerializeField] float playerFanScale = 0.54f;
+        [SerializeField] float enemyFanScale = 0.95f;
+        [SerializeField] float fanLiftBase = 1.4f;
+        [SerializeField] Vector3 fanHeadCenter = new(-0.16f, 0.60f, 0f);
+        [SerializeField] float fanBladeScale = 1.2f;
+        [SerializeField] float fanBladeSquashX = 0.82f;
+        [SerializeField] Vector2 fanGrilleScale = new(0.92f, 1.02f);
+        [SerializeField] float fanBladesZ = -0.015f;
+        [SerializeField] float fanGrilleZ = -0.03f;
+
         void SpawnStayItemFans()
         {
-            var fanSprite = GameSprites.GetStayItemSprite();
-            if (fanSprite == null) return;
-
+            var bodySprite = Resources.Load<Sprite>("Fan/fan_body");
+            var bladesSprite = Resources.Load<Sprite>("Fan/fan_blades");
+            var grilleSprite = Resources.Load<Sprite>("Fan/fan_grille");
+            var fallback = GameSprites.GetStayItemSprite();
             var litMat = Resources.Load<Material>("sprite3DMat");
-            string[] markerNames = { "PlayerStayItem", "EnemyStayItem" };
 
-            foreach (var name in markerNames)
+            SpawnFanAt("PlayerStayItem", true, bodySprite, bladesSprite, grilleSprite, fallback, litMat);
+            SpawnFanAt("EnemyStayItem", false, bodySprite, bladesSprite, grilleSprite, fallback, litMat);
+        }
+
+        void SpawnFanAt(string markerName, bool isPlayer,
+            Sprite bodySprite, Sprite bladesSprite, Sprite grilleSprite, Sprite fallback, Material litMat)
+        {
+            var marker = GameObject.Find(markerName);
+            if (marker == null) return;
+
+            float s = isPlayer ? playerFanScale : enemyFanScale;
+            int playerIndex = isPlayer ? -1 : -2;
+
+            Material mat = litMat;
+            if (!isPlayer && litMat != null)
             {
-                var marker = GameObject.Find(name);
-                if (marker == null) continue;
+                mat = new Material(litMat);
+                mat.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Off);
+            }
 
-                var go = new GameObject($"{name}_Fan");
-                go.transform.SetParent(marker.transform, false);
-                go.transform.localPosition = Vector3.zero;
+            var go = new GameObject($"{markerName}_Fan");
+            go.transform.SetParent(marker.transform, false);
+            go.transform.localPosition = new Vector3(0f, fanLiftBase * s, 0f);
+            go.transform.localScale = isPlayer ? Vector3.one * s : new Vector3(-s, s, s);
 
-                var sr = go.AddComponent<SpriteRenderer>();
-                sr.sprite = fanSprite;
-                sr.sortingOrder = 3;
-                if (litMat != null) sr.material = litMat;
+            var bodySr = go.AddComponent<SpriteRenderer>();
+            bodySr.sprite = bodySprite != null ? bodySprite : fallback;
+            bodySr.sortingOrder = 3;
+            if (mat != null) bodySr.material = mat;
+
+            if (bodySprite == null || bladesSprite == null) return;
+
+            var head = new GameObject("Head");
+            head.transform.SetParent(go.transform, false);
+            head.transform.localPosition = fanHeadCenter;
+
+            if (grilleSprite != null)
+            {
+                var grille = new GameObject("Grille");
+                grille.transform.SetParent(head.transform, false);
+                grille.transform.localPosition = new Vector3(0f, 0f, fanGrilleZ);
+                grille.transform.localScale = new Vector3(fanGrilleScale.x, fanGrilleScale.y, 1f);
+                var grilleSr = grille.AddComponent<SpriteRenderer>();
+                grilleSr.sprite = grilleSprite;
+                grilleSr.sortingOrder = 5;
+                if (mat != null) grilleSr.material = mat;
+            }
+
+            var pivot = new GameObject("BladePivot");
+            pivot.transform.SetParent(head.transform, false);
+            pivot.transform.localPosition = new Vector3(0f, 0f, fanBladesZ);
+            pivot.transform.localScale = new Vector3(fanBladeSquashX, 1f, 1f);
+
+            var blades = new GameObject("Blades");
+            blades.transform.SetParent(pivot.transform, false);
+            blades.transform.localScale = Vector3.one * fanBladeScale;
+            var bladeSr = blades.AddComponent<SpriteRenderer>();
+            bladeSr.sprite = bladesSprite;
+            bladeSr.sortingOrder = 4;
+            if (mat != null) bladeSr.material = mat;
+
+            var spinner = go.AddComponent<FanBladeSpinner>();
+            spinner.Bind(blades.transform, playerIndex);
+        }
+
+#if UNITY_EDITOR
+        void OnValidate()
+        {
+            if (Application.isPlaying) ReapplyFanTuning();
+        }
+
+        void ReapplyFanTuning()
+        {
+            ReapplyFanOne("PlayerStayItem_Fan", true);
+            ReapplyFanOne("EnemyStayItem_Fan", false);
+        }
+
+        void ReapplyFanOne(string fanName, bool isPlayer)
+        {
+            var go = GameObject.Find(fanName);
+            if (go == null) return;
+
+            float s = isPlayer ? playerFanScale : enemyFanScale;
+            go.transform.localPosition = new Vector3(0f, fanLiftBase * s, 0f);
+            go.transform.localScale = isPlayer ? Vector3.one * s : new Vector3(-s, s, s);
+
+            var head = go.transform.Find("Head");
+            if (head == null) return;
+            head.localPosition = fanHeadCenter;
+
+            var grille = head.Find("Grille");
+            if (grille != null)
+            {
+                grille.localPosition = new Vector3(0f, 0f, fanGrilleZ);
+                grille.localScale = new Vector3(fanGrilleScale.x, fanGrilleScale.y, 1f);
+            }
+
+            var pivot = head.Find("BladePivot");
+            if (pivot != null)
+            {
+                pivot.localPosition = new Vector3(0f, 0f, fanBladesZ);
+                pivot.localScale = new Vector3(fanBladeSquashX, 1f, 1f);
+                var bladesTf = pivot.Find("Blades");
+                if (bladesTf != null) bladesTf.localScale = Vector3.one * fanBladeScale;
             }
         }
+#endif
 
         void EnsureAudioManager()
         {
-            if (GameAudioManager.Instance != null) return;
-            var go = new GameObject("GameAudioManager");
-            go.AddComponent<GameAudioManager>();
-            DontDestroyOnLoad(go);
+            if (GameAudioManager.Instance == null)
+            {
+                var go = new GameObject("GameAudioManager");
+                go.AddComponent<GameAudioManager>();
+                DontDestroyOnLoad(go);
+            }
             GameAudioManager.Instance?.PlayBGM();
         }
 
@@ -177,8 +281,6 @@ namespace AbsoluteZero.UI.Game
             UpdateScoreDisplay();
             UpdateOppBarTransform();
 
-            if (!_oppItemsSpawned)
-                TrySpawnOpponentItems();
         }
 
         void OnDestroy()
@@ -203,15 +305,8 @@ namespace AbsoluteZero.UI.Game
                 GameAudioManager.Instance.StopEnvironment();
                 GameAudioManager.Instance.StopBGM();
             }
-            if (_worldDisplay != null)
-                _worldDisplay.OnWorldItemClicked -= OnItemClicked;
-            if (_oppInventory != null)
-                _oppInventory.SlotStates.OnListChanged -= OnOppSlotStatesChanged;
-            if (_oppItemObjects != null)
-            {
-                foreach (var go in _oppItemObjects)
-                    if (go != null) Destroy(go);
-            }
+            if (_presenter != null)
+                _presenter.OnWorldItemClicked -= OnItemClicked;
             CancelInvoke();
         }
 
@@ -232,11 +327,6 @@ namespace AbsoluteZero.UI.Game
 
             var ps = localObj.GetComponent<PlayerState>();
             if (ps == null) return;
-
-            var inv = ps.GetInventory();
-            if (inv == null || ItemManager.Instance == null) return;
-
-            ItemManager.Instance.InitializeClientRegistry(inv);
 
             _localPlayer = ps;
             _localPlayer.HasSelectedItem.OnValueChanged += OnHasSelectedItemChanged;
@@ -524,11 +614,9 @@ namespace AbsoluteZero.UI.Game
             if (_localPlayer == null) return;
             if (_localPlayer.IsReady.Value) return;
             if (MiniGameHub.IsRunning) return;
+            if (_presenter == null) return;
 
-            var inv = _localPlayer.GetInventory();
-            if (inv == null || slotIndex >= inv.SlotStates.Count) return;
-
-            var itemData = inv.GetItemData(slotIndex);
+            var itemData = _presenter.GetLocalItemData(slotIndex);
             if (itemData == null) return;
 
             if (_localPlayer.HasSelectedItem.Value)
@@ -536,7 +624,7 @@ namespace AbsoluteZero.UI.Game
 
             GameAudioManager.Instance?.PlayButtonClick();
             _localPlayer.SelectItemServerRpc((byte)slotIndex);
-            _worldDisplay?.NotifyItemConfirmed(slotIndex);
+            _presenter.NotifyItemConfirmed(slotIndex);
 
             _selectedMainName = itemData.ItemName;
 
@@ -575,71 +663,6 @@ namespace AbsoluteZero.UI.Game
                 sessionManager.Disconnect();
         }
 
-        void TrySpawnOpponentItems()
-        {
-            var opp = GetOpponentPlayer();
-            if (opp == null) return;
-
-            var inv = opp.GetInventory();
-            if (inv == null || inv.SlotStates == null || inv.SlotStates.Count == 0) return;
-            if (ItemManager.Instance == null) return;
-
-            ItemManager.Instance.InitializeClientRegistry(inv);
-
-            _oppInventory = inv;
-            _oppInventory.SlotStates.OnListChanged += OnOppSlotStatesChanged;
-
-            RebuildOpponentItems();
-            _oppItemsSpawned = true;
-        }
-
-        void OnOppSlotStatesChanged(NetworkListEvent<ItemSlotNetData> changeEvent)
-        {
-            RebuildOpponentItems();
-        }
-
-        void RebuildOpponentItems()
-        {
-            if (_oppInventory == null) return;
-
-            if (_oppItemObjects != null)
-            {
-                foreach (var go in _oppItemObjects)
-                    if (go != null) Destroy(go);
-            }
-
-            int slotCount = _oppInventory.SlotStates.Count;
-            var litMat = Resources.Load<Material>("sprite3DMat");
-            var activeItems = new System.Collections.Generic.List<GameObject>();
-
-            for (int i = 0; i < slotCount; i++)
-            {
-                var slot = _oppInventory.SlotStates[i];
-                if (slot.IsEmpty) continue;
-
-                var itemData = _oppInventory.GetItemData(i);
-                if (itemData == null) continue;
-
-                string itemName = itemData.ItemName;
-                var go = new GameObject($"OppItem_{activeItems.Count}_{itemName}");
-
-                var sr = go.AddComponent<SpriteRenderer>();
-                sr.sprite = GameSprites.GetItemSprite(itemName);
-                if (litMat != null) sr.material = litMat;
-                sr.sortingOrder = 5;
-
-                activeItems.Add(go);
-            }
-
-            for (int i = 0; i < activeItems.Count; i++)
-            {
-                var marker = GameObject.Find($"EnemyItem{i + 1}");
-                if (marker != null)
-                    activeItems[i].transform.position = marker.transform.position;
-            }
-
-            _oppItemObjects = activeItems.ToArray();
-        }
 
         #region UI Construction
 

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using AbsoluteZero.Core.Common;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -13,9 +14,19 @@ namespace AbsoluteZero.Core.Player
         bool _initialized;
         readonly Dictionary<string, Sprite> _spriteCache = new();
 
+        const string IdleState = "New State";
+
         static readonly string[] SpriteNames =
         {
             "gun", "tape", "fan", "mask", "card", "eat", "hug"
+        };
+
+        static readonly Dictionary<string, string> TriggerToSprite = new()
+        {
+            { "swing", "fan" },
+            { "defence", "mask" },
+            { "use", "gun" },
+            { "feed", "eat" },
         };
 
         void Awake()
@@ -96,7 +107,17 @@ namespace AbsoluteZero.Core.Player
 
             var root = new GameObject("FPS");
             root.transform.SetParent(cameraTransform, false);
-            root.transform.localPosition = Vector3.zero;
+
+            var spawnMarker = GameObject.Find("FPSAnimSpawn");
+            if (spawnMarker != null)
+            {
+                root.transform.position = spawnMarker.transform.position;
+                Debug.Log($"[FPS] Build — using FPSAnimSpawn position: {spawnMarker.transform.position}");
+            }
+            else
+            {
+                root.transform.localPosition = Vector3.zero;
+            }
             root.transform.localRotation = Quaternion.identity;
 
             var sortGroup = root.AddComponent<SortingGroup>();
@@ -143,6 +164,16 @@ namespace AbsoluteZero.Core.Player
             return go.GetComponent<SpriteRenderer>();
         }
 
+        void ApplySpawnMarkerPosition()
+        {
+            var spawnMarker = GameObject.Find("FPSAnimSpawn");
+            if (spawnMarker != null)
+            {
+                transform.position = spawnMarker.transform.position;
+                Debug.Log($"[FPS] ApplySpawnMarkerPosition: {spawnMarker.transform.position}");
+            }
+        }
+
         void CacheSprites()
         {
             foreach (var name in SpriteNames)
@@ -151,10 +182,15 @@ namespace AbsoluteZero.Core.Player
                 if (sprites.Length > 0)
                     _spriteCache[name] = sprites[0];
             }
-            Debug.Log($"[FPS] CacheSprites — {_spriteCache.Count}/{SpriteNames.Length} cached");
+            foreach (var kv in TriggerToSprite)
+            {
+                if (!_spriteCache.ContainsKey(kv.Key) && _spriteCache.TryGetValue(kv.Value, out var fallback))
+                    _spriteCache[kv.Key] = fallback;
+            }
+            Debug.Log($"[FPS] CacheSprites — {_spriteCache.Count} cached ({SpriteNames.Length} direct + {TriggerToSprite.Count} fallback)");
         }
 
-        public void PlayFPSAnimation(string trigger)
+        public void PlayFPSAnimation(string trigger, string itemName = null)
         {
             if (_animator == null)
             {
@@ -162,17 +198,29 @@ namespace AbsoluteZero.Core.Player
                 return;
             }
 
-            if (_spriteCache.TryGetValue(trigger, out var sprite) && _itemRenderer != null)
+            _animator.Play(IdleState, 0, 0f);
+            _animator.Update(0f);
+
+            if (_itemRenderer != null)
+            {
+                Sprite sprite = null;
+                if (!string.IsNullOrEmpty(itemName))
+                    sprite = GameSprites.GetItemSprite(itemName);
+                if (sprite == null)
+                    _spriteCache.TryGetValue(trigger, out sprite);
                 _itemRenderer.sprite = sprite;
+            }
 
             _animator.SetTrigger(trigger);
-            Debug.Log($"[FPS] PlayFPSAnimation('{trigger}')");
+            Debug.Log($"[FPS] PlayFPSAnimation('{trigger}', item='{itemName}')");
         }
 
         public void ReturnToIdle()
         {
-            if (_animator != null)
-                _animator.SetTrigger("end");
+            if (_animator == null) return;
+            _animator.Play(IdleState, 0, 0f);
+            if (_itemRenderer != null)
+                _itemRenderer.sprite = null;
         }
     }
 }

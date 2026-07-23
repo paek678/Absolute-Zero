@@ -31,5 +31,5 @@ MonoBehaviour:
   MiniGameType: 0
   MiniGameTimeLimit: 0
   MiniGameGoal: 1
-  BlockAmount: 4
+  BlockAmount: 2
   Filter: 0

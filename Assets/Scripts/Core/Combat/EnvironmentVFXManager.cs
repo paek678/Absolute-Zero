@@ -28,6 +28,7 @@ namespace AbsoluteZero.Core.Combat
         GameObject _coolerObj;
         GameObject _teaObj;
         GameObject _catObj;
+        GameObject _windObj;
         Light _directionalLight;
 
         Color _defaultLightColor;
@@ -61,6 +62,7 @@ namespace AbsoluteZero.Core.Combat
             BuildCooler();
             BuildTea();
             BuildCat();
+            BuildWindParticle();
 
             TurnManager.OnEnvironmentAnnounced += OnEnvironmentAnnounced;
         }
@@ -90,12 +92,14 @@ namespace AbsoluteZero.Core.Combat
                 case EnvironmentType.CoolBreeze:
                     StartCoroutine(LerpLight(new Color(0.8f, 0.9f, 1f), 1.8f));
                     if (_coolerObj != null) _coolerObj.SetActive(true);
+                    if (_windObj != null) _windObj.SetActive(true);
                     break;
                 case EnvironmentType.Kids:
+                    Debug.Log("[EnvVFX] Kids activated — KidsRiseRoutine");
                     StartCoroutine(KidsRiseRoutine());
-                    if (_catObj != null) _catObj.SetActive(true);
                     break;
                 case EnvironmentType.Ambulance:
+                    Debug.Log("[EnvVFX] Ambulance activated — AmbulanceSlideRoutine");
                     StartCoroutine(AmbulanceSlideRoutine());
                     break;
             }
@@ -116,6 +120,7 @@ namespace AbsoluteZero.Core.Combat
             if (_coolerObj != null) _coolerObj.SetActive(false);
             if (_teaObj != null) _teaObj.SetActive(false);
             if (_catObj != null) _catObj.SetActive(false);
+            if (_windObj != null) _windObj.SetActive(false);
 
             _currentEnv = EnvironmentType.None;
         }
@@ -357,11 +362,17 @@ namespace AbsoluteZero.Core.Combat
             _kidGroup = new GameObject("KidVFX");
             _kidGroup.transform.SetParent(transform);
 
-            var litMat = Resources.Load<Material>("sprite3DMat");
             var idleSprite = Resources.Load<Sprite>("Environment/kid_idle");
+            var robSprite = Resources.Load<Sprite>("Environment/kid_rob");
+            var skewSprite = Resources.Load<Sprite>("Environment/kid_skew");
             var kidCtrl = Resources.Load<RuntimeAnimatorController>("Environment/kidA");
 
-            Debug.Log($"[EnvVFX] BuildKidGroup: sprite={idleSprite != null}, ctrl={kidCtrl != null}, mat={litMat != null}");
+            Debug.Log($"[EnvVFX] BuildKidGroup LOAD: idle={idleSprite != null}, rob={robSprite != null}, skew={skewSprite != null}, ctrl={kidCtrl != null}");
+            if (kidCtrl != null)
+            {
+                foreach (var clip in kidCtrl.animationClips)
+                    Debug.Log($"[EnvVFX]   KidAnimClip: '{clip.name}' length={clip.length:F2}s wrapMode={clip.wrapMode}");
+            }
             if (idleSprite == null) { Debug.LogWarning("[EnvVFX] BuildKidGroup: kid_idle sprite MISSING"); return; }
 
             Vector3[] positions = { new(-3f, 0.5f, 6f), new(3.5f, 0.5f, 7f) };
@@ -378,7 +389,6 @@ namespace AbsoluteZero.Core.Combat
                 var sr = go.AddComponent<SpriteRenderer>();
                 sr.sprite = idleSprite;
                 sr.sortingOrder = 2;
-                if (litMat != null) sr.material = litMat;
 
                 if (kidCtrl != null)
                 {
@@ -386,9 +396,11 @@ namespace AbsoluteZero.Core.Combat
                     anim.runtimeAnimatorController = kidCtrl;
                     anim.applyRootMotion = false;
                 }
+                Debug.Log($"[EnvVFX]   Kid_{i} created at {positions[i]}, scale={go.transform.localScale}, sprite={sr.sprite.name}, anim={kidCtrl != null}");
             }
 
             _kidGroup.SetActive(false);
+            Debug.Log($"[EnvVFX] BuildKidGroup DONE — {positions.Length} kids, hidden until Kids announced");
         }
 
         void BuildAmbulanceGroup()
@@ -396,11 +408,16 @@ namespace AbsoluteZero.Core.Combat
             _ambulanceGroup = new GameObject("AmbulanceVFX");
             _ambulanceGroup.transform.SetParent(transform);
 
-            var litMat = Resources.Load<Material>("sprite3DMat");
             var readySprite = Resources.Load<Sprite>("Environment/rescue_ready");
+            var saveSprite = Resources.Load<Sprite>("Environment/rescue_save");
             var rescueCtrl = Resources.Load<RuntimeAnimatorController>("Environment/rescueA");
 
-            Debug.Log($"[EnvVFX] BuildAmbulanceGroup: sprite={readySprite != null}, ctrl={rescueCtrl != null}, mat={litMat != null}");
+            Debug.Log($"[EnvVFX] BuildAmbulanceGroup LOAD: ready={readySprite != null}, save={saveSprite != null}, ctrl={rescueCtrl != null}");
+            if (rescueCtrl != null)
+            {
+                foreach (var clip in rescueCtrl.animationClips)
+                    Debug.Log($"[EnvVFX]   RescueAnimClip: '{clip.name}' length={clip.length:F2}s wrapMode={clip.wrapMode}");
+            }
             if (readySprite == null) { Debug.LogWarning("[EnvVFX] BuildAmbulanceGroup: rescue_ready sprite MISSING"); return; }
 
             var go = new GameObject("Rescue");
@@ -411,7 +428,6 @@ namespace AbsoluteZero.Core.Combat
             var sr = go.AddComponent<SpriteRenderer>();
             sr.sprite = readySprite;
             sr.sortingOrder = 1;
-            if (litMat != null) sr.material = litMat;
 
             if (rescueCtrl != null)
             {
@@ -421,6 +437,7 @@ namespace AbsoluteZero.Core.Combat
             }
 
             _ambulanceGroup.SetActive(false);
+            Debug.Log($"[EnvVFX] BuildAmbulanceGroup DONE — Rescue at (4, 0.5, 8), sprite={readySprite.name}, anim={rescueCtrl != null}");
         }
 
         void BuildCooler()
@@ -472,6 +489,104 @@ namespace AbsoluteZero.Core.Combat
             }
 
             _teaObj.SetActive(false);
+        }
+
+        void BuildWindParticle()
+        {
+            _windObj = new GameObject("WindVFX");
+            _windObj.transform.SetParent(transform);
+            _windObj.transform.position = new Vector3(0f, 2f, 3f);
+
+            var ps = _windObj.AddComponent<ParticleSystem>();
+
+            var main = ps.main;
+            main.startLifetime = 4f;
+            main.startSpeed = 0f;
+            main.startSize = 0.12f;
+            main.startColor = new Color(0.85f, 0.93f, 1f, 0.4f);
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.loop = true;
+            main.maxParticles = 25;
+            main.gravityModifier = 0f;
+
+            var emission = ps.emission;
+            emission.rateOverTime = 4f;
+
+            var shape = ps.shape;
+            shape.enabled = true;
+            shape.shapeType = ParticleSystemShapeType.Box;
+            shape.scale = new Vector3(12f, 3f, 8f);
+
+            var vel = ps.velocityOverLifetime;
+            vel.enabled = true;
+            vel.space = ParticleSystemSimulationSpace.Local;
+
+            vel.x = new ParticleSystem.MinMaxCurve(4f, new AnimationCurve(
+                new Keyframe(0f, -0.6f),
+                new Keyframe(0.3f, -1f),
+                new Keyframe(0.7f, -0.8f),
+                new Keyframe(1f, -0.5f)
+            ));
+
+            vel.y = new ParticleSystem.MinMaxCurve(2f, new AnimationCurve(
+                new Keyframe(0f, -0.2f),
+                new Keyframe(0.3f, -0.6f),
+                new Keyframe(0.6f, -0.8f),
+                new Keyframe(1f, -1f)
+            ));
+
+            vel.z = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(
+                new Keyframe(0f, 0.1f),
+                new Keyframe(0.5f, -0.1f),
+                new Keyframe(1f, 0f)
+            ));
+
+            var sol = ps.sizeOverLifetime;
+            sol.enabled = true;
+            sol.size = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(
+                new Keyframe(0f, 0f),
+                new Keyframe(0.1f, 1f),
+                new Keyframe(0.85f, 1f),
+                new Keyframe(1f, 0f)
+            ));
+
+            var trails = ps.trails;
+            trails.enabled = true;
+            trails.lifetime = new ParticleSystem.MinMaxCurve(0.15f);
+            trails.dieWithParticles = true;
+            trails.sizeAffectsWidth = true;
+            trails.widthOverTrail = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(
+                new Keyframe(0f, 1f),
+                new Keyframe(1f, 0f)
+            ));
+
+            var psr = _windObj.GetComponent<ParticleSystemRenderer>();
+            psr.renderMode = ParticleSystemRenderMode.Billboard;
+            psr.trailMaterial = CreateWindMaterial(new Color(0.85f, 0.93f, 1f, 0.5f));
+            psr.material = CreateWindMaterial(new Color(1f, 1f, 1f, 0f));
+
+            _windObj.SetActive(false);
+            Debug.Log("[EnvVFX] BuildWindParticle DONE");
+        }
+
+        static Material CreateWindMaterial(Color color)
+        {
+            var shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+            if (shader == null) shader = Shader.Find("Particles/Standard Unlit");
+            if (shader == null) shader = Shader.Find("Sprites/Default");
+            var mat = new Material(shader);
+            mat.color = color;
+            if (shader.name.Contains("Universal"))
+            {
+                mat.SetColor("_BaseColor", color);
+                mat.SetFloat("_Surface", 1f);
+                mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.One);
+                mat.SetInt("_ZWrite", 0);
+                mat.renderQueue = 3000;
+            }
+            return mat;
         }
 
         void BuildCat()

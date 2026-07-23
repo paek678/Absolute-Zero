@@ -98,6 +98,10 @@ namespace AbsoluteZero.Core.Common
             { "Smartphone", "Smartphone" },
             { "Water Gun", "WaterGun" },
             { "Red Card", "RedCard" },
+            { "Samgyetang", "Samgyetang" },
+            { "Mask", "Mask" },
+            { "Screwdriver", "Screwdriver" },
+            { "Claw Machine", "ClawMachine" },
         };
 
         static readonly Dictionary<string, Sprite> _itemSpriteCache = new();

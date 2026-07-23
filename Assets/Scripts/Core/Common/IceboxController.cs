@@ -149,14 +149,13 @@ namespace AbsoluteZero.Core.Common
             if (_iceboxAnimator != null)
                 _iceboxAnimator.SetBool(IsOpenHash, true);
 
-            GameAudioManager.Instance?.PlayBoxOpen();
-
             if (_iceboxParticle != null)
             {
                 _iceboxParticle.gameObject.SetActive(true);
-                _iceboxParticle.Play();
-                Debug.Log("[Icebox] Particle PLAY on box open");
+                _iceboxParticle.Play(true);
             }
+
+            GameAudioManager.Instance?.PlayBoxOpen();
 
             yield return _waitBoxOpen;
 
@@ -172,8 +171,8 @@ namespace AbsoluteZero.Core.Common
 
             if (_iceboxParticle != null)
             {
-                _iceboxParticle.Stop(true, ParticleSystemStopBehavior.StopEmitting);
-                Debug.Log("[Icebox] Particle STOP on box close");
+                _iceboxParticle.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                _iceboxParticle.gameObject.SetActive(false);
             }
 
             if (_iceboxAnimator != null)

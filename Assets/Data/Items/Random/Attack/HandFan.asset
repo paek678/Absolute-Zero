@@ -31,6 +31,6 @@ MonoBehaviour:
   MiniGameType: 0
   MiniGameTimeLimit: 0
   MiniGameGoal: 1
-  Damage: 4
+  Damage: 2
   AttackFilter: 0
   EqualizeToUserTemp: 0

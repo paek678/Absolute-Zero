@@ -5,6 +5,7 @@ using AbsoluteZero.Core.Item;
 using AbsoluteZero.Core.Item.Data;
 using AbsoluteZero.Core.Player;
 using AbsoluteZero.Core.Turn;
+using AbsoluteZero.Core.Inventory;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -134,7 +135,12 @@ namespace AbsoluteZero.Core.Combat
 
             bool isAttack = itemData.Category == ItemCategory.Attack;
             bool isRecovery = itemData.Category == ItemCategory.Recovery;
-            bool isLocalUser = (int)nm.LocalClientId == userIdx;
+            bool isLocalUser = userVisual != null && userVisual.IsOwner;
+
+            if (isLocalUser && itemData.Category == ItemCategory.Buff)
+                ScreenVFXManager.Instance.PlayRecoveryVFX();
+            else if (!isLocalUser && itemData.Category == ItemCategory.Debuff)
+                ScreenVFXManager.Instance.PlayHitVFX();
 
             string userTrigger = isLocalUser
                 ? itemData.AnimTrigger
@@ -145,6 +151,13 @@ namespace AbsoluteZero.Core.Combat
 
             if (hasUserAnim)
             {
+                if (!isLocalUser && userVisual != null)
+                {
+                    var itemSprite = GameSprites.GetItemSprite(itemData.ItemName);
+                    userVisual.SetItemSprite(itemSprite);
+                    Debug.Log($"[CombatVFX] → 3P SetItemSprite('{itemData.ItemName}') sprite={itemSprite != null}");
+                }
+
                 Debug.Log($"[CombatVFX] → userVisual.PlayCombatAnimation('{userTrigger}')");
                 userVisual.PlayCombatAnimation(userTrigger);
 
@@ -158,7 +171,7 @@ namespace AbsoluteZero.Core.Combat
                 {
                     var fps = FPSVisualController.Instance;
                     Debug.Log($"[CombatVFX] → FPS isLocalUser=true, FPSInstance={fps != null}");
-                    if (fps != null) fps.PlayFPSAnimation(itemData.AnimTrigger);
+                    if (fps != null) fps.PlayFPSAnimation(itemData.AnimTrigger, itemData.ItemName);
                 }
 
                 float animLen = GetAnimDuration(itemData, userVisual.GetAnimator(), userTrigger);
@@ -181,14 +194,20 @@ namespace AbsoluteZero.Core.Combat
                             {
                                 targetVisual.PlayDamageFlash();
                                 if (!isLocalUser)
+                                {
                                     PlayHitAt(GetPlayerWorldPos(targetIdx));
+                                    if (h == 0) ScreenVFXManager.Instance.PlayHitVFX();
+                                }
                                 GameAudioManager.Instance?.PlayDamaged();
                             }
                         }
                         else if (isRecovery && userVisual != null)
                         {
                             if (isLocalUser)
+                            {
                                 PlayHitAt(GetPlayerWorldPos(userIdx));
+                                if (h == 0) ScreenVFXManager.Instance.PlayRecoveryVFX();
+                            }
                         }
 
                         if (h < itemData.EffectHitCount - 1 && itemData.EffectInterval > 0f)
@@ -222,7 +241,8 @@ namespace AbsoluteZero.Core.Combat
             }
             else if (itemData.ItemName == "Cat")
             {
-                yield return StartCoroutine(PlayCatSpriteSequence(userIdx, targetIdx, isLocalUser));
+                float catMinDur = itemData.AnimDuration > 0f ? itemData.AnimDuration : 1.5f;
+                yield return StartCoroutine(PlayCatSpriteSequence(userIdx, targetIdx, isLocalUser, catMinDur));
             }
             else if ((isAttack || isRecovery) && itemData.EffectHitCount > 0)
             {
@@ -236,14 +256,20 @@ namespace AbsoluteZero.Core.Combat
                     {
                         targetVisual.PlayDamageFlash();
                         if (!isLocalUser)
+                        {
                             PlayHitAt(GetPlayerWorldPos(targetIdx));
+                            ScreenVFXManager.Instance.PlayHitVFX();
+                        }
                         GameAudioManager.Instance?.PlayDamaged();
                     }
                 }
                 else if (isRecovery)
                 {
                     if (isLocalUser)
+                    {
                         PlayHitAt(GetPlayerWorldPos(userIdx));
+                        ScreenVFXManager.Instance.PlayRecoveryVFX();
+                    }
                 }
                 yield return _waitDamageReact;
                 if (targetDefending && targetVisual != null)
@@ -324,8 +350,14 @@ namespace AbsoluteZero.Core.Combat
             return info.length > 0f ? info.length : 0.8f;
         }
 
-        IEnumerator PlayCatSpriteSequence(int userIdx, int targetIdx, bool isLocalUser)
+        IEnumerator PlayCatSpriteSequence(int userIdx, int targetIdx, bool isLocalUser, float minDuration = 1.5f)
         {
+            float startTime = Time.time;
+            Debug.Log($"[CombatVFX] Cat sequence START — user=P{userIdx} target=P{targetIdx} isLocal={isLocalUser} minDur={minDuration}s");
+
+            var nm = NetworkManager.Singleton;
+            var userVisual = nm != null ? GetPlayerVisual(userIdx, nm) : null;
+
             GameAudioManager.Instance?.PlayItemSfx("", "Cat");
 
             var spSleep = Resources.Load<Sprite>("Cat/cat_sleep");
@@ -333,37 +365,87 @@ namespace AbsoluteZero.Core.Combat
             var spJump = Resources.Load<Sprite>(isLocalUser ? "Cat/cat_jump" : "Cat/cat_jump2");
             var spRummage = Resources.Load<Sprite>("Cat/cat_rummage");
 
-            if (spSleep == null) { Debug.LogWarning("[CombatVFX] Cat sprites not found"); yield break; }
+            if (spSleep == null)
+            {
+                Debug.LogWarning("[CombatVFX] Cat sprites not found — waiting minDuration");
+                yield return new WaitForSeconds(minDuration);
+                yield break;
+            }
 
-            var litMat = Resources.Load<Material>("sprite3DMat");
+            Transform catItemTransform = isLocalUser ? FindCatItemView() : null;
+            SpriteRenderer sr;
+            GameObject go;
+            Vector3 originalScale;
+            Material originalMat = null;
 
-            var go = new GameObject("CatAnim");
-            var sr = go.AddComponent<SpriteRenderer>();
-            sr.sprite = spSleep;
-            sr.sortingOrder = 90;
-            if (litMat != null) sr.material = litMat;
+            if (catItemTransform != null)
+            {
+                go = catItemTransform.gameObject;
+                var cardChild = catItemTransform.Find("Card");
+                sr = cardChild != null ? cardChild.GetComponent<SpriteRenderer>() : catItemTransform.GetComponentInChildren<SpriteRenderer>();
+                if (sr == null)
+                {
+                    Debug.LogWarning("[CombatVFX] Cat item SpriteRenderer not found — waiting minDuration");
+                    yield return new WaitForSeconds(minDuration);
+                    yield break;
+                }
+                originalScale = go.transform.localScale;
 
-            Vector3 userPos = GetPlayerWorldPos(userIdx);
-            go.transform.position = userPos + new Vector3(-0.5f, 0.3f, 0f);
-            go.transform.localScale = Vector3.one * 1.2f;
+                originalMat = sr.material;
+                sr.material = new Material(Shader.Find("Sprites/Default"));
+
+                sr.sprite = spSleep;
+                sr.sortingOrder = 90;
+
+                var hover = go.GetComponent<HoverEffect>();
+                if (hover != null) hover.enabled = false;
+                var col = go.GetComponent<Collider>();
+                if (col != null) col.enabled = false;
+                var label = catItemTransform.Find("Label");
+                if (label != null) label.gameObject.SetActive(false);
+                var banned = catItemTransform.Find("BannedOverlay");
+                if (banned != null) banned.gameObject.SetActive(false);
+                var outline = catItemTransform.Find("HoverOutline");
+                if (outline == null)
+                {
+                    var cardOutline = cardChild != null ? cardChild.Find("HoverOutline") : null;
+                    if (cardOutline != null) outline = cardOutline;
+                }
+                if (outline != null) outline.gameObject.SetActive(false);
+            }
+            else
+            {
+                go = new GameObject("CatAnim");
+                sr = go.AddComponent<SpriteRenderer>();
+                sr.sprite = spSleep;
+                sr.sortingOrder = 90;
+                Vector3 userPos = GetPlayerWorldPos(userIdx);
+                go.transform.position = userPos + new Vector3(-0.5f, 0.3f, 0f);
+                originalScale = Vector3.one * 0.7f;
+                go.transform.localScale = originalScale;
+            }
+
+            if (userVisual != null)
+                userVisual.PlayCombatAnimation("jump");
 
             yield return _waitCatReady;
 
-            if (spWakeup != null) sr.sprite = spWakeup;
+            sr.sprite = spWakeup;
             yield return _waitCatWake;
 
-            if (spJump != null) sr.sprite = spJump;
+            sr.sprite = spJump;
 
-            var targetItemRoot = isLocalUser
-                ? GameObject.Find("OppItemSpawnRoot")
-                : GameObject.Find("MyItemSpawnRoot");
-            Vector3 destPos = targetItemRoot != null
-                ? targetItemRoot.transform.position + new Vector3(0f, 0.5f, 0f)
+            string destMarkerPrefix = isLocalUser ? "EnemyItem" : "PlayerItem";
+            int randomIdx = Random.Range(1, 9);
+            var destMarker = GameObject.Find($"{destMarkerPrefix}{randomIdx}");
+            Vector3 destPos = destMarker != null
+                ? destMarker.transform.position
                 : GetPlayerWorldPos(targetIdx) + new Vector3(0f, 0.3f, 0f);
 
             Vector3 arcStart = go.transform.position;
             bool flipX = destPos.x < arcStart.x;
-            go.transform.localScale = new Vector3(flipX ? -1.2f : 1.2f, 1.2f, 1f);
+            float baseScale = originalScale.x;
+            go.transform.localScale = new Vector3(flipX ? -baseScale : baseScale, baseScale, originalScale.z);
 
             float arcDur = 0.8f;
             float arcHeight = 2.5f;
@@ -379,9 +461,9 @@ namespace AbsoluteZero.Core.Combat
             }
             go.transform.position = destPos;
 
-            if (spRummage != null) sr.sprite = spRummage;
+            sr.sprite = spRummage;
 
-            float rumbleDur = 1.5f;
+            float rumbleDur = minDuration;
             float rumbleRange = 1.2f;
             float rumbleSpeed = 12f;
             t = 0f;
@@ -391,26 +473,50 @@ namespace AbsoluteZero.Core.Combat
                 float xOff = Mathf.Sin(t * rumbleSpeed) * rumbleRange;
                 go.transform.position = destPos + new Vector3(xOff, 0f, 0f);
 
-                float s = 1.2f + Mathf.Sin(t * rumbleSpeed * 2f) * 0.1f;
+                float s = baseScale + Mathf.Sin(t * rumbleSpeed * 2f) * 0.05f;
                 float dir = Mathf.Sin(t * rumbleSpeed) >= 0f ? 1f : -1f;
-                go.transform.localScale = new Vector3(dir * s, s, 1f);
+                go.transform.localScale = new Vector3(dir * s, s, originalScale.z);
                 yield return null;
             }
 
             float exitDur = 0.5f;
             Vector3 exitStart = go.transform.position;
-            Vector3 exitEnd = exitStart + new Vector3(6f, 2f, 0f);
+            Vector3 exitEnd = exitStart + new Vector3(6f, 3f, 0f);
             t = 0f;
             while (t < exitDur)
             {
                 t += Time.deltaTime;
                 float p = Mathf.Clamp01(t / exitDur);
                 go.transform.position = Vector3.Lerp(exitStart, exitEnd, p);
+
+                float yArc = Mathf.Sin(p * Mathf.PI) * 1.5f;
+                go.transform.position += new Vector3(0f, yArc, 0f);
+
                 sr.color = new Color(1f, 1f, 1f, 1f - p);
                 yield return null;
             }
 
-            Destroy(go);
+            if (catItemTransform == null)
+            {
+                Destroy(go);
+            }
+            else
+            {
+                if (originalMat != null)
+                    sr.material = originalMat;
+                go.SetActive(false);
+            }
+
+            if (userVisual != null)
+                userVisual.ReturnToIdle();
+
+            float elapsed = Time.time - startTime;
+            Debug.Log($"[CombatVFX] Cat sequence END — elapsed={elapsed:F2}s");
+        }
+
+        Transform FindCatItemView()
+        {
+            return InventoryPresenter.Instance?.FindLocalViewByName("Cat");
         }
 
         AZPlayerVisual GetPlayerVisual(int playerIndex, NetworkManager nm)
@@ -418,8 +524,9 @@ namespace AbsoluteZero.Core.Combat
             foreach (var kvp in nm.SpawnManager.SpawnedObjects)
             {
                 var netObj = kvp.Value;
-                if (netObj == null) continue;
-                if (netObj.IsPlayerObject && (int)netObj.OwnerClientId == playerIndex)
+                if (netObj == null || !netObj.IsPlayerObject) continue;
+                var ps = netObj.GetComponent<PlayerState>();
+                if (ps != null && ps.PlayerIndex == playerIndex)
                     return netObj.GetComponent<AZPlayerVisual>();
             }
             return null;
@@ -468,8 +575,9 @@ namespace AbsoluteZero.Core.Combat
             foreach (var kvp in nm.SpawnManager.SpawnedObjects)
             {
                 var netObj = kvp.Value;
-                if (netObj == null) continue;
-                if (netObj.IsPlayerObject && (int)netObj.OwnerClientId == playerIndex)
+                if (netObj == null || !netObj.IsPlayerObject) continue;
+                var ps = netObj.GetComponent<PlayerState>();
+                if (ps != null && ps.PlayerIndex == playerIndex)
                 {
                     var visual = netObj.GetComponent<AZPlayerVisual>();
                     if (visual != null)

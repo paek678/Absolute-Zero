@@ -30,9 +30,15 @@ namespace AbsoluteZero.Core.Player
         Material[] _cachedMaterials;
         Coroutine _flashCoroutine;
         Coroutine _animEndCoroutine;
+        Coroutine _deathCoroutine;
+        bool _isDead;
+        Vector3 _deathSavedPos;
 
         SpriteRenderer _freezeRenderer;
         SpriteRenderer _fanRenderer;
+
+        Transform _itemTransform;
+        SpriteRenderer _itemRenderer;
         Sprite _freeze1;
         Sprite _freeze2;
         Sprite _freeze3;
@@ -82,6 +88,14 @@ namespace AbsoluteZero.Core.Player
             var fanChild = _visualRoot.Find("fan") ?? _visualRoot.Find("Fan");
             if (fanChild != null)
                 _fanRenderer = fanChild.GetComponent<SpriteRenderer>();
+
+            _itemTransform = _visualRoot.Find("item");
+            if (_itemTransform != null)
+            {
+                _itemRenderer = _itemTransform.GetComponent<SpriteRenderer>();
+                _itemTransform.gameObject.SetActive(false);
+                Debug.Log($"[PlayerVisual] item child found: renderer={(_itemRenderer != null)}");
+            }
 
             BuildFreezeObject(_visualRoot);
         }
@@ -230,7 +244,8 @@ namespace AbsoluteZero.Core.Player
             if (_animator != null)
                 _animator.SetTrigger("end");
 
-            StartCoroutine(DeathRoutine());
+            _isDead = true;
+            _deathCoroutine = StartCoroutine(DeathRoutine());
         }
 
         IEnumerator DeathRoutine()
@@ -266,20 +281,50 @@ namespace AbsoluteZero.Core.Player
             if (_freezeRenderer != null)
                 _freezeRenderer.gameObject.SetActive(false);
 
-            Vector3 savedPos = Vector3.zero;
             if (_visualRoot != null)
             {
-                savedPos = _visualRoot.position;
+                _deathSavedPos = _visualRoot.position;
                 _visualRoot.position = new Vector3(0f, -100f, 0f);
             }
 
-            yield return _waitBreakHide;
+            _deathCoroutine = null;
+        }
+
+        public void ReviveVisual()
+        {
+            if (!_isDead) return;
+            Debug.Log("[PlayerVisual] ReviveVisual");
+
+            if (_deathCoroutine != null)
+            {
+                StopCoroutine(_deathCoroutine);
+                _deathCoroutine = null;
+            }
+
+            if (_freezeRenderer != null)
+                _freezeRenderer.gameObject.SetActive(false);
 
             if (_visualRoot != null)
-                _visualRoot.position = savedPos;
+                _visualRoot.position = _deathSavedPos;
 
             if (_animator != null)
                 _animator.SetTrigger("end");
+
+            _isDead = false;
+        }
+
+        public void SetItemSprite(Sprite sprite)
+        {
+            if (_itemRenderer == null) return;
+            _itemRenderer.sprite = sprite;
+        }
+
+        public void ClearItemSprite()
+        {
+            if (_itemRenderer != null)
+                _itemRenderer.sprite = null;
+            if (_itemTransform != null)
+                _itemTransform.gameObject.SetActive(false);
         }
 
         public void PlayCombatAnimation(string triggerName)
@@ -327,6 +372,7 @@ namespace AbsoluteZero.Core.Player
             }
             if (_animator != null)
                 _animator.SetTrigger("end");
+            ClearItemSprite();
         }
 
         public Animator GetAnimator() => _animator;

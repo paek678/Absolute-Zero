@@ -225,7 +225,7 @@ namespace AbsoluteZero.Core.Turn
                 Debug.Log($"[ENV] SummerVacation: prep duration {prepDuration}s → {currentPrepDuration}s");
             }
 
-            if (ActiveEnvironment.Value == EnvironmentType.Kids && TurnNumber.Value >= 3)
+            if (ActiveEnvironment.Value == EnvironmentType.Kids && TurnNumber.Value == 3)
             {
                 Debug.Log("[ENV] Kids: steal staging + removing 1 random item from each player");
                 KidsStealStagingClientRpc();
@@ -515,6 +515,8 @@ namespace AbsoluteZero.Core.Turn
             if (!isDraw && _matchManager != null)
                 _matchManager.StartRound();
 
+            ReviveVisualsClientRpc();
+
             Debug.Log(isDraw
                 ? "[TurnManager] Draw — round voided, replaying"
                 : "[TurnManager] New round started — temperatures reset");
@@ -565,10 +567,9 @@ namespace AbsoluteZero.Core.Turn
 
         IEnumerator EnvironmentAnnouncementRoutine()
         {
+            // TODO: 테스트용 — Kids/Ambulance/CoolBreeze만 출현. 테스트 후 원래 풀로 복원할 것
             var pool = new[] {
-                EnvironmentType.SunnyDay, EnvironmentType.CoolBreeze,
-                EnvironmentType.Kids, EnvironmentType.Ambulance,
-                EnvironmentType.SummerVacation, EnvironmentType.HeatWaveWarning
+                EnvironmentType.Kids, EnvironmentType.Ambulance, EnvironmentType.CoolBreeze
             };
             ActiveEnvironment.Value = pool[Random.Range(0, pool.Length)];
 
@@ -662,6 +663,13 @@ namespace AbsoluteZero.Core.Turn
                 EnvironmentType.HeatWaveWarning => "폭염경보",
                 _ => ""
             };
+        }
+
+        [Rpc(SendTo.Everyone)]
+        void ReviveVisualsClientRpc()
+        {
+            foreach (var visual in FindObjectsByType<AZPlayerVisual>(FindObjectsSortMode.None))
+                visual.ReviveVisual();
         }
 
         [Rpc(SendTo.Everyone)]
