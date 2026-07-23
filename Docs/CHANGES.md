@@ -1,9 +1,11 @@
 # Change Log
 
 > Record changes on script modification.
-> Format: [YYYY-MM-DD] [Author] [Category] - Description
+> Format: [YYYY-MM-DD] [Author]잠까 [Category] - Description
 
 ---
+
+[2026-07-24] [Claude] [Gameplay+Feature] — Permanent-item consecutive-use lock + taunt emote system (branch `feature/permanent-lock-emote`). (1) 기본 영구 아이템(부채/바람막이) 연속 사용 방지: new `PlayerState.IsPermanentLocked` NetworkVariable, set on Permanent-item use (attack+defense resolve paths), enforced in `ItemDataSO.CanUse` (Persistence==Permanent), reset at attack-phase start (one-turn lifetime), banned overlay in `InventoryPresenter` — consumables (차/고양이) unaffected. (2) 도발 이모티콘: 5 emojis (character+text sprites, English filenames) in `Resources/Emoticon`; `EmoteCatalog`/`EmoteWheel`(준비완료 버튼 hold → 부채꼴 팬아웃 drag-select, coroutine easing, auto-close on prep-end)/`EmoteBubble`(screen-space, resolution-independent, tracks opponent head, 1s fade). `PlayerState.SendEmoteServerRpc`/`ShowEmoteClientRpc` — prep-only, sender sees local pop only, world bubble anchors to opponent's enemy-visual only (no netTransform fallback — it mismatches client-local seating). (3) Attack-start delay: `TurnManager` waits for in-flight taunt (≤1s) to finish before attack phase; `AcceptEmotes` window closes during the wait. Compile 0 errors, MPPM 2-player tested.
 
 [2026-07-23] [Claude] [Visual] — Mini-game visual rework (branch `feature/claw-hug-rework`). 집게손(ClawGrab): procedural cylinder-and-arms claw replaced with provided crane-claw sprites (open `Claw_Minigame2` → closed `Claw_Minigame1` swap at the grab frame); "ball-with-eyes" doll replaced with a plain rectangle box; cable line above the claw removed. 안아줘요(HugCharacter): removed the pink heart and (after exploring silhouette/soft-focus/URP-DoF options) all focus-blur — now a plain timing-bar game (cursor + green zone + tap). Claw PNGs background-cutout via PIL flood-fill + hand-written Sprite import metas. DebugItemGranter F1→집게손 / F2→안아줘요 for quick testing. No mechanic/network changes. Compile 0 errors; not yet live play-tested.
 
