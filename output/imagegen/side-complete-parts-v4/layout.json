@@ -1,0 +1,137 @@
+{
+  "canvas": [
+    1157,
+    1359
+  ],
+  "drawOrder": [
+    "backHair",
+    "lowerbody",
+    "body",
+    "frontHair_2",
+    "arm2",
+    "arm1",
+    "head",
+    "frontHair",
+    "frontHair_1"
+  ],
+  "layers": {
+    "backHair": {
+      "rect": [
+        24,
+        24,
+        521,
+        669
+      ],
+      "position": [
+        246,
+        122
+      ]
+    },
+    "lowerbody": {
+      "rect": [
+        569,
+        24,
+        539,
+        273
+      ],
+      "position": [
+        350,
+        993
+      ]
+    },
+    "body": {
+      "rect": [
+        1132,
+        24,
+        366,
+        435
+      ],
+      "position": [
+        358,
+        653
+      ]
+    },
+    "frontHair_2": {
+      "rect": [
+        1522,
+        24,
+        70,
+        323
+      ],
+      "position": [
+        489,
+        351
+      ]
+    },
+    "arm2": {
+      "rect": [
+        1616,
+        24,
+        163,
+        411
+      ],
+      "position": [
+        602,
+        712
+      ]
+    },
+    "arm1": {
+      "rect": [
+        24,
+        743,
+        274,
+        473
+      ],
+      "position": [
+        436,
+        661
+      ]
+    },
+    "head": {
+      "rect": [
+        322,
+        743,
+        472,
+        557
+      ],
+      "position": [
+        406,
+        199
+      ]
+    },
+    "frontHair": {
+      "rect": [
+        818,
+        743,
+        645,
+        384
+      ],
+      "position": [
+        245,
+        102
+      ]
+    },
+    "frontHair_1": {
+      "rect": [
+        1487,
+        743,
+        124,
+        427
+      ],
+      "position": [
+        527,
+        287
+      ]
+    }
+  },
+  "shoulders": {
+    "arm1": [
+      513,
+      686
+    ],
+    "arm2": [
+      620,
+      735
+    ]
+  }
+}

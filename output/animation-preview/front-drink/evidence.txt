@@ -1,0 +1,10 @@
+Source: GameScene_Multi/EnemyPlayer_0
+Controller: Assets/MainFolder/Animations/playerA.controller
+Clip: Assets/MainFolder/Animations/playerA_drink.anim
+Length: 1.5
+Frames: 46 at 30 fps
+Method: original clip sampling and SpriteResolver evaluation on isolated preview clone; neutral unlit preview material; no live gameplay/VFX driver
+0: body=body/default, arm1=arm_Left/drink, arm2=arm_Right/drink, head=head/drink, frontHair=frontHair/default, lowerbody=lowBody/default, item=item/tea
+0.5: body=body/default, arm1=arm_Left/drink, arm2=arm_Right/drink, head=head/drink, frontHair=frontHair/default, lowerbody=lowBody/default, item=item/tea
+1: body=body/default, arm1=arm_Left/drink, arm2=arm_Right/drink, head=head/drink, frontHair=frontHair/default, lowerbody=lowBody/default, item=item/tea
+1.5: body=body/default, arm1=arm_Left/drink, arm2=arm_Right/drink, head=head/drink, frontHair=frontHair/default, lowerbody=lowBody/default, item=item/tea
