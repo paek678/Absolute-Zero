@@ -1,0 +1,16 @@
+{
+  "atlas_reassembly_pixel_identical": true,
+  "part_count": 9,
+  "v4_reference_comparison": {
+    "silhouette_iou": 0.96144
+  },
+  "scope": "Static offline assembly only; no Unity, skinning or motion validation. IoU measures silhouette overlap, not artistic likeness.",
+  "remaining": [
+    "Eye and mouth shapes differ slightly.",
+    "Hair tips and leg contours need further art refinement.",
+    "Smooth palette fields do not reproduce the reference paint texture."
+  ],
+  "v3_reference_comparison": {
+    "silhouette_iou": 0.93539
+  }
+}
