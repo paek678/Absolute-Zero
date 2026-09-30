@@ -1,0 +1,746 @@
+fileFormatVersion: 2
+guid: f191c7c97b008e04c96cdd3e64de0a7f
+TextureImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 0
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WindowsStoreApps
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: body_maid_0
+      rect:
+        serializedVersion: 2
+        x: 31
+        y: 214
+        width: 60
+        height: 129
+      alignment: 9
+      pivot: {x: 0.7141588, y: 0.77373797}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5a2aee0aaa52a2b498ced3972c83664f
+      internalID: -1252001844
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_maid_1
+      rect:
+        serializedVersion: 2
+        x: 174
+        y: 327
+        width: 164
+        height: 165
+      alignment: 9
+      pivot: {x: 0.5022032, y: 0.6248095}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a23054a84894bc74e8f20b2153f7b9a1
+      internalID: -1072556203
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_maid_4_1
+      rect:
+        serializedVersion: 2
+        x: 397
+        y: 165
+        width: 101
+        height: 218
+      alignment: 9
+      pivot: {x: 0.37370557, y: 0.8793219}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 13d131f4d21ce3a4681d793a6bea4e71
+      internalID: 165274280
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_maid_3
+      rect:
+        serializedVersion: 2
+        x: 142
+        y: 236
+        width: 92
+        height: 70
+      alignment: 9
+      pivot: {x: 0.354292, y: 0.68985116}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1fe1d1cd0791bec4ab51206988504933
+      internalID: -1115963585
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_maid_4
+      rect:
+        serializedVersion: 2
+        x: 279
+        y: 238
+        width: 68
+        height: 83
+      alignment: 9
+      pivot: {x: 0.5607358, y: 0.7658603}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 142d380e0901dfe41a230cbb311a7e62
+      internalID: 76291755
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_maid_5
+      rect:
+        serializedVersion: 2
+        x: 530
+        y: 229
+        width: 75
+        height: 83
+      alignment: 9
+      pivot: {x: 0.6662484, y: 0.75454783}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: cb49cc56b4e3fb54ab8cc8806cc08244
+      internalID: -540427029
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_maid_6
+      rect:
+        serializedVersion: 2
+        x: 628
+        y: 227
+        width: 122
+        height: 82
+      alignment: 9
+      pivot: {x: 0.27572381, y: 0.64986736}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e3a94ec308f36104c97096568792a4a9
+      internalID: 1753246002
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_maid_7
+      rect:
+        serializedVersion: 2
+        x: 778
+        y: 212
+        width: 72
+        height: 86
+      alignment: 9
+      pivot: {x: 0.559138, y: 0.7736415}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9cffabf9920e69f4282e7a48be92bbb5
+      internalID: 1683058301
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_maid_8
+      rect:
+        serializedVersion: 2
+        x: 888
+        y: 217
+        width: 74
+        height: 89
+      alignment: 9
+      pivot: {x: 0.50076956, y: 0.7098615}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: baf64162f56f3c84c90d0115af65e454
+      internalID: -939118138
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_maid_9
+      rect:
+        serializedVersion: 2
+        x: 982
+        y: 206
+        width: 72
+        height: 87
+      alignment: 9
+      pivot: {x: 0.54478115, y: 0.7614939}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: bfd5de6239e62c04c923a0eb873d9af9
+      internalID: 178809560
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_maid_10
+      rect:
+        serializedVersion: 2
+        x: 1080
+        y: 194
+        width: 91
+        height: 119
+      alignment: 9
+      pivot: {x: 0.82619333, y: 0.23076136}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d41a3714c6b460641afb25179d427c75
+      internalID: -1850769095
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_maid_11
+      rect:
+        serializedVersion: 2
+        x: 1183
+        y: 207
+        width: 97
+        height: 100
+      alignment: 9
+      pivot: {x: 0.95871884, y: 0.14905655}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 935ca2709ea087e44ad4b6853316159d
+      internalID: -181651605
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_maid_12
+      rect:
+        serializedVersion: 2
+        x: 1299
+        y: 200
+        width: 114
+        height: 98
+      alignment: 9
+      pivot: {x: 0.29226953, y: 0.7281684}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8cb19b242579f76448d70879fc7148a2
+      internalID: -70308879
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_maid_13
+      rect:
+        serializedVersion: 2
+        x: 1424
+        y: 203
+        width: 77
+        height: 101
+      alignment: 9
+      pivot: {x: 0.88020146, y: 0.6356987}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9cbb6fe648a958749918ddf4f51428b1
+      internalID: 946350155
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_maid_14
+      rect:
+        serializedVersion: 2
+        x: 1539
+        y: 216
+        width: 86
+        height: 87
+      alignment: 9
+      pivot: {x: 0.4733617, y: 0.76332146}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5cb6a9fc1e2c6b44083518a9cf8f8907
+      internalID: -1039190756
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_maid_16
+      rect:
+        serializedVersion: 2
+        x: 42
+        y: 50
+        width: 59
+        height: 129
+      alignment: 9
+      pivot: {x: 0.35609496, y: 0.81464887}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 87c990f806b9c3c4f9a2f95ef5324e9b
+      internalID: -1781705468
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_maid_17
+      rect:
+        serializedVersion: 2
+        x: 142
+        y: 102
+        width: 95
+        height: 88
+      alignment: 9
+      pivot: {x: 0.73809844, y: 0.7035528}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7949b2b0a8c1fbb458517378c00e3e5a
+      internalID: -905708540
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_maid_18
+      rect:
+        serializedVersion: 2
+        x: 281
+        y: 93
+        width: 67
+        height: 84
+      alignment: 9
+      pivot: {x: 0.4118256, y: 0.75117654}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ac673e9d0678b784c8749a23ea6bc075
+      internalID: -463901680
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_maid_19
+      rect:
+        serializedVersion: 2
+        x: 420
+        y: 18
+        width: 59
+        height: 129
+      alignment: 9
+      pivot: {x: 0.4313287, y: 0.8077971}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3a9d90fe16a86e54a84b5ee3e7e9eb0a
+      internalID: 1205087210
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_maid_20
+      rect:
+        serializedVersion: 2
+        x: 533
+        y: 67
+        width: 65
+        height: 103
+      alignment: 9
+      pivot: {x: 0.05428185, y: 0.23026343}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d55f6fda31ceeab44ad021dba8998be0
+      internalID: -598117564
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_maid_21
+      rect:
+        serializedVersion: 2
+        x: 644
+        y: 74
+        width: 121
+        height: 81
+      alignment: 9
+      pivot: {x: 0.6709716, y: 0.68103725}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 94524fceff22b07488ad7e77d6700703
+      internalID: -83175633
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_maid_22
+      rect:
+        serializedVersion: 2
+        x: 786
+        y: 66
+        width: 72
+        height: 87
+      alignment: 9
+      pivot: {x: 0.43853843, y: 0.759841}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f0e0e2614656ee14eb35d31206f2c9dc
+      internalID: -1734380575
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_maid_23
+      rect:
+        serializedVersion: 2
+        x: 887
+        y: 71
+        width: 73
+        height: 87
+      alignment: 9
+      pivot: {x: 0.49687132, y: 0.7498069}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 96bc2713fbd5ce34ca6f66efbf8396a4
+      internalID: -1593875059
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_maid_24
+      rect:
+        serializedVersion: 2
+        x: 982
+        y: 67
+        width: 73
+        height: 86
+      alignment: 9
+      pivot: {x: 0.44912678, y: 0.77967143}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e967cee5107dc4a4da8491311d6989ef
+      internalID: 1847116335
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_maid_25
+      rect:
+        serializedVersion: 2
+        x: 1075
+        y: 62
+        width: 91
+        height: 119
+      alignment: 9
+      pivot: {x: 0.18207927, y: 0.17193013}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b641812274c38c146bb86a968d86d7b9
+      internalID: 1087573758
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_maid_27
+      rect:
+        serializedVersion: 2
+        x: 1431
+        y: 72
+        width: 74
+        height: 97
+      alignment: 9
+      pivot: {x: 0.12920482, y: 0.2724713}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 98b2a555b35021d499c06359af84978e
+      internalID: -2083182887
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 9664dacadabe1664e82cf7a40ba34600
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries:
+      - key: SpriteEditor.SliceSettings
+        value: '{"sliceOnImport":false,"gridCellCount":{"x":1.0,"y":1.0},"gridSpriteSize":{"x":64.0,"y":64.0},"gridSpriteOffset":{"x":0.0,"y":0.0},"gridSpritePadding":{"x":0.0,"y":0.0},"pivot":{"x":0.5,"y":0.5},"pivotPixels":{"x":0.0,"y":0.0},"autoSlicingMethod":0,"spriteAlignment":0,"pivotUnitMode":0,"slicingType":0,"keepEmptyRects":false,"isAlternate":false}'
+    nameFileIdTable:
+      body_maid_0: -1252001844
+      body_maid_1: -1072556203
+      body_maid_10: -1850769095
+      body_maid_11: -181651605
+      body_maid_12: -70308879
+      body_maid_13: 946350155
+      body_maid_14: -1039190756
+      body_maid_15: -1986216656
+      body_maid_16: -1781705468
+      body_maid_17: -905708540
+      body_maid_18: -463901680
+      body_maid_19: 1205087210
+      body_maid_20: -598117564
+      body_maid_21: -83175633
+      body_maid_22: -1734380575
+      body_maid_23: -1593875059
+      body_maid_24: 1847116335
+      body_maid_25: 1087573758
+      body_maid_26: 985008894
+      body_maid_27: -2083182887
+      body_maid_28: 539857022
+      body_maid_3: -1115963585
+      body_maid_4: 76291755
+      body_maid_4_1: 165274280
+      body_maid_5: -540427029
+      body_maid_6: 1753246002
+      body_maid_7: 1683058301
+      body_maid_8: -939118138
+      body_maid_9: 178809560
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

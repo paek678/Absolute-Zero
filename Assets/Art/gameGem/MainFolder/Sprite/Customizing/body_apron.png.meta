@@ -1,0 +1,766 @@
+fileFormatVersion: 2
+guid: dbce7f9704907fc4ebbdfe5411c37d36
+TextureImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 0
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WindowsStoreApps
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: body_apron_0
+      rect:
+        serializedVersion: 2
+        x: 35
+        y: 213
+        width: 52
+        height: 131
+      alignment: 9
+      pivot: {x: 0.6175939, y: 0.790426}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 114d555ca07b5894fb872d4d8021b0d9
+      internalID: -1604002996
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_apron_1
+      rect:
+        serializedVersion: 2
+        x: 178
+        y: 331
+        width: 128
+        height: 164
+      alignment: 9
+      pivot: {x: 0.525527, y: 0.66842073}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 539f6acad11d3ca4ebf5a3550a38263a
+      internalID: -2142711494
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_apron_4_1
+      rect:
+        serializedVersion: 2
+        x: 408
+        y: 162
+        width: 91
+        height: 233
+      alignment: 9
+      pivot: {x: 0.28003535, y: 0.85105824}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4d0ec1af28c5e76448d24cf0270e65da
+      internalID: 1082296560
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_apron_3
+      rect:
+        serializedVersion: 2
+        x: 150
+        y: 225
+        width: 78
+        height: 85
+      alignment: 9
+      pivot: {x: 0.32905656, y: 0.7855734}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 798fd76785f52244f86ba3198277f9b3
+      internalID: -1246334768
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_apron_4
+      rect:
+        serializedVersion: 2
+        x: 282
+        y: 238
+        width: 63
+        height: 83
+      alignment: 9
+      pivot: {x: 0.5922532, y: 0.76774025}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5ab8b7ee8fbcb894aa033bcb768108c2
+      internalID: -424128700
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_apron_5
+      rect:
+        serializedVersion: 2
+        x: 532
+        y: 223
+        width: 69
+        height: 96
+      alignment: 9
+      pivot: {x: 0.6116289, y: 0.7941882}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c050493777ad798449acaa67c68369f5
+      internalID: -1246655405
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_apron_6
+      rect:
+        serializedVersion: 2
+        x: 637
+        y: 219
+        width: 105
+        height: 96
+      alignment: 9
+      pivot: {x: 0.23897472, y: 0.7256343}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: eaa699db1556ecf469fc43d0260118a9
+      internalID: 704788875
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_apron_7
+      rect:
+        serializedVersion: 2
+        x: 784
+        y: 206
+        width: 59
+        height: 99
+      alignment: 9
+      pivot: {x: 0.49974656, y: 0.87483877}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a8cdb04baaeff084bb10bfcd4c3e604e
+      internalID: 1814597587
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_apron_8
+      rect:
+        serializedVersion: 2
+        x: 893
+        y: 218
+        width: 65
+        height: 85
+      alignment: 9
+      pivot: {x: 0.36913592, y: 0.7212402}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7bc3695a0d06166489bfea211178e21e
+      internalID: 661857802
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_apron_9
+      rect:
+        serializedVersion: 2
+        x: 988
+        y: 199
+        width: 59
+        height: 100
+      alignment: 9
+      pivot: {x: 0.5186468, y: 0.7806277}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 16a2d1f04f601244dabd1f8ee24d92e4
+      internalID: -1269441562
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_apron_10
+      rect:
+        serializedVersion: 2
+        x: 1084
+        y: 193
+        width: 82
+        height: 123
+      alignment: 9
+      pivot: {x: 0.98210925, y: 0.18606791}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 91033b16285deba4a8983da9c3ba6dd2
+      internalID: -498554911
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_apron_11
+      rect:
+        serializedVersion: 2
+        x: 1185
+        y: 207
+        width: 92
+        height: 100
+      alignment: 9
+      pivot: {x: 0.9852096, y: 0.24831039}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 71b8e63e2c3eda54ebee6d713daef360
+      internalID: 624109628
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_apron_12
+      rect:
+        serializedVersion: 2
+        x: 1303
+        y: 193
+        width: 107
+        height: 110
+      alignment: 9
+      pivot: {x: 0.3029842, y: 0.8165239}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 12b94a06f619e634c9887ca0c6e96861
+      internalID: -1045829022
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_apron_13
+      rect:
+        serializedVersion: 2
+        x: 1425
+        y: 203
+        width: 77
+        height: 102
+      alignment: 9
+      pivot: {x: 0.9560943, y: 0.74228835}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5df2490fd87117149af79a73b5353f1d
+      internalID: -1977486054
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_apron_14
+      rect:
+        serializedVersion: 2
+        x: 1544
+        y: 214
+        width: 77
+        height: 99
+      alignment: 9
+      pivot: {x: 0.4127451, y: 0.7805062}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 639687f618680d94c8d95258c2134e88
+      internalID: 1004810911
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_apron_15
+      rect:
+        serializedVersion: 2
+        x: 192
+        y: 220
+        width: 5
+        height: 4
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 001755516e644c74c8aa857848f46d55
+      internalID: 1250354750
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_apron_16
+      rect:
+        serializedVersion: 2
+        x: 46
+        y: 49
+        width: 52
+        height: 132
+      alignment: 9
+      pivot: {x: 0.41781294, y: 0.8367187}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 248a5fd293ae23c488b05423bbeb7fae
+      internalID: -1422877704
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_apron_17
+      rect:
+        serializedVersion: 2
+        x: 147
+        y: 95
+        width: 85
+        height: 103
+      alignment: 9
+      pivot: {x: 0.69646555, y: 0.8316339}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 06e93b38ac31cc449a7bc3a085e2e5c1
+      internalID: -111916329
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_apron_18
+      rect:
+        serializedVersion: 2
+        x: 282
+        y: 93
+        width: 65
+        height: 83
+      alignment: 9
+      pivot: {x: 0.3962036, y: 0.80323297}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7149b806a231047428d1492cd2e87735
+      internalID: -886172434
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_apron_19
+      rect:
+        serializedVersion: 2
+        x: 424
+        y: 15
+        width: 53
+        height: 135
+      alignment: 9
+      pivot: {x: 0.3941512, y: 0.7972821}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: bc660518db4992042b4ec4709d354c25
+      internalID: 1718952385
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_apron_20
+      rect:
+        serializedVersion: 2
+        x: 530
+        y: 68
+        width: 67
+        height: 101
+      alignment: 9
+      pivot: {x: -0.04546026, y: 0.30356446}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 061f7f2903e5430459bdc7294388713c
+      internalID: -497728011
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_apron_21
+      rect:
+        serializedVersion: 2
+        x: 652
+        y: 67
+        width: 106
+        height: 95
+      alignment: 9
+      pivot: {x: 0.7644814, y: 0.74346215}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9e4429541a46fe842ba249af4083f235
+      internalID: 501908698
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_apron_22
+      rect:
+        serializedVersion: 2
+        x: 791
+        y: 59
+        width: 60
+        height: 100
+      alignment: 9
+      pivot: {x: 0.5019216, y: 0.8783051}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 890724f469e142146b4091ae7a226d4c
+      internalID: -528001593
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_apron_23
+      rect:
+        serializedVersion: 2
+        x: 891
+        y: 72
+        width: 65
+        height: 86
+      alignment: 9
+      pivot: {x: 0.6241971, y: 0.7589956}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0347558f8ecb3fa498b779a27f60511e
+      internalID: -1957648630
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_apron_24
+      rect:
+        serializedVersion: 2
+        x: 989
+        y: 62
+        width: 59
+        height: 99
+      alignment: 9
+      pivot: {x: 0.48509604, y: 0.8000029}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: caad37293088cb84b813bc99e8bb6fd9
+      internalID: -687788586
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_apron_25
+      rect:
+        serializedVersion: 2
+        x: 1079
+        y: 59
+        width: 83
+        height: 123
+      alignment: 9
+      pivot: {x: 0.041031804, y: 0.19028975}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0168f18b1f9ba7b4aa6823c2d187ea58
+      internalID: 722184518
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_apron_26
+      rect:
+        serializedVersion: 2
+        x: 1426
+        y: 78
+        width: 82
+        height: 86
+      alignment: 9
+      pivot: {x: 0.08781321, y: 0.25038174}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 6bb0f48100e3355409ed7bcda4eb7608
+      internalID: -907291276
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 733fcb5579ef05c42b63e1fbfe88305e
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries:
+      - key: SpriteEditor.SliceSettings
+        value: '{"sliceOnImport":false,"gridCellCount":{"x":1.0,"y":1.0},"gridSpriteSize":{"x":64.0,"y":64.0},"gridSpriteOffset":{"x":0.0,"y":0.0},"gridSpritePadding":{"x":0.0,"y":0.0},"pivot":{"x":0.5,"y":0.5},"pivotPixels":{"x":0.0,"y":0.0},"autoSlicingMethod":0,"spriteAlignment":0,"pivotUnitMode":0,"slicingType":0,"keepEmptyRects":false,"isAlternate":false}'
+    nameFileIdTable:
+      body_apron_0: -1604002996
+      body_apron_1: -2142711494
+      body_apron_10: -498554911
+      body_apron_11: 624109628
+      body_apron_12: -1045829022
+      body_apron_13: -1977486054
+      body_apron_14: 1004810911
+      body_apron_15: 1250354750
+      body_apron_16: -1422877704
+      body_apron_17: -111916329
+      body_apron_18: -886172434
+      body_apron_19: 1718952385
+      body_apron_20: -497728011
+      body_apron_21: 501908698
+      body_apron_22: -528001593
+      body_apron_23: -1957648630
+      body_apron_24: -687788586
+      body_apron_25: 722184518
+      body_apron_26: -907291276
+      body_apron_3: -1246334768
+      body_apron_4: -424128700
+      body_apron_4_1: 1082296560
+      body_apron_5: -1246655405
+      body_apron_6: 704788875
+      body_apron_7: 1814597587
+      body_apron_8: 661857802
+      body_apron_9: -1269441562
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

@@ -1,0 +1,767 @@
+fileFormatVersion: 2
+guid: b77aba44252d5914d9d74b15663f3499
+TextureImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 0
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WindowsStoreApps
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: body_swimsuit_0
+      rect:
+        serializedVersion: 2
+        x: 45
+        y: 373
+        width: 111
+        height: 122
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: dbdfa1c50518ed347819a2c39209e9c5
+      internalID: -1585834717
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_swimsuit_4_1
+      rect:
+        serializedVersion: 2
+        x: 421
+        y: 165
+        width: 81
+        height: 236
+      alignment: 9
+      pivot: {x: 0.2628366, y: 0.83996207}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c08d89f114e072e409b2f6de073a8204
+      internalID: 956911589
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_swimsuit_2
+      rect:
+        serializedVersion: 2
+        x: 37
+        y: 212
+        width: 48
+        height: 133
+      alignment: 9
+      pivot: {x: 0.5607133, y: 0.84230304}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 63cc773e2a4ff464099cd985256c3847
+      internalID: -115905634
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_swimsuit_3
+      rect:
+        serializedVersion: 2
+        x: 150
+        y: 234
+        width: 76
+        height: 76
+      alignment: 9
+      pivot: {x: 0.400643, y: 0.77838254}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 26c381714379902469adc67c577ae43f
+      internalID: 800614165
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_swimsuit_4
+      rect:
+        serializedVersion: 2
+        x: 282
+        y: 238
+        width: 63
+        height: 83
+      alignment: 9
+      pivot: {x: 0.56888837, y: 0.7875863}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0f66742ba65f7af4db1cd357a3c3dcd4
+      internalID: 49819609
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_swimsuit_5
+      rect:
+        serializedVersion: 2
+        x: 535
+        y: 229
+        width: 65
+        height: 84
+      alignment: 9
+      pivot: {x: 0.57958794, y: 0.78483653}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ad58e79f42821fa4294b0abc62ee19f4
+      internalID: 2100501530
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_swimsuit_6
+      rect:
+        serializedVersion: 2
+        x: 637
+        y: 219
+        width: 105
+        height: 95
+      alignment: 9
+      pivot: {x: 0.25509325, y: 0.80141634}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0cc904de8ad85aa4495e825d22fb4f9b
+      internalID: 1084907022
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_swimsuit_7
+      rect:
+        serializedVersion: 2
+        x: 784
+        y: 208
+        width: 59
+        height: 95
+      alignment: 9
+      pivot: {x: 0.5900031, y: 0.7801835}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 33ec6f783b8212f42a5eed04e38c0bdf
+      internalID: 444841792
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_swimsuit_8
+      rect:
+        serializedVersion: 2
+        x: 893
+        y: 222
+        width: 65
+        height: 77
+      alignment: 9
+      pivot: {x: 0.44066536, y: 0.7717729}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 024fdaccd8981ef47a94341c36a5d78a
+      internalID: -1584260875
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_swimsuit_9
+      rect:
+        serializedVersion: 2
+        x: 987
+        y: 202
+        width: 60
+        height: 95
+      alignment: 9
+      pivot: {x: 0.57741493, y: 0.72270507}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 918922bdf9817db428d9d5fe65a3cb7d
+      internalID: -258312570
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_swimsuit_10
+      rect:
+        serializedVersion: 2
+        x: 1082
+        y: 194
+        width: 87
+        height: 119
+      alignment: 9
+      pivot: {x: 0.89543205, y: 0.20608495}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e713e715274bef249987e47192d261ec
+      internalID: 437493584
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_swimsuit_11
+      rect:
+        serializedVersion: 2
+        x: 1183
+        y: 207
+        width: 97
+        height: 100
+      alignment: 9
+      pivot: {x: 0.93795305, y: 0.18112503}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8aa93294895f94b47bdb9c1a84ae17f7
+      internalID: 919532531
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_swimsuit_12
+      rect:
+        serializedVersion: 2
+        x: 1303
+        y: 195
+        width: 107
+        height: 107
+      alignment: 9
+      pivot: {x: 0.31570578, y: 0.82525176}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 43cab787548b0d24ea2564916b482140
+      internalID: -2003790511
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_swimsuit_13
+      rect:
+        serializedVersion: 2
+        x: 1426
+        y: 205
+        width: 75
+        height: 98
+      alignment: 9
+      pivot: {x: 0.8767969, y: 0.6786988}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 424c9d7f43cbaeb469fa048848fdf51b
+      internalID: 1073270266
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_swimsuit_14
+      rect:
+        serializedVersion: 2
+        x: 1544
+        y: 214
+        width: 75
+        height: 95
+      alignment: 9
+      pivot: {x: 0.4783496, y: 0.7511163}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5f0a59527a8a6354e8482329fc32f63e
+      internalID: 1922324831
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_swimsuit_16
+      rect:
+        serializedVersion: 2
+        x: 50
+        y: 48
+        width: 45
+        height: 133
+      alignment: 9
+      pivot: {x: 0.43911827, y: 0.8536115}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 41d3a7d015096fa44a6ea18c3fffc719
+      internalID: -1327808126
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_swimsuit_17
+      rect:
+        serializedVersion: 2
+        x: 147
+        y: 103
+        width: 84
+        height: 91
+      alignment: 9
+      pivot: {x: 0.71598345, y: 0.8099937}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: fd35a919685f09845a6b054ce3dd3344
+      internalID: 1942241498
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_swimsuit_18
+      rect:
+        serializedVersion: 2
+        x: 177
+        y: 99
+        width: 22
+        height: 4
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 22ff256d14034204f9747fad82b7c04b
+      internalID: -935364600
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_swimsuit_19
+      rect:
+        serializedVersion: 2
+        x: 282
+        y: 93
+        width: 65
+        height: 83
+      alignment: 9
+      pivot: {x: 0.37480986, y: 0.82026654}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4e8f3860c8fce2c4b8a4684168224b02
+      internalID: -692713455
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_swimsuit_20
+      rect:
+        serializedVersion: 2
+        x: 428
+        y: 16
+        width: 45
+        height: 134
+      alignment: 9
+      pivot: {x: 0.42814875, y: 0.81850207}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c8bbce30f526516449273be56716b02b
+      internalID: -1929478111
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_swimsuit_21
+      rect:
+        serializedVersion: 2
+        x: 519
+        y: 69
+        width: 87
+        height: 98
+      alignment: 9
+      pivot: {x: 0.24253055, y: 0.27565026}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3f4c9b5462971c446b1a24732496b456
+      internalID: -1571986099
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_swimsuit_22
+      rect:
+        serializedVersion: 2
+        x: 652
+        y: 66
+        width: 106
+        height: 95
+      alignment: 9
+      pivot: {x: 0.76472676, y: 0.7683563}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: fa57d4c44f603cc4194f7d8f1b80f916
+      internalID: -709167933
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_swimsuit_23
+      rect:
+        serializedVersion: 2
+        x: 791
+        y: 63
+        width: 60
+        height: 94
+      alignment: 9
+      pivot: {x: 0.4237254, y: 0.79286927}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 42177c054e93cde4fac7b5d0bff1b087
+      internalID: 322126632
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_swimsuit_24
+      rect:
+        serializedVersion: 2
+        x: 891
+        y: 76
+        width: 65
+        height: 78
+      alignment: 9
+      pivot: {x: 0.5846961, y: 0.796438}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b542569c9e7a7d045803124a19cb82eb
+      internalID: 416954542
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_swimsuit_25
+      rect:
+        serializedVersion: 2
+        x: 986
+        y: 64
+        width: 62
+        height: 94
+      alignment: 9
+      pivot: {x: 0.42428392, y: 0.77953726}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2bc17d7bdbe4c134596093adb6ff5363
+      internalID: 1901937581
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_swimsuit_26
+      rect:
+        serializedVersion: 2
+        x: 1077
+        y: 61
+        width: 88
+        height: 120
+      alignment: 9
+      pivot: {x: 0.10906289, y: 0.18464361}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: cd02ef05a5042ca44a828f8234fc7318
+      internalID: -1752841775
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_swimsuit_27
+      rect:
+        serializedVersion: 2
+        x: 1430
+        y: 78
+        width: 75
+        height: 85
+      alignment: 9
+      pivot: {x: 0.058862306, y: 0.15053523}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1e3415ebc559bc54eb2871580b2b3f2f
+      internalID: 949504727
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 20e0b1f6c5253c749a33bc49f173f98a
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries:
+      - key: SpriteEditor.SliceSettings
+        value: '{"sliceOnImport":false,"gridCellCount":{"x":1.0,"y":1.0},"gridSpriteSize":{"x":64.0,"y":64.0},"gridSpriteOffset":{"x":0.0,"y":0.0},"gridSpritePadding":{"x":0.0,"y":0.0},"pivot":{"x":0.5,"y":0.5},"pivotPixels":{"x":0.0,"y":0.0},"autoSlicingMethod":0,"spriteAlignment":0,"pivotUnitMode":0,"slicingType":0,"keepEmptyRects":false,"isAlternate":false}'
+    nameFileIdTable:
+      body_swimsuit_0: -1585834717
+      body_swimsuit_10: 437493584
+      body_swimsuit_11: 919532531
+      body_swimsuit_12: -2003790511
+      body_swimsuit_13: 1073270266
+      body_swimsuit_14: 1922324831
+      body_swimsuit_15: 1311781960
+      body_swimsuit_16: -1327808126
+      body_swimsuit_17: 1942241498
+      body_swimsuit_18: -935364600
+      body_swimsuit_19: -692713455
+      body_swimsuit_2: -115905634
+      body_swimsuit_20: -1929478111
+      body_swimsuit_21: -1571986099
+      body_swimsuit_22: -709167933
+      body_swimsuit_23: 322126632
+      body_swimsuit_24: 416954542
+      body_swimsuit_25: 1901937581
+      body_swimsuit_26: -1752841775
+      body_swimsuit_27: 949504727
+      body_swimsuit_3: 800614165
+      body_swimsuit_4: 49819609
+      body_swimsuit_4_1: 956911589
+      body_swimsuit_5: 2100501530
+      body_swimsuit_6: 1084907022
+      body_swimsuit_7: 444841792
+      body_swimsuit_8: -1584260875
+      body_swimsuit_9: -258312570
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

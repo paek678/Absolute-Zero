@@ -1,0 +1,745 @@
+fileFormatVersion: 2
+guid: f4b12c74107fc1744aeaf912a73e1ab7
+TextureImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 0
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WindowsStoreApps
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: body_training_0
+      rect:
+        serializedVersion: 2
+        x: 44
+        y: 373
+        width: 111
+        height: 121
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c5142d06712f7424ca4c6dfb301d67d8
+      internalID: -1318446156
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_training_4_1
+      rect:
+        serializedVersion: 2
+        x: 408
+        y: 166
+        width: 94
+        height: 227
+      alignment: 9
+      pivot: {x: 0.42365345, y: 0.8714746}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 985248882156d79489a5ca24a3d43185
+      internalID: 375155325
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_training_2
+      rect:
+        serializedVersion: 2
+        x: 33
+        y: 213
+        width: 57
+        height: 132
+      alignment: 9
+      pivot: {x: 0.6316453, y: 0.8505554}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7d48b4a1c5023544baa084e6b4190a6d
+      internalID: -605957589
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_training_3
+      rect:
+        serializedVersion: 2
+        x: 146
+        y: 235
+        width: 83
+        height: 75
+      alignment: 9
+      pivot: {x: 0.42968252, y: 0.755684}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a30ce6ff3553f5046970ceef4b89f8fd
+      internalID: 1971224011
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_training_4
+      rect:
+        serializedVersion: 2
+        x: 281
+        y: 238
+        width: 65
+        height: 83
+      alignment: 9
+      pivot: {x: 0.6001953, y: 0.8295575}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a84bc122fe117534f87335c78bdc91e8
+      internalID: 175805430
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_training_5
+      rect:
+        serializedVersion: 2
+        x: 530
+        y: 227
+        width: 74
+        height: 87
+      alignment: 9
+      pivot: {x: 0.6956482, y: 0.7773557}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 6d7079035a0368f48ba53fead8bc4b76
+      internalID: -1224797354
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_training_6
+      rect:
+        serializedVersion: 2
+        x: 634
+        y: 222
+        width: 109
+        height: 92
+      alignment: 9
+      pivot: {x: 0.27419737, y: 0.7150713}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4b99383dc80e56f43ae5ddd2b68486ea
+      internalID: -1537412924
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_training_7
+      rect:
+        serializedVersion: 2
+        x: 779
+        y: 208
+        width: 67
+        height: 95
+      alignment: 9
+      pivot: {x: 0.5417189, y: 0.8083249}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8481bf6b64c95ec4995f21cfc83f033e
+      internalID: -1426625201
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_training_8
+      rect:
+        serializedVersion: 2
+        x: 889
+        y: 222
+        width: 72
+        height: 77
+      alignment: 9
+      pivot: {x: 0.47998893, y: 0.8118599}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2f89a8952caf7e24ea5113e75ab35df8
+      internalID: -1975840469
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_training_9
+      rect:
+        serializedVersion: 2
+        x: 983
+        y: 202
+        width: 68
+        height: 95
+      alignment: 9
+      pivot: {x: 0.5734953, y: 0.7487841}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5a90305ae36ae07489a919e898b123c3
+      internalID: 655303366
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_training_10
+      rect:
+        serializedVersion: 2
+        x: 1083
+        y: 195
+        width: 84
+        height: 119
+      alignment: 9
+      pivot: {x: 0.9251709, y: 0.1954665}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 93a67e7433ff55a41a6bcc1124f33942
+      internalID: 963363889
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_training_11
+      rect:
+        serializedVersion: 2
+        x: 1183
+        y: 205
+        width: 96
+        height: 104
+      alignment: 9
+      pivot: {x: 0.9809316, y: 0.24907875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8add193e0c939304b97ccf6867a40f7a
+      internalID: -736908959
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_training_12
+      rect:
+        serializedVersion: 2
+        x: 1302
+        y: 198
+        width: 109
+        height: 103
+      alignment: 9
+      pivot: {x: 0.30819505, y: 0.84506375}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: eb98982411df46949b9a2e94d30e4c26
+      internalID: 1405350135
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_training_13
+      rect:
+        serializedVersion: 2
+        x: 1427
+        y: 204
+        width: 73
+        height: 99
+      alignment: 9
+      pivot: {x: 0.927512, y: 0.70515335}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 55de970ee6be07f4b97175015df1f989
+      internalID: 345569117
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_training_14
+      rect:
+        serializedVersion: 2
+        x: 1542
+        y: 217
+        width: 80
+        height: 94
+      alignment: 9
+      pivot: {x: 0.47441253, y: 0.83209294}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 74ec98c9a07297d4390724f1569a4004
+      internalID: -1186769645
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_training_16
+      rect:
+        serializedVersion: 2
+        x: 43
+        y: 49
+        width: 59
+        height: 131
+      alignment: 9
+      pivot: {x: 0.33815494, y: 0.86446166}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b676eedc8913b344e9850e24a256a29f
+      internalID: -2105201477
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_training_17
+      rect:
+        serializedVersion: 2
+        x: 142
+        y: 101
+        width: 93
+        height: 93
+      alignment: 9
+      pivot: {x: 0.5834152, y: 0.8204902}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 73d5f7bbc515cf9449dfc57260a8ea89
+      internalID: 1481636533
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_training_19
+      rect:
+        serializedVersion: 2
+        x: 282
+        y: 93
+        width: 64
+        height: 82
+      alignment: 9
+      pivot: {x: 0.45504332, y: 0.8333398}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 517ee4d535a1e4040a4703a6a6d9cc18
+      internalID: -1962738856
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_training_20
+      rect:
+        serializedVersion: 2
+        x: 421
+        y: 17
+        width: 57
+        height: 131
+      alignment: 9
+      pivot: {x: 0.3118602, y: 0.8572179}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3af6725f58ee1614aad1182fb8ddeb53
+      internalID: -918730821
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_training_21
+      rect:
+        serializedVersion: 2
+        x: 528
+        y: 69
+        width: 70
+        height: 100
+      alignment: 9
+      pivot: {x: -0.063706756, y: 0.2822004}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9e5b62d88aadd5141850bf07f1fb2090
+      internalID: -1705965337
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_training_22
+      rect:
+        serializedVersion: 2
+        x: 651
+        y: 66
+        width: 109
+        height: 95
+      alignment: 9
+      pivot: {x: 0.74146515, y: 0.75470614}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9a6a1c1608a3642409e1514a700e25fc
+      internalID: 2075971338
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_training_23
+      rect:
+        serializedVersion: 2
+        x: 787
+        y: 63
+        width: 67
+        height: 94
+      alignment: 9
+      pivot: {x: 0.4890091, y: 0.8137444}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ce0980041f457bb41ad8f966c3bbd135
+      internalID: -1504387628
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_training_24
+      rect:
+        serializedVersion: 2
+        x: 888
+        y: 75
+        width: 71
+        height: 79
+      alignment: 9
+      pivot: {x: 0.5048166, y: 0.8116401}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f90fa77c7dafe05438ed36a9533a8e19
+      internalID: -226333378
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_training_25
+      rect:
+        serializedVersion: 2
+        x: 984
+        y: 64
+        width: 67
+        height: 95
+      alignment: 9
+      pivot: {x: 0.47469318, y: 0.7155985}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: efa1b69dd06860b4bb2dd2bec61192da
+      internalID: 1132642984
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_training_26
+      rect:
+        serializedVersion: 2
+        x: 1078
+        y: 62
+        width: 86
+        height: 119
+      alignment: 9
+      pivot: {x: 0.071560174, y: 0.15267663}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 06c22a22d052a184f851cb8b88cfa782
+      internalID: -2029746490
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_training_27
+      rect:
+        serializedVersion: 2
+        x: 1429
+        y: 71
+        width: 76
+        height: 99
+      alignment: 9
+      pivot: {x: 0.06905325, y: 0.30874002}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d99dbac560355d24aa77207060607d14
+      internalID: -2064402429
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: d5384fc981b63194db5d6b2a1834863f
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries:
+      - key: SpriteEditor.SliceSettings
+        value: '{"sliceOnImport":false,"gridCellCount":{"x":1.0,"y":1.0},"gridSpriteSize":{"x":64.0,"y":64.0},"gridSpriteOffset":{"x":0.0,"y":0.0},"gridSpritePadding":{"x":0.0,"y":0.0},"pivot":{"x":0.5,"y":0.5},"pivotPixels":{"x":0.0,"y":0.0},"autoSlicingMethod":0,"spriteAlignment":0,"pivotUnitMode":0,"slicingType":0,"keepEmptyRects":false,"isAlternate":false}'
+    nameFileIdTable:
+      body_training_0: -1318446156
+      body_training_10: 963363889
+      body_training_11: -736908959
+      body_training_12: 1405350135
+      body_training_13: 345569117
+      body_training_14: -1186769645
+      body_training_15: -1296840516
+      body_training_16: -2105201477
+      body_training_17: 1481636533
+      body_training_18: -485776612
+      body_training_19: -1962738856
+      body_training_2: -605957589
+      body_training_20: -918730821
+      body_training_21: -1705965337
+      body_training_22: 2075971338
+      body_training_23: -1504387628
+      body_training_24: -226333378
+      body_training_25: 1132642984
+      body_training_26: -2029746490
+      body_training_27: -2064402429
+      body_training_3: 1971224011
+      body_training_4: 175805430
+      body_training_4_1: 375155325
+      body_training_5: -1224797354
+      body_training_6: -1537412924
+      body_training_7: -1426625201
+      body_training_8: -1975840469
+      body_training_9: 655303366
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

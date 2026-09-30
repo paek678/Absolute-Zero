@@ -1,0 +1,747 @@
+fileFormatVersion: 2
+guid: a63b830f1670eb7408bc026bd4ba74dd
+TextureImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 0
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WindowsStoreApps
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: body_tanktop1_0
+      rect:
+        serializedVersion: 2
+        x: 45
+        y: 373
+        width: 111
+        height: 122
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 036ab7b12ddde204a9a05819412934cc
+      internalID: -1897659340
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_tanktop1_4_1
+      rect:
+        serializedVersion: 2
+        x: 409
+        y: 165
+        width: 92
+        height: 234
+      alignment: 9
+      pivot: {x: 0.3482507, y: 0.8627709}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 29cdadb6810b33244830b84fc144f072
+      internalID: 1466043882
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_tanktop1_2
+      rect:
+        serializedVersion: 2
+        x: 35
+        y: 212
+        width: 51
+        height: 133
+      alignment: 9
+      pivot: {x: 0.65096194, y: 0.87422055}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a313999df052c2b489a15abc7b8edc64
+      internalID: 936002810
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_tanktop1_3
+      rect:
+        serializedVersion: 2
+        x: 146
+        y: 235
+        width: 83
+        height: 75
+      alignment: 9
+      pivot: {x: 0.42427412, y: 0.76858723}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 56d297bdd6f84d947aa31f2da15a69e3
+      internalID: -405144539
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_tanktop1_4
+      rect:
+        serializedVersion: 2
+        x: 282
+        y: 238
+        width: 63
+        height: 83
+      alignment: 9
+      pivot: {x: 0.57772535, y: 0.80088127}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0eecb74e025a29e4db7021742b8b6d13
+      internalID: 17920235
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_tanktop1_5
+      rect:
+        serializedVersion: 2
+        x: 534
+        y: 227
+        width: 67
+        height: 87
+      alignment: 9
+      pivot: {x: 0.6776442, y: 0.7707516}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 634d79ac8877fc54ebf1a8db5410b50b
+      internalID: 697384261
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_tanktop1_6
+      rect:
+        serializedVersion: 2
+        x: 635
+        y: 222
+        width: 107
+        height: 92
+      alignment: 9
+      pivot: {x: 0.24871883, y: 0.78201824}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f2a78d7c71474614f88b4939ae5414e7
+      internalID: 649400709
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_tanktop1_7
+      rect:
+        serializedVersion: 2
+        x: 781
+        y: 208
+        width: 64
+        height: 94
+      alignment: 9
+      pivot: {x: 0.647624, y: 0.8160248}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 43a728dec2c9d4c459b01d44db3bdfcb
+      internalID: -747844764
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_tanktop1_8
+      rect:
+        serializedVersion: 2
+        x: 890
+        y: 222
+        width: 71
+        height: 77
+      alignment: 9
+      pivot: {x: 0.46471393, y: 0.8462191}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: bdfbf6ee4cc1fb4408cf9f0980528c2b
+      internalID: 1685624987
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_tanktop1_10
+      rect:
+        serializedVersion: 2
+        x: 985
+        y: 202
+        width: 64
+        height: 95
+      alignment: 9
+      pivot: {x: 0.6151829, y: 0.7961307}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1497284ff29c5eb4c85e62fe8feecf4a
+      internalID: 2145800838
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_tanktop1_11
+      rect:
+        serializedVersion: 2
+        x: 1084
+        y: 194
+        width: 83
+        height: 119
+      alignment: 9
+      pivot: {x: 0.91730106, y: 0.2089413}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 311c485d058b8c14b8a74ef5dc5b9e12
+      internalID: 102684157
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_tanktop1_12
+      rect:
+        serializedVersion: 2
+        x: 1183
+        y: 207
+        width: 97
+        height: 100
+      alignment: 9
+      pivot: {x: 0.9547006, y: 0.2060466}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 28a138eee8099d049a2ecd7ea3feaccd
+      internalID: 1544292211
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_tanktop1_13
+      rect:
+        serializedVersion: 2
+        x: 1303
+        y: 195
+        width: 107
+        height: 106
+      alignment: 9
+      pivot: {x: 0.28442726, y: 0.7893239}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c581df279dba7bf4e89e649e25d6e73c
+      internalID: -557966559
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_tanktop1_14
+      rect:
+        serializedVersion: 2
+        x: 1427
+        y: 205
+        width: 70
+        height: 97
+      alignment: 9
+      pivot: {x: 0.96241105, y: 0.71705955}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 327ffceb48d1cd54c909a5e2dac084f6
+      internalID: 1744784274
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_tanktop1_15
+      rect:
+        serializedVersion: 2
+        x: 1543
+        y: 215
+        width: 78
+        height: 95
+      alignment: 9
+      pivot: {x: 0.40982446, y: 0.77595794}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 33897ca39557b1940b107e23009845cc
+      internalID: -472982898
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_tanktop1_17
+      rect:
+        serializedVersion: 2
+        x: 47
+        y: 48
+        width: 51
+        height: 133
+      alignment: 9
+      pivot: {x: 0.45072517, y: 0.85539097}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e14f386362a4aa343a39ab288bb2a897
+      internalID: 446986655
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_tanktop1_18
+      rect:
+        serializedVersion: 2
+        x: 147
+        y: 103
+        width: 85
+        height: 91
+      alignment: 9
+      pivot: {x: 0.6749975, y: 0.79595375}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2abd47c347bb9cb448c1e813b4704fee
+      internalID: -1133407615
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_tanktop1_19
+      rect:
+        serializedVersion: 2
+        x: 282
+        y: 93
+        width: 65
+        height: 83
+      alignment: 9
+      pivot: {x: 0.4020658, y: 0.7949814}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5ff6e977183e7b94687005e70628a81f
+      internalID: 1924981470
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_tanktop1_20
+      rect:
+        serializedVersion: 2
+        x: 425
+        y: 16
+        width: 49
+        height: 134
+      alignment: 9
+      pivot: {x: 0.45334235, y: 0.85828584}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3509324d03de6fd4ca75c4187ab3e817
+      internalID: -72801364
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_tanktop1_21
+      rect:
+        serializedVersion: 2
+        x: 531
+        y: 69
+        width: 63
+        height: 101
+      alignment: 9
+      pivot: {x: -0.05481054, y: 0.23095265}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c7de54a1ceaef834ab2ea43fececdca6
+      internalID: -1133778660
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_tanktop1_22
+      rect:
+        serializedVersion: 2
+        x: 651
+        y: 67
+        width: 108
+        height: 93
+      alignment: 9
+      pivot: {x: 0.74620396, y: 0.8008723}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: dee199b296307e946bc07bbd014f28fc
+      internalID: 2024237262
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_tanktop1_23
+      rect:
+        serializedVersion: 2
+        x: 790
+        y: 62
+        width: 63
+        height: 95
+      alignment: 9
+      pivot: {x: 0.3818398, y: 0.8217907}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d2acbe2d17fef7d4db8870f14d023d38
+      internalID: 2215157
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_tanktop1_24
+      rect:
+        serializedVersion: 2
+        x: 888
+        y: 76
+        width: 71
+        height: 77
+      alignment: 9
+      pivot: {x: 0.53204, y: 0.8259854}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ae3ebacd07940fe4e882a8832d41ff76
+      internalID: 1359208262
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_tanktop1_26
+      rect:
+        serializedVersion: 2
+        x: 986
+        y: 64
+        width: 64
+        height: 95
+      alignment: 9
+      pivot: {x: 0.3897133, y: 0.8008779}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 659e30ff6a420ac4dbac83eebc25fab8
+      internalID: 979281834
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_tanktop1_27
+      rect:
+        serializedVersion: 2
+        x: 1080
+        y: 61
+        width: 82
+        height: 120
+      alignment: 9
+      pivot: {x: 0.04119724, y: 0.20141385}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ab036846b5eed194fba78e5ecb28475b
+      internalID: 1712952990
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_tanktop1_28
+      rect:
+        serializedVersion: 2
+        x: 1432
+        y: 78
+        width: 69
+        height: 85
+      alignment: 9
+      pivot: {x: 0.02828139, y: 0.16600943}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b9bd28672e94953499db88b9229e4402
+      internalID: 153294242
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: f6d02bf612fb7f0439aa4a0072b52f16
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries:
+      - key: SpriteEditor.SliceSettings
+        value: '{"sliceOnImport":false,"gridCellCount":{"x":1.0,"y":1.0},"gridSpriteSize":{"x":64.0,"y":64.0},"gridSpriteOffset":{"x":0.0,"y":0.0},"gridSpritePadding":{"x":0.0,"y":0.0},"pivot":{"x":0.5,"y":0.5},"pivotPixels":{"x":0.0,"y":0.0},"autoSlicingMethod":0,"spriteAlignment":0,"pivotUnitMode":0,"slicingType":0,"keepEmptyRects":false,"isAlternate":false}'
+    nameFileIdTable:
+      body_tanktop1_0: -1897659340
+      body_tanktop1_10: 2145800838
+      body_tanktop1_11: 102684157
+      body_tanktop1_12: 1544292211
+      body_tanktop1_13: -557966559
+      body_tanktop1_14: 1744784274
+      body_tanktop1_15: -472982898
+      body_tanktop1_16: 223226543
+      body_tanktop1_17: 446986655
+      body_tanktop1_18: -1133407615
+      body_tanktop1_19: 1924981470
+      body_tanktop1_2: 936002810
+      body_tanktop1_20: -72801364
+      body_tanktop1_21: -1133778660
+      body_tanktop1_22: 2024237262
+      body_tanktop1_23: 2215157
+      body_tanktop1_24: 1359208262
+      body_tanktop1_25: -1267400898
+      body_tanktop1_26: 979281834
+      body_tanktop1_27: 1712952990
+      body_tanktop1_28: 153294242
+      body_tanktop1_29: 77163746
+      body_tanktop1_3: -405144539
+      body_tanktop1_4: 17920235
+      body_tanktop1_4_1: 1466043882
+      body_tanktop1_5: 697384261
+      body_tanktop1_6: 649400709
+      body_tanktop1_7: -747844764
+      body_tanktop1_8: 1685624987
+      body_tanktop1_9: -170764957
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

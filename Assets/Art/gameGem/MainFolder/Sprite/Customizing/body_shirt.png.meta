@@ -1,0 +1,744 @@
+fileFormatVersion: 2
+guid: 377b1f6c5e3e9b64a8e24a0ed7cb2eb5
+TextureImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 0
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WindowsStoreApps
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: body_shirt_0
+      rect:
+        serializedVersion: 2
+        x: 45
+        y: 373
+        width: 110
+        height: 122
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 048bee282e3ad064abdf85509c72e763
+      internalID: -1388700855
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_shirt_4_1
+      rect:
+        serializedVersion: 2
+        x: 406
+        y: 165
+        width: 91
+        height: 233
+      alignment: 9
+      pivot: {x: 0.28766137, y: 0.89179766}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 94115eb2a0dae8245bd058456127791c
+      internalID: -621717416
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_shirt_2
+      rect:
+        serializedVersion: 2
+        x: 35
+        y: 212
+        width: 52
+        height: 134
+      alignment: 9
+      pivot: {x: 0.674193, y: 0.8573012}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 17e5dd35aa650f44e8c50b5442bbce35
+      internalID: 781497285
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_shirt_3
+      rect:
+        serializedVersion: 2
+        x: 150
+        y: 225
+        width: 78
+        height: 85
+      alignment: 9
+      pivot: {x: 0.38387102, y: 0.7638765}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 936cf839b83a4604fab6050e0716e6fb
+      internalID: -31194475
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_shirt_4
+      rect:
+        serializedVersion: 2
+        x: 282
+        y: 238
+        width: 63
+        height: 83
+      alignment: 9
+      pivot: {x: 0.5386188, y: 0.77358717}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4968189b3e925fd419c08d8d37f6c3fe
+      internalID: 949581137
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_shirt_5
+      rect:
+        serializedVersion: 2
+        x: 532
+        y: 223
+        width: 69
+        height: 96
+      alignment: 9
+      pivot: {x: 0.6175785, y: 0.76761246}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 62530680d527eb14a9fb570f460c5d00
+      internalID: 1703900493
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_shirt_6
+      rect:
+        serializedVersion: 2
+        x: 637
+        y: 219
+        width: 105
+        height: 96
+      alignment: 9
+      pivot: {x: 0.25185838, y: 0.7252798}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f8b4690301bd3844792369f523dcf380
+      internalID: 857478418
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_shirt_7
+      rect:
+        serializedVersion: 2
+        x: 784
+        y: 206
+        width: 59
+        height: 99
+      alignment: 9
+      pivot: {x: 0.51916915, y: 0.82655907}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 6134e8db3675ab748807a6205a8d1ca2
+      internalID: 2128236600
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_shirt_8
+      rect:
+        serializedVersion: 2
+        x: 893
+        y: 218
+        width: 65
+        height: 85
+      alignment: 9
+      pivot: {x: 0.4621995, y: 0.80351955}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7ae0a59e90c49994c8ceacc7e371606a
+      internalID: 1013344560
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_shirt_9
+      rect:
+        serializedVersion: 2
+        x: 988
+        y: 199
+        width: 59
+        height: 100
+      alignment: 9
+      pivot: {x: 0.5301162, y: 0.81538755}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3c925a3bcc67c424aba8a0aba0ecd39e
+      internalID: -496068325
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_shirt_10
+      rect:
+        serializedVersion: 2
+        x: 1082
+        y: 192
+        width: 87
+        height: 123
+      alignment: 9
+      pivot: {x: 0.9254193, y: 0.19909383}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 17f09e9f5f56f2d4fb8607bf4878f8ab
+      internalID: 633821359
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_shirt_11
+      rect:
+        serializedVersion: 2
+        x: 1183
+        y: 207
+        width: 96
+        height: 100
+      alignment: 9
+      pivot: {x: 0.99680835, y: 0.2015161}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: bfacd4d202b5abf429ecf6eced001386
+      internalID: -1357942061
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_shirt_12
+      rect:
+        serializedVersion: 2
+        x: 1303
+        y: 193
+        width: 107
+        height: 110
+      alignment: 9
+      pivot: {x: 0.3469569, y: 0.8101538}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c3a9dfbcd98500848b31de855c8e1fc0
+      internalID: 489118820
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_shirt_13
+      rect:
+        serializedVersion: 2
+        x: 1422
+        y: 203
+        width: 82
+        height: 102
+      alignment: 9
+      pivot: {x: 0.96051323, y: 0.7073206}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e092b95ec4dfeb649b1fffe2d5dd6299
+      internalID: -62424750
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_shirt_14
+      rect:
+        serializedVersion: 2
+        x: 1544
+        y: 214
+        width: 77
+        height: 99
+      alignment: 9
+      pivot: {x: 0.44551858, y: 0.75424933}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2c8fbcfba2b43a4488a2eea0b5376acc
+      internalID: -1912576765
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_shirt_16
+      rect:
+        serializedVersion: 2
+        x: 46
+        y: 47
+        width: 52
+        height: 135
+      alignment: 9
+      pivot: {x: 0.32992664, y: 0.8468155}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7d84b80936e975847bfcf941d7e9e2fb
+      internalID: -1619696722
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_shirt_17
+      rect:
+        serializedVersion: 2
+        x: 147
+        y: 95
+        width: 85
+        height: 103
+      alignment: 9
+      pivot: {x: 0.66042554, y: 0.8044967}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c37e8af19b98abf4b96e5c9bff1237c1
+      internalID: -1346037283
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_shirt_18
+      rect:
+        serializedVersion: 2
+        x: 282
+        y: 93
+        width: 65
+        height: 83
+      alignment: 9
+      pivot: {x: 0.42417884, y: 0.80431396}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: fab0b672b10dbf549a7f4b55ddebfbce
+      internalID: -1166273632
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_shirt_19
+      rect:
+        serializedVersion: 2
+        x: 424
+        y: 15
+        width: 53
+        height: 135
+      alignment: 9
+      pivot: {x: 0.32143244, y: 0.8461378}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: daebbe38a5cac5f4d90899a0eec7c037
+      internalID: 1619053836
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_shirt_20
+      rect:
+        serializedVersion: 2
+        x: 529
+        y: 68
+        width: 68
+        height: 101
+      alignment: 9
+      pivot: {x: 0.09075659, y: 0.28070024}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9a8d487b85b27fc4790196f2d5d80a11
+      internalID: 759893179
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_shirt_21
+      rect:
+        serializedVersion: 2
+        x: 652
+        y: 67
+        width: 106
+        height: 95
+      alignment: 9
+      pivot: {x: 0.7340675, y: 0.7768399}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ed29b77f4c52a7e4089bed9efcaa3383
+      internalID: 1778510749
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_shirt_22
+      rect:
+        serializedVersion: 2
+        x: 791
+        y: 59
+        width: 60
+        height: 100
+      alignment: 9
+      pivot: {x: 0.47403258, y: 0.8115973}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3e082266b1c2b7044ac6107fcffac10e
+      internalID: 1611401940
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_shirt_23
+      rect:
+        serializedVersion: 2
+        x: 891
+        y: 72
+        width: 65
+        height: 86
+      alignment: 9
+      pivot: {x: 0.5418861, y: 0.7585364}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8a367e7804001f5489e4cf84979a86cf
+      internalID: 746600073
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_shirt_24
+      rect:
+        serializedVersion: 2
+        x: 989
+        y: 62
+        width: 59
+        height: 99
+      alignment: 9
+      pivot: {x: 0.47784528, y: 0.76404566}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 97e4f2d743244164e98409b16e04aed6
+      internalID: 2011339265
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_shirt_25
+      rect:
+        serializedVersion: 2
+        x: 1077
+        y: 59
+        width: 88
+        height: 123
+      alignment: 9
+      pivot: {x: 0.084127255, y: 0.17412902}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 77b1f5489e62fee488229da36179b6c9
+      internalID: -456918564
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: body_shirt_26
+      rect:
+        serializedVersion: 2
+        x: 1431
+        y: 78
+        width: 77
+        height: 85
+      alignment: 9
+      pivot: {x: 0.0075192144, y: 0.24506862}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 338d3f2c09eaa794eb94ec369007044b
+      internalID: -2048526808
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 4c0e9ae3632d59a44b9cb3a5b79174ab
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries:
+      - key: SpriteEditor.SliceSettings
+        value: '{"sliceOnImport":false,"gridCellCount":{"x":1.0,"y":1.0},"gridSpriteSize":{"x":64.0,"y":64.0},"gridSpriteOffset":{"x":0.0,"y":0.0},"gridSpritePadding":{"x":0.0,"y":0.0},"pivot":{"x":0.5,"y":0.5},"pivotPixels":{"x":0.0,"y":0.0},"autoSlicingMethod":0,"spriteAlignment":0,"pivotUnitMode":0,"slicingType":0,"keepEmptyRects":false,"isAlternate":false}'
+    nameFileIdTable:
+      body_shirt_0: -1388700855
+      body_shirt_10: 633821359
+      body_shirt_11: -1357942061
+      body_shirt_12: 489118820
+      body_shirt_13: -62424750
+      body_shirt_14: -1912576765
+      body_shirt_15: 1096696441
+      body_shirt_16: -1619696722
+      body_shirt_17: -1346037283
+      body_shirt_18: -1166273632
+      body_shirt_19: 1619053836
+      body_shirt_2: 781497285
+      body_shirt_20: 759893179
+      body_shirt_21: 1778510749
+      body_shirt_22: 1611401940
+      body_shirt_23: 746600073
+      body_shirt_24: 2011339265
+      body_shirt_25: -456918564
+      body_shirt_26: -2048526808
+      body_shirt_3: -31194475
+      body_shirt_4: 949581137
+      body_shirt_4_1: -621717416
+      body_shirt_5: 1703900493
+      body_shirt_6: 857478418
+      body_shirt_7: 2128236600
+      body_shirt_8: 1013344560
+      body_shirt_9: -496068325
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
