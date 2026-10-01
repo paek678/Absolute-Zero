@@ -10,9 +10,10 @@ namespace AbsoluteZero.Core.Player
         public bool isReady;
         public bool hasUsedSub;
 
-        public void SetSelected(byte slotIndex, ItemDataSO itemData, byte targetSeat = ActionIntent.NoTarget)
+        public void SetSelected(byte slotIndex, ItemDataSO itemData,
+            byte targetSeat = ActionIntent.NoTarget, uint copyId = 0)
         {
-            selectedAction = new QueuedAction(slotIndex, itemData, targetSeat);
+            selectedAction = new QueuedAction(slotIndex, itemData, targetSeat, copyId);
         }
 
         public void SetSub(byte slotIndex, ItemDataSO itemData, byte targetSeat = ActionIntent.NoTarget)
@@ -77,12 +78,15 @@ namespace AbsoluteZero.Core.Player
         public byte SlotIndex;
         public ItemDataSO ItemData;
         public byte TargetSeat;
+        public uint CopyId;
 
-        public QueuedAction(byte slotIndex, ItemDataSO itemData, byte targetSeat = ActionIntent.NoTarget)
+        public QueuedAction(byte slotIndex, ItemDataSO itemData,
+            byte targetSeat = ActionIntent.NoTarget, uint copyId = 0)
         {
             SlotIndex = slotIndex;
             ItemData = itemData;
             TargetSeat = targetSeat;
+            CopyId = copyId;
         }
     }
 }

@@ -2,6 +2,8 @@ using AbsoluteZero.Core.Item;
 using AbsoluteZero.Core.Item.Data;
 using Unity.Netcode;
 using UnityEngine;
+using System;
+using System.Collections.Generic;
 
 namespace AbsoluteZero.Core.Player
 {
@@ -16,6 +18,48 @@ namespace AbsoluteZero.Core.Player
         short[] _basicItemIds;
         bool _isWindbreakerUnlimited = true;
         bool[] _thresholdGranted = new bool[3];
+        bool _topUpCommitInProgress;
+        public bool TopUpCommitInProgress => _topUpCommitInProgress;
+        uint _nextCopyId;
+
+        // Identical on server and clients; includes slot order, uses and copy identity.
+        public uint CurrentFingerprint()
+        {
+            uint hash = FingerprintStart(SlotStates.Count);
+            for (int i = 0; i < SlotStates.Count; i++)
+                hash = FingerprintSlot(hash, SlotStates[i]);
+            return hash;
+        }
+
+        static uint Fingerprint(ItemSlotNetData[] slots)
+        {
+            uint hash = FingerprintStart(slots.Length);
+            for (int i = 0; i < slots.Length; i++)
+                hash = FingerprintSlot(hash, slots[i]);
+            return hash;
+        }
+
+        static uint FingerprintStart(int count) => unchecked(2166136261u ^ (uint)count);
+
+        static uint FingerprintSlot(uint hash, ItemSlotNetData slot)
+        {
+            unchecked
+            {
+                hash = (hash ^ (ushort)slot.ItemId) * 16777619u;
+                hash = (hash ^ slot.RemainingUses) * 16777619u;
+                hash = (hash ^ slot.Flags) * 16777619u;
+                return (hash ^ slot.CopyId) * 16777619u;
+            }
+        }
+
+        public ItemSlotNetData AssignNewCopyId(ItemSlotNetData slot)
+        {
+            if (!IsServer) throw new System.InvalidOperationException("Only the server may allocate item copies");
+            uint next = ++_nextCopyId;
+            if (next == 0) throw new System.InvalidOperationException("Item copy identity exhausted");
+            slot.CopyId = next;
+            return slot;
+        }
 
         void Awake()
         {
@@ -191,6 +235,135 @@ namespace AbsoluteZero.Core.Player
             return granted;
         }
 
+        public sealed class RandomTopUpPlan
+        {
+            readonly PlayerInventory _owner;
+            readonly ItemSlotNetData[] _before;
+            readonly ItemSlotNetData[] _after;
+            bool _applyStarted;
+            int _appliedThrough;
+
+            internal RandomTopUpPlan(PlayerInventory owner, ItemSlotNetData[] before,
+                ItemSlotNetData[] after)
+            {
+                _owner = owner;
+                _before = before;
+                _after = after;
+            }
+
+            public int BeforeCount => _before.Length;
+            public int ExpectedCount => _after.Length;
+            public uint BeforeFingerprint => Fingerprint(_before);
+            public uint ExpectedFingerprint => Fingerprint(_after);
+
+            public bool CanApply()
+            {
+                if (_owner == null || !_owner.IsServer || _owner.SlotStates.Count != _before.Length)
+                    return false;
+                for (int i = 0; i < _before.Length; i++)
+                    if (!_owner.SlotStates[i].Equals(_before[i])) return false;
+                return true;
+            }
+
+            public bool TryApply()
+            {
+                if (!CanApply()) return false;
+                _applyStarted = true;
+                _appliedThrough = 0;
+                _owner._topUpCommitInProgress = true;
+                try
+                {
+                    for (int i = 0; i < _after.Length; i++)
+                    {
+                        if (i < _before.Length)
+                        {
+                            if (!_before[i].Equals(_after[i]))
+                                _owner.SlotStates[i] = _after[i];
+                        }
+                        else
+                            _owner.SlotStates.Add(_after[i]);
+                        _appliedThrough = i + 1;
+                    }
+                    return true;
+                }
+                finally { _owner._topUpCommitInProgress = false; }
+            }
+
+            public void Restore()
+            {
+                if (!_applyStarted || _owner == null || !_owner.IsServer) return;
+                _owner._topUpCommitInProgress = true;
+                try
+                {
+                    int expectedCount = System.Math.Max(_before.Length, _appliedThrough);
+                    if (_owner.SlotStates.Count != expectedCount)
+                        throw new System.InvalidOperationException(
+                            "Cannot restore a top-up after inventory length changed independently");
+                    for (int i = 0; i < expectedCount; i++)
+                    {
+                        var expected = i < _appliedThrough ? _after[i] : _before[i];
+                        if (!_owner.SlotStates[i].Equals(expected))
+                            throw new System.InvalidOperationException(
+                                $"Cannot restore a top-up after slot {i} changed independently");
+                    }
+                    while (_owner.SlotStates.Count > _before.Length)
+                        _owner.SlotStates.RemoveAt(_owner.SlotStates.Count - 1);
+                    for (int i = 0; i < _before.Length; i++)
+                    {
+                        if (i < _owner.SlotStates.Count) _owner.SlotStates[i] = _before[i];
+                        else _owner.SlotStates.Add(_before[i]);
+                    }
+                    _applyStarted = false;
+                    _appliedThrough = 0;
+                }
+                finally { _owner._topUpCommitInProgress = false; }
+            }
+        }
+
+        public bool TryPrepareRandomTopUp(int maxRandomItems, ItemDropTable dropTable,
+            out RandomTopUpPlan plan)
+        {
+            plan = null;
+            if (!IsServer || !IsRegistryReady || maxRandomItems < 0 || maxRandomItems > MAX_SLOTS)
+                return false;
+            var before = new ItemSlotNetData[SlotStates.Count];
+            var staged = new List<ItemSlotNetData>(SlotStates.Count);
+            int randomCount = 0;
+            for (int i = 0; i < SlotStates.Count; i++)
+            {
+                before[i] = SlotStates[i];
+                staged.Add(before[i]);
+                if (!before[i].IsEmpty && !IsBasicItem(before[i].ItemId)) randomCount++;
+            }
+            if (randomCount < maxRandomItems && (dropTable == null || dropTable.IsEmpty))
+                return false;
+            while (randomCount < maxRandomItems)
+            {
+                int destination = -1;
+                for (int i = 0; i < staged.Count; i++)
+                    if (staged[i].IsEmpty) { destination = i; break; }
+                if (destination < 0 && staged.Count >= MAX_SLOTS) return false;
+
+                var item = dropTable.Roll(candidate =>
+                {
+                    short candidateId = FindItemId(candidate);
+                    if (candidateId < 0 || IsBasicItem(candidateId)) return false;
+                    int copies = 0;
+                    for (int i = 0; i < staged.Count; i++)
+                        if (!staged[i].IsEmpty && staged[i].ItemId == candidateId) copies++;
+                    return copies < MAX_DUPLICATE_COPIES;
+                });
+                if (item == null) return false;
+                short itemId = FindItemId(item);
+                var slot = MakeSlot(itemId, item);
+                if (destination >= 0) staged[destination] = slot;
+                else staged.Add(slot);
+                randomCount++;
+            }
+            plan = new RandomTopUpPlan(this, before, staged.ToArray());
+            return true;
+        }
+
         public void GrantRandomItems(int count, ItemDropTable dropTable)
         {
             if (!IsServer) return;
@@ -236,6 +409,8 @@ namespace AbsoluteZero.Core.Player
             if (_itemRegistry == null || itemId < 0 || itemId >= _itemRegistry.Length) return false;
 
             var item = _itemRegistry[itemId];
+
+            if (!ItemAvailability.IsEnabled(item)) return false;
 
             int existingSlot = FindSlotByItemId(itemId);
             if (existingSlot >= 0 && !SlotStates[existingSlot].IsUnlimited)
@@ -291,7 +466,7 @@ namespace AbsoluteZero.Core.Player
             {
                 if (SlotStates[i].IsEmpty || SlotStates[i].IsUnlimited) continue;
                 var existingItem = GetItemData(i);
-                if (existingItem == null || existingItem.SlotType != Item.ItemSlotType.Sub) continue;
+                if (!InventoryMutationCalculations.CanReroll(SlotStates[i], existingItem != null ? existingItem.SlotType : (ItemSlotType?)null)) continue;
 
                 string oldName = GetItemData(i)?.ItemName ?? $"id={SlotStates[i].ItemId}";
                 var newItem = dropTable.Roll();
@@ -313,7 +488,8 @@ namespace AbsoluteZero.Core.Player
             var occupied = new System.Collections.Generic.List<int>();
             for (int i = 0; i < otherInventory.SlotStates.Count; i++)
             {
-                if (!otherInventory.SlotStates[i].IsEmpty && !otherInventory.SlotStates[i].IsUnlimited)
+                if (InventoryMutationCalculations.IsFiniteCopy(otherInventory.SlotStates[i])
+                    && ItemAvailability.IsEnabled(otherInventory.GetItemData(i)))
                     occupied.Add(i);
             }
             if (occupied.Count == 0)
@@ -322,27 +498,29 @@ namespace AbsoluteZero.Core.Player
                 return;
             }
 
-            int targetSlot = occupied[Random.Range(0, occupied.Count)];
+            int targetSlot = occupied[UnityEngine.Random.Range(0, occupied.Count)];
             string stolenName = otherInventory.GetItemData(targetSlot)?.ItemName ?? $"id={otherInventory.SlotStates[targetSlot].ItemId}";
             short stolenItemId = otherInventory.SlotStates[targetSlot].ItemId;
 
             int existingSlot = FindSlotByItemId(stolenItemId);
-            if (existingSlot >= 0 && !SlotStates[existingSlot].IsUnlimited)
+            var placement = InventoryMutationCalculations.PlaceStolen(
+                existingSlot >= 0 ? SlotStates[existingSlot] : null,
+                otherInventory.SlotStates[targetSlot].RemainingUses, SlotStates.Count, MAX_SLOTS);
+            if (placement.Destination == StealDestination.Stack)
             {
                 var slot = SlotStates[existingSlot];
-                slot.RemainingUses = (byte)Mathf.Min(
-                    slot.RemainingUses + otherInventory.SlotStates[targetSlot].RemainingUses, 254);
+                slot.RemainingUses = placement.StackedUses;
                 SlotStates[existingSlot] = slot;
                 Debug.Log($"[ITEM] StealRandomItem: stole '{stolenName}' from opponent slot={targetSlot} → STACKED on slot={existingSlot} (uses→{slot.RemainingUses})");
             }
-            else if (SlotStates.Count >= MAX_SLOTS)
+            else if (placement.Destination == StealDestination.None)
             {
                 Debug.Log($"[ITEM] StealRandomItem: inventory full, cannot steal");
                 return;
             }
             else
             {
-                SlotStates.Add(otherInventory.SlotStates[targetSlot]);
+                SlotStates.Add(AssignNewCopyId(otherInventory.SlotStates[targetSlot]));
                 Debug.Log($"[ITEM] StealRandomItem: stole '{stolenName}' from opponent slot={targetSlot} → my slot={SlotStates.Count - 1}");
             }
 
@@ -422,12 +600,12 @@ namespace AbsoluteZero.Core.Player
         ItemSlotNetData MakeSlot(short itemId, ItemDataSO item)
         {
             byte uses = item.MaxUses <= 0 ? (byte)255 : (byte)Mathf.Min(item.MaxUses, 254);
-            return new ItemSlotNetData
+            return AssignNewCopyId(new ItemSlotNetData
             {
                 ItemId = itemId,
                 RemainingUses = uses,
                 Flags = (byte)(item.SlotType == ItemSlotType.Sub ? 0b10 : 0)
-            };
+            });
         }
 
         byte GetBasicItemUses(short basicId, ItemDataSO basicItem)
@@ -440,12 +618,12 @@ namespace AbsoluteZero.Core.Player
 
         ItemSlotNetData MakeSlotLimited(short itemId, ItemDataSO item, byte uses)
         {
-            return new ItemSlotNetData
+            return AssignNewCopyId(new ItemSlotNetData
             {
                 ItemId = itemId,
                 RemainingUses = uses,
                 Flags = (byte)(item.SlotType == ItemSlotType.Sub ? 0b10 : 0)
-            };
+            });
         }
     }
 }

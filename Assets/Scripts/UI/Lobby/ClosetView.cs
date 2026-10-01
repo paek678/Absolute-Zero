@@ -1,164 +1,152 @@
 using System;
 using System.Collections.Generic;
 using AbsoluteZero.Core.Cosmetic;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace AbsoluteZero.UI.LobbyUI
 {
-    public class ClosetView
+    public sealed class ClosetView : IClosetView, IDisposable
     {
+        sealed class Cell
+        {
+            public CosmeticItemSO Item;
+            public ClosetItemCellBindings View;
+            public UnityEngine.Events.UnityAction Click;
+        }
         readonly GameObject _root;
-        Transform _listContent;
-        readonly List<GameObject> _itemSlots = new();
-        CosmeticPart _currentTab = CosmeticPart.Head;
-        readonly Button[] _tabButtons = new Button[5];
-
-        static readonly Color TabActive = new(0.24f, 0.48f, 0.50f);
-        static readonly Color TabInactive = new(0.40f, 0.38f, 0.35f);
-        static readonly Color EquippedColor = new(0.18f, 0.55f, 0.34f);
-        static readonly Color UnequippedColor = new(0.55f, 0.45f, 0.33f);
-
-        public event Action<CosmeticPart> OnTabChanged;
-        public event Action<CosmeticItemSO> OnEquipClicked;
-        public event Action<CosmeticPart> OnUnequipClicked;
-        public event Action OnCloseClicked;
-
+        readonly ClosetViewBindings _bindings;
+        readonly ClosetPreviewSurface _preview;
+        readonly Dictionary<string, Cell> _cells = new(StringComparer.Ordinal);
+        readonly List<(Button button, UnityEngine.Events.UnityAction callback)> _listeners = new();
+        CosmeticItemSO _selected;
+        bool _disposed;
         public GameObject Root => _root;
+        public CosmeticPart CurrentTab { get; private set; } = CosmeticPart.Head;
+        public event Action<CosmeticPart> OnTabChanged;
+        public event Action<CosmeticItemSO> OnEquipClicked, OnItemSelected;
+        public event Action<CosmeticPart> OnUnequipClicked;
+        public event Action OnCloseClicked, OnResetPreview;
+        public event Action<bool> OnVisibilityChanged;
 
         public ClosetView(GameObject root)
         {
             _root = root;
-            Bind();
-        }
-
-        void Bind()
-        {
-            var panel = _root.transform.Find("PanelBG");
-            if (panel == null) return;
-
-            var dimBtn = _root.transform.Find("Dim")?.GetComponent<Button>();
-            if (dimBtn != null)
-                dimBtn.onClick.AddListener(() => OnCloseClicked?.Invoke());
-
-            BindTabs(panel);
-
-            var scroll = panel.Find("Scroll");
-            if (scroll != null)
+            _bindings = root != null ? root.GetComponent<ClosetViewBindings>() : null;
+            if (_bindings == null || !_bindings.Validate(out _))
+                throw new ArgumentException("Closet panel is missing valid serialized view bindings.", nameof(root));
+            _preview = root.GetComponent<ClosetPreviewSurface>();
+            for (int i = 0; i < _bindings.Tabs.Length; i++)
             {
-                var content = scroll.Find("Content");
-                if (content != null)
-                    _listContent = content;
-            }
-
-            var closeBtn = panel.Find("CloseBtn")?.GetComponent<Button>();
-            if (closeBtn != null)
-                closeBtn.onClick.AddListener(() => OnCloseClicked?.Invoke());
-        }
-
-        void BindTabs(Transform panel)
-        {
-            var tabs = panel.Find("Tabs");
-            if (tabs == null) return;
-
-            string[] tabNames = { "Tab_Head", "Tab_Top", "Tab_Back", "Tab_Bottom", "Tab_Tail" };
-            CosmeticPart[] parts = { CosmeticPart.Head, CosmeticPart.Top, CosmeticPart.Back, CosmeticPart.Bottom, CosmeticPart.Tail };
-
-            for (int i = 0; i < 5; i++)
-            {
-                var btn = tabs.Find(tabNames[i])?.GetComponent<Button>();
-                if (btn == null) continue;
-
-                _tabButtons[i] = btn;
-                var part = parts[i];
-                btn.onClick.AddListener(() =>
-                {
-                    _currentTab = part;
-                    UpdateTabVisuals();
+                var part = (CosmeticPart)i;
+                Listen(_bindings.Tabs[i], () => {
+                    if (_disposed) return;
+                    CurrentTab = part; _selected = null;
+                    UpdateTabs(); _bindings.Scroll.verticalNormalizedPosition = 1;
                     OnTabChanged?.Invoke(part);
                 });
             }
+            Listen(_bindings.Close, () => OnCloseClicked?.Invoke());
+            Listen(_bindings.Dim, () => OnCloseClicked?.Invoke());
+            Listen(_bindings.ResetPreview, () => OnResetPreview?.Invoke());
+            Listen(_bindings.Equip, () => { if (_selected != null) OnEquipClicked?.Invoke(_selected); });
+            Listen(_bindings.Unequip, () => OnUnequipClicked?.Invoke(CurrentTab));
+            _bindings.VisibilityChanged += HandleVisibility;
         }
-
-        public void RenderItems(List<CosmeticItemSO> items, CosmeticEquipState equipState)
+        void HandleVisibility(bool visible)
         {
-            foreach (var slot in _itemSlots)
-                UnityEngine.Object.Destroy(slot);
-            _itemSlots.Clear();
+            if (_disposed) return;
+            if (!visible) _selected = null;
+            OnVisibilityChanged?.Invoke(visible);
+        }
+        void Listen(Button button, UnityEngine.Events.UnityAction callback)
+        { button.onClick.AddListener(callback); _listeners.Add((button, callback)); }
 
-            if (items == null || _listContent == null) return;
-
-            foreach (var item in items)
+        public void RenderItems(IReadOnlyList<CosmeticItemSO> items, CosmeticSnapshot snapshot)
+        {
+            if (_disposed) return;
+            foreach (var cell in _cells.Values) cell.View.gameObject.SetActive(false);
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            if (items != null) foreach (var item in items)
             {
-                bool isEquipped = equipState != null && equipState.GetEquipped(item.Part) == item;
-                var slot = CreateItemSlot(item, isEquipped);
-                _itemSlots.Add(slot);
+                if (item == null || string.IsNullOrEmpty(item.Id) || !seen.Add(item.Id)) continue;
+                if (!_cells.TryGetValue(item.Id, out var cell))
+                {
+                    cell = new Cell { View = UnityEngine.Object.Instantiate(_bindings.ItemTemplate, _bindings.Content) };
+                    var captured = cell;
+                    cell.Click = () => { if (!_disposed && captured.Item != null) OnItemSelected?.Invoke(captured.Item); };
+                    cell.View.Button.onClick.AddListener(cell.Click);
+                    _cells.Add(item.Id, cell);
+                }
+                cell.Item = item;
+                cell.View.name = "Item_" + item.Id;
+                cell.View.Name.text = item.DisplayName;
+                cell.View.Icon.sprite = item.Sprite;
+                cell.View.Icon.enabled = item.Sprite != null;
+                cell.View.Fallback.gameObject.SetActive(item.Sprite == null);
+                cell.View.gameObject.SetActive(true);
+                cell.View.transform.SetAsLastSibling();
+            }
+            var stale = new List<string>();
+            foreach (var pair in _cells)
+                if (pair.Value.Item == null || (pair.Value.Item.Part == CurrentTab && !seen.Contains(pair.Key))) stale.Add(pair.Key);
+            foreach (var id in stale) { DestroyCell(_cells[id]); _cells.Remove(id); }
+            _bindings.EmptyMessage.gameObject.SetActive(seen.Count == 0);
+        }
+        public void SetSelection(CosmeticSnapshot equipped, CosmeticItemSO selected, CosmeticSnapshot preview)
+        {
+            if (_disposed) return;
+            _selected = selected;
+            var id = equipped.Get(CurrentTab);
+            string equippedName = "기본 모습";
+            foreach (var cell in _cells.Values)
+            {
+                bool isEquipped = cell.Item != null && equipped.Get(cell.Item.Part) == cell.Item.Id;
+                cell.View.EquippedBadge.gameObject.SetActive(isEquipped);
+                cell.View.SelectionBorder.gameObject.SetActive(selected != null && cell.Item == selected);
+                if (cell.Item != null && cell.Item.Id == id) equippedName = cell.Item.DisplayName;
+            }
+            _bindings.SelectedName.text = selected != null ? "미리보기: " + selected.DisplayName : "선택한 항목이 없습니다";
+            _bindings.EquippedName.text = "착용 중: " + equippedName;
+            _bindings.Equip.interactable = selected != null && selected.Id != id;
+            _bindings.Unequip.interactable = !string.IsNullOrEmpty(id);
+            _bindings.ResetPreview.interactable = selected != null;
+            _preview?.Show(preview);
+        }
+        void UpdateTabs()
+        {
+            for (int i = 0; i < _bindings.Tabs.Length; i++)
+            {
+                var colors = _bindings.Tabs[i].colors;
+                colors.normalColor = i == (int)CurrentTab ? new Color(.35f, .53f, .53f) : new Color(.19f, .39f, .40f);
+                _bindings.Tabs[i].colors = colors;
             }
         }
-
-        GameObject CreateItemSlot(CosmeticItemSO item, bool isEquipped)
-        {
-            var go = new GameObject($"Item_{item.Id}");
-            go.transform.SetParent(_listContent, false);
-            var rt = go.AddComponent<RectTransform>();
-            rt.sizeDelta = new Vector2(0, 50);
-
-            var le = go.AddComponent<LayoutElement>();
-            le.preferredHeight = 50;
-
-            var bg = go.AddComponent<Image>();
-            bg.color = new Color(0.96f, 0.93f, 0.88f);
-
-            var label = UIHelper.CreateText(go.transform, "Name",
-                new Vector2(-60, 0), new Vector2(280, 40),
-                item.DisplayName, 20, new Color(0.17f, 0.09f, 0.06f));
-            label.alignment = TextAlignmentOptions.MidlineLeft;
-            var labelRT = label.GetComponent<RectTransform>();
-            labelRT.anchorMin = new Vector2(0, 0);
-            labelRT.anchorMax = new Vector2(0.6f, 1);
-            labelRT.offsetMin = new Vector2(16, 4);
-            labelRT.offsetMax = new Vector2(0, -4);
-
-            string btnLabel = isEquipped ? "해제" : "장착";
-            Color btnColor = isEquipped ? EquippedColor : UnequippedColor;
-            var btn = UIHelper.CreateButton(go.transform, "EquipBtn",
-                Vector2.zero, new Vector2(80, 36), btnLabel, btnColor, 18);
-            var btnRT = btn.GetComponent<RectTransform>();
-            btnRT.anchorMin = new Vector2(1, 0.5f);
-            btnRT.anchorMax = new Vector2(1, 0.5f);
-            btnRT.anchoredPosition = new Vector2(-56, 0);
-
-            if (isEquipped)
-                btn.onClick.AddListener(() => OnUnequipClicked?.Invoke(item.Part));
-            else
-                btn.onClick.AddListener(() => OnEquipClicked?.Invoke(item));
-
-            return go;
-        }
-
-        void UpdateTabVisuals()
-        {
-            CosmeticPart[] parts = { CosmeticPart.Head, CosmeticPart.Top, CosmeticPart.Back, CosmeticPart.Bottom, CosmeticPart.Tail };
-            for (int i = 0; i < 5; i++)
-            {
-                if (_tabButtons[i] == null) continue;
-                var img = _tabButtons[i].GetComponent<Image>();
-                if (img != null)
-                    img.color = parts[i] == _currentTab ? TabActive : TabInactive;
-            }
-        }
-
         public void SetVisible(bool visible)
         {
+            if (_disposed || _root == null) return;
+            if (visible && !_root.activeSelf) { CurrentTab = CosmeticPart.Head; UpdateTabs(); }
             _root.SetActive(visible);
-            if (visible)
-            {
-                _currentTab = CosmeticPart.Head;
-                UpdateTabVisuals();
-            }
         }
-
-        public CosmeticPart CurrentTab => _currentTab;
+        public void SetStatus(string message) { if (!_disposed) _bindings.SaveStatus.text = message; }
+        public void SetPublicationStatus(string message) { if (!_disposed) _bindings.PublicationStatus.text = message; }
+        void DestroyCell(Cell cell)
+        {
+            if (cell.View == null) return;
+            cell.View.Button.onClick.RemoveListener(cell.Click);
+            cell.View.gameObject.SetActive(false);
+            UnityEngine.Object.Destroy(cell.View.gameObject);
+        }
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+            if (_bindings != null) _bindings.VisibilityChanged -= HandleVisibility;
+            foreach (var pair in _listeners) if (pair.button != null) pair.button.onClick.RemoveListener(pair.callback);
+            _listeners.Clear();
+            foreach (var cell in _cells.Values) DestroyCell(cell);
+            _cells.Clear(); _selected = null;
+            _preview?.Release();
+        }
     }
 }

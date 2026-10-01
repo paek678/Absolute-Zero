@@ -78,14 +78,14 @@ namespace AbsoluteZero.Core.Session
         {
             return await WrapLobbyVoidCall(
                 () => LobbyService.Instance.DeleteLobbyAsync(lobbyId),
-                "Delete");
+                "Delete", true);
         }
 
         public async Task<Result<Unit>> RemovePlayerAsync(string lobbyId, string playerId)
         {
             return await WrapLobbyVoidCall(
                 () => LobbyService.Instance.RemovePlayerAsync(lobbyId, playerId),
-                "RemovePlayer");
+                "RemovePlayer", true);
         }
 
         public async Task<Result<Unit>> SendHeartbeatAsync(string lobbyId)
@@ -109,7 +109,7 @@ namespace AbsoluteZero.Core.Session
             }
         }
 
-        static async Task<Result<Unit>> WrapLobbyVoidCall(Func<Task> call, string opName)
+        static async Task<Result<Unit>> WrapLobbyVoidCall(Func<Task> call, string opName, bool alreadyRemovedIsSuccess = false)
         {
             try
             {
@@ -118,6 +118,10 @@ namespace AbsoluteZero.Core.Session
             }
             catch (LobbyServiceException e)
             {
+                // A host can delete the lobby before departing clients remove
+                // themselves. The requested absence is already satisfied.
+                if (alreadyRemovedIsSuccess && IsAlreadyAbsent(e.Reason))
+                    return Result<Unit>.Success(Unit.Value);
                 Debug.LogError($"{LogPrefix} {opName} failed: {e.Message}");
                 return Result<Unit>.Failure(MapLobbyError(e), e.Message);
             }
@@ -129,8 +133,14 @@ namespace AbsoluteZero.Core.Session
             {
                 LobbyExceptionReason.LobbyNotFound => OperationErrorCode.LobbyNotFound,
                 LobbyExceptionReason.LobbyConflict => OperationErrorCode.LobbyConflict,
+                LobbyExceptionReason.RateLimited => OperationErrorCode.RateLimited,
                 _ => OperationErrorCode.Unexpected
             };
         }
+
+        // Removal can race host deletion or an earlier successful removal. These
+        // specific responses already satisfy the requested absence, not an auth failure.
+        static bool IsAlreadyAbsent(LobbyExceptionReason reason)
+            => reason == LobbyExceptionReason.LobbyNotFound || reason == LobbyExceptionReason.PlayerNotFound;
     }
 }

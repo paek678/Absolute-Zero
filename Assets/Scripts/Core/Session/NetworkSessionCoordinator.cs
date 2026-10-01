@@ -50,6 +50,9 @@ namespace AbsoluteZero.Core.Session
         string _lastError;
         bool _isHostRole;
         Lobby _currentLobby;
+        LobbySessionWork _lobbyWork;
+        MatchSessionLease _lobbyWorkLease;
+        internal LobbySessionWork LobbyWork => EnsureLobbyWork();
 
         GameMode _selectedMode = GameMode.OneVsOne;
         int _selectedPlayerCount = 2;
@@ -61,6 +64,19 @@ namespace AbsoluteZero.Core.Session
         IRelayGateway _relayGateway;
         INetworkRuntime _networkRuntime;
         ISceneTransitionService _sceneTransition;
+        MatchSessionLease _lease;
+        Task<Result<Unit>> _servicesTask;
+        Task<Result<Unit>> _initializationTask;
+        MatchSessionLease _initializationLease;
+
+        public MatchSessionRouter Router { get; set; }
+        MatchSessionRouter SessionRouter => Router ?? AppBootstrapper.Instance?.SessionRouter;
+        public MatchSessionLease OnlineLease => _lease;
+        public bool HasOnlineOwnership => IsCurrentSession(_lease);
+        public bool OwnsOnlineSession => _lease != null && SessionRouter != null && SessionRouter.Owns(_lease);
+        public bool IsCurrentSession(MatchSessionLease lease)
+            => this != null && lease != null && ReferenceEquals(lease, _lease)
+                && SessionRouter != null && SessionRouter.IsCurrent(lease);
 
         public SessionState State => _state;
         public SessionOperation Operation => _operation;
@@ -94,7 +110,7 @@ namespace AbsoluteZero.Core.Session
             _sceneTransition = new SceneTransitionService("LobbyScene");
         }
 
-        // InitializeAsync is called by AppBootstrapper — no self-init here
+        // Online services start only in an explicit online command.
 
         void OnEnable()
         {
@@ -104,60 +120,156 @@ namespace AbsoluteZero.Core.Session
 
         void OnDisable()
         {
+            DisposeLobbyWork();
             if (_lobbyPollSubscribed)
             {
-                var lobbyMgr = LobbyManager.Instance;
-                if (lobbyMgr != null)
-                    lobbyMgr.OnLobbyUpdated -= OnLobbyPolled;
+                if (_subscribedLobbyManager != null)
+                {
+                    _subscribedLobbyManager.OnLobbyUpdated -= OnLobbyPolled;
+                    _subscribedLobbyManager.OnLobbyLeft -= OnLobbyLost;
+                }
+                _subscribedLobbyManager = null;
                 _lobbyPollSubscribed = false;
             }
 
             if (_ngoCallbacksSubscribed)
             {
-                var nm = Unity.Netcode.NetworkManager.Singleton;
-                if (nm != null)
-                    nm.OnClientStopped -= OnNetworkStopped;
+                if (_subscribedNetworkManager != null)
+                    _subscribedNetworkManager.OnClientStopped -= _networkStoppedHandler;
+                _subscribedNetworkManager = null;
+                _subscribedNetworkLease = null;
+                _networkStoppedHandler = null;
                 _ngoCallbacksSubscribed = false;
             }
         }
 
         void OnDestroy()
         {
+            DisposeLobbyWork();
             _operationGeneration++;
+            UnregisterConnectionApproval();
+            UnregisterSceneLoadCallback();
             if (Instance == this) Instance = null;
         }
 
         bool _lobbyPollSubscribed;
+        LobbyManager _subscribedLobbyManager;
 
         void TrySubscribeLobbyPoll()
         {
-            if (_lobbyPollSubscribed) return;
             var lobbyMgr = LobbyManager.Instance;
+            if (_lobbyPollSubscribed && _subscribedLobbyManager == lobbyMgr) return;
+            if (_subscribedLobbyManager != null)
+            {
+                _subscribedLobbyManager.OnLobbyUpdated -= OnLobbyPolled;
+                _subscribedLobbyManager.OnLobbyLeft -= OnLobbyLost;
+            }
+            _lobbyPollSubscribed = false;
+            _subscribedLobbyManager = null;
             if (lobbyMgr == null) return;
             lobbyMgr.OnLobbyUpdated += OnLobbyPolled;
+            lobbyMgr.OnLobbyLeft += OnLobbyLost;
+            _subscribedLobbyManager = lobbyMgr;
             _lobbyPollSubscribed = true;
+        }
+
+        void OnLobbyLost()
+        {
+            if (HasOnlineOwnership && _currentLobby != null) ObserveUnexpectedLeave();
         }
 
         void OnLobbyPolled(Lobby lobby)
         {
+            if (!HasOnlineOwnership) return;
             if (_currentLobby == null || lobby == null) return;
             if (_currentLobby.Id != lobby.Id) return;
-            _currentLobby = lobby;
+            var work = EnsureLobbyWork();
+            work?.TryAccept(lobby, work.MetadataEpoch);
+        }
+
+        void Update()
+        {
+            var work = EnsureLobbyWork();
+            work?.Tick(Time.deltaTime, _isHostRole, LobbyManager.Instance?.IsGameSessionActive == true);
+        }
+
+        LobbySessionWork EnsureLobbyWork()
+        {
+            if (!isActiveAndEnabled || !HasOnlineOwnership || _currentLobby == null)
+            { DisposeLobbyWork(); return null; }
+            if (_lobbyWork != null && ReferenceEquals(_lobbyWorkLease, _lease) &&
+                _lobbyWork.Current.Id == _currentLobby.Id) return _lobbyWork;
+            DisposeLobbyWork();
+            var lease = _lease;
+            var manager = LobbyManager.Instance;
+            string playerId = _services.PlayerId;
+            string lobbyId = _currentLobby.Id;
+            LobbySessionWork work = null;
+            work = new LobbySessionWork(_lobbyGateway, _currentLobby, playerId, lease,
+                () => this != null && isActiveAndEnabled && IsCurrentSession(lease) &&
+                    _services.PlayerId == playerId && _currentLobby?.Id == lobbyId && ReferenceEquals(_lobbyWork, work),
+                lobby =>
+                {
+                    _currentLobby = lobby;
+                    var currentManager = LobbyManager.Instance;
+                    currentManager?.SyncFromCoordinator(lobby, _isHostRole);
+                    currentManager?.FireUpdatedEvent();
+                }, OnLobbyLost, message => Debug.LogWarning("[SessionCoordinator] Lobby: " + message),
+                manager != null ? manager.HeartbeatInterval : 15f,
+                manager != null ? manager.PollInterval : 2f);
+            _lobbyWork = work;
+            _lobbyWorkLease = lease;
+            return work;
+        }
+
+        void DisposeLobbyWork()
+        {
+            _lobbyWork?.Dispose();
+            _lobbyWork = null;
+            _lobbyWorkLease = null;
+        }
+
+        internal bool AcceptLobbyResponse(LobbySessionWork owner, Lobby lobby, long capturedEpoch)
+            => ReferenceEquals(owner, EnsureLobbyWork()) && owner != null && owner.TryAccept(lobby, capturedEpoch);
+
+        public Task<CosmeticPublicationResult> PublishCosmeticsAsync(string dto, long equipmentRevision)
+        {
+            var work = EnsureLobbyWork();
+            return work != null ? work.PublishAsync(dto, equipmentRevision)
+                : Task.FromResult(new CosmeticPublicationResult(CosmeticPublicationStatus.NotApplicable,
+                    equipmentRevision, _lease));
         }
 
         bool _ngoCallbacksSubscribed;
+        Unity.Netcode.NetworkManager _subscribedNetworkManager;
+        MatchSessionLease _subscribedNetworkLease;
+        Action<bool> _networkStoppedHandler;
 
         void TrySubscribeNgoCallbacks()
         {
-            if (_ngoCallbacksSubscribed) return;
             var nm = Unity.Netcode.NetworkManager.Singleton;
+            if (_ngoCallbacksSubscribed && _subscribedNetworkManager == nm && ReferenceEquals(_subscribedNetworkLease, _lease)) return;
+            if (_subscribedNetworkManager != null)
+                _subscribedNetworkManager.OnClientStopped -= _networkStoppedHandler;
+            _ngoCallbacksSubscribed = false;
+            _subscribedNetworkManager = null;
+            _subscribedNetworkLease = null;
+            _networkStoppedHandler = null;
             if (nm == null) return;
-            nm.OnClientStopped += OnNetworkStopped;
+            _subscribedNetworkManager = nm;
+            var lease = _lease;
+            _subscribedNetworkLease = lease;
+            _networkStoppedHandler = wasHost =>
+            {
+                if (nm == Unity.Netcode.NetworkManager.Singleton && IsCurrentSession(lease)) OnNetworkStopped(wasHost);
+            };
+            nm.OnClientStopped += _networkStoppedHandler;
             _ngoCallbacksSubscribed = true;
         }
 
         void OnNetworkStopped(bool wasHost)
         {
+            if (!HasOnlineOwnership) return;
             if (_state == SessionState.Disconnecting) return;
             // The pending entry operation owns cleanup and reports its failure.
             if (_state == SessionState.LoadingGame) return;
@@ -166,27 +278,34 @@ namespace AbsoluteZero.Core.Session
                 _state != SessionState.Connecting)
                 return;
 
-            Debug.Log("[SessionCoordinator] External network stop detected — resetting to Ready");
-            _currentLobby = null;
-            _isHostRole = false;
-            _selectedMode = GameMode.OneVsOne;
-            _selectedPlayerCount = 2;
-            _participantTable?.Clear();
-            _participantTable = null;
-            _operationGeneration++;
-
-            var lobbyMgr = LobbyManager.Instance;
-            if (lobbyMgr != null)
-            {
-                lobbyMgr.SyncFromCoordinator(null, false);
-                lobbyMgr.SetGameSessionActive(false);
-            }
-
-            if (_services.IsInitialized && _services.IsSignedIn)
-                SetState(SessionState.Ready);
-            else
-                SetState(SessionState.Failed);
+            Debug.Log("[SessionCoordinator] External network stop detected — leaving session");
+            ObserveUnexpectedLeave();
         }
+
+        async void ObserveUnexpectedLeave()
+        {
+            try { await LeaveAsync(); }
+            catch (Exception error) { Debug.LogException(error); }
+        }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        public void DebugSetSceneTransitionForValidation(ISceneTransitionService sceneTransition)
+        {
+            if (OwnsOnlineSession) throw new InvalidOperationException("Cannot replace scene navigation during a session");
+            _sceneTransition = sceneTransition ?? throw new ArgumentNullException(nameof(sceneTransition));
+        }
+
+        // Direct-UTP fixtures opt into the same lifecycle without changing release admission.
+        public void DebugAdoptLocalNetworkSession()
+        {
+            var nm = Unity.Netcode.NetworkManager.Singleton;
+            if (_currentLobby == null && nm != null && nm.IsListening && TryAcquireOnlineLease())
+            {
+                TrySubscribeSceneLoadCallback();
+                SetState(SessionState.InGame);
+            }
+        }
+#endif
 
         #region State Machine
 
@@ -209,51 +328,86 @@ namespace AbsoluteZero.Core.Session
         {
             _lastError = null;
             _operationGeneration++;
-            return new OperationScope(() => _operationGeneration);
+            var lease = _lease;
+            uint captured = _operationGeneration;
+            return new OperationScope(() => IsCurrentSession(lease) ? _operationGeneration : unchecked(captured + 1));
         }
 
         #endregion
 
         #region Public Commands
 
-        public async Task InitializeAsync()
+        bool TryAcquireOnlineLease()
         {
-            if (_state != SessionState.Offline && _state != SessionState.Failed) return;
+            var router = SessionRouter;
+            if (router == null || _selectedMode == GameMode.Solo) return false;
+            if (IsCurrentSession(_lease)) return true;
+            MatchSessionLease lease = null;
+            if (!router.TryBegin(_selectedMode, () => LeaveOwnedAsync(lease), out lease)) return false;
+            _lease = lease;
+            _operationGeneration++;
+            TrySubscribeNgoCallbacks();
+            return true;
+        }
 
-            SetState(SessionState.Initializing);
-
-            try
+        public Task<Result<Unit>> EnsureInitializedAsync()
+        {
+            if (!TryAcquireOnlineLease())
+                return Task.FromResult(Result<Unit>.Failure(OperationErrorCode.InvalidState, "Another session owns the network, or local bootstrap is unavailable"));
+            if (_services.IsInitialized && _services.IsSignedIn)
             {
-                string profile = DetectParrelSyncProfile();
-                var result = await _services.InitializeAndSignInAsync(profile);
-
-                if (result.IsFailure)
-                {
-                    SetError(result.ErrorMessage);
-                    SetState(SessionState.Failed);
-                    return;
-                }
-
                 TrySubscribeNgoCallbacks();
                 TrySubscribeLobbyPoll();
-                SetState(SessionState.Ready);
+                if (_state == SessionState.Offline || _state == SessionState.Failed) SetState(SessionState.Ready);
+                return Task.FromResult(Result<Unit>.Success(Unit.Value));
             }
-            catch (Exception e)
-            {
-                Debug.LogError($"[SessionCoordinator] InitializeAsync exception: {e}");
-                SetError(e.Message);
-                SetState(SessionState.Failed);
-            }
+            if (_initializationTask != null && !_initializationTask.IsCompleted && ReferenceEquals(_initializationLease, _lease))
+                return _initializationTask;
+            _initializationLease = _lease;
+            return _initializationTask = InitializeOwnedAsync(_lease, _operationGeneration);
         }
 
-        public async Task RetryInitializeAsync()
+        async Task<Result<Unit>> InitializeOwnedAsync(MatchSessionLease lease, uint generation)
         {
-            if (_state != SessionState.Failed) return;
-            await InitializeAsync();
+            SetState(SessionState.Initializing);
+            Result<Unit> result;
+            try
+            {
+                // A canceled application operation must not start a second uncancelable SDK flight.
+                if (_servicesTask == null || _servicesTask.IsCompleted)
+                    _servicesTask = _services.InitializeAndSignInAsync(DetectParrelSyncProfile());
+                result = await _servicesTask;
+            }
+            catch (Exception e) { result = Result<Unit>.Failure(OperationErrorCode.AuthenticationFailed, e.Message); }
+            if (!IsCurrentSession(lease) || generation != _operationGeneration)
+                return Result<Unit>.Failure(OperationErrorCode.Cancelled, "Online initialization was superseded");
+            if (result.IsFailure)
+            {
+                SetError(result.ErrorMessage);
+                SetState(SessionState.Failed);
+                SessionRouter.End(lease);
+                return result;
+            }
+            TrySubscribeNgoCallbacks();
+            TrySubscribeLobbyPoll();
+            SetState(SessionState.Ready);
+            return result;
         }
+
+        public async Task InitializeAsync() { await EnsureInitializedAsync(); }
+        public async Task RetryInitializeAsync() { if (_state == SessionState.Failed) await EnsureInitializedAsync(); }
 
         public void SetMatchParameters(GameMode mode, int playerCount)
         {
+            if (mode == GameMode.Solo || SessionRouter?.IsSolo == true || _currentLobby != null
+                || _state == SessionState.Initializing || _state == SessionState.Connecting
+                || _state == SessionState.LoadingGame || _state == SessionState.InGame || _state == SessionState.Disconnecting) return;
+            if (HasOnlineOwnership && _lease.Mode != mode)
+            {
+                SessionRouter.End(_lease);
+                _lease = null;
+                _operationGeneration++;
+            }
             _selectedMode = mode;
             _selectedPlayerCount = Mathf.Clamp(playerCount, 2, 4);
             Debug.Log($"[SessionCoordinator] Match params set — Mode={_selectedMode}, Players={_selectedPlayerCount}");
@@ -261,9 +415,15 @@ namespace AbsoluteZero.Core.Session
 
         public async Task<Result<Unit>> CreateLobbyAsync(string lobbyName = null)
         {
-            if (_state != SessionState.Ready)
+            var initialization = EnsureInitializedAsync();
+            var lease = _lease;
+            var ready = await initialization;
+            if (ready.IsFailure) return ready;
+            if (!IsCurrentSession(lease)) return Result<Unit>.Failure(OperationErrorCode.Cancelled, "Online command was superseded");
+            if (_state != SessionState.Ready || _currentLobby != null)
                 return Result<Unit>.Failure(OperationErrorCode.InvalidState, $"Cannot create lobby from state {_state}");
 
+            var scope = BeginOperation();
             _isHostRole = true;
             lobbyName ??= $"AZ_{UnityEngine.Random.Range(1000, 9999)}";
 
@@ -283,6 +443,12 @@ namespace AbsoluteZero.Core.Session
                 }
             });
 
+            if (scope.IsStale)
+            {
+                if (createResult.IsSuccess) ObserveRemoteCleanup(_lobbyGateway.DeleteAsync(createResult.Value.Id));
+                return Result<Unit>.Failure(OperationErrorCode.Cancelled, "Lobby creation was superseded");
+            }
+
             if (createResult.IsFailure)
             {
                 _isHostRole = false;
@@ -299,32 +465,41 @@ namespace AbsoluteZero.Core.Session
 
         public async Task<Result<Unit>> StartMatchAsHostAsync()
         {
+            var initialization = EnsureInitializedAsync();
+            var lease = _lease;
+            var ready = await initialization;
+            if (ready.IsFailure) return ready;
+            if (!IsCurrentSession(lease)) return Result<Unit>.Failure(OperationErrorCode.Cancelled, "Online command was superseded");
             if (_state != SessionState.Ready || _currentLobby == null || !_isHostRole)
                 return Result<Unit>.Failure(OperationErrorCode.InvalidState, "No active lobby or not host");
 
             TrySubscribeNgoCallbacks();
             var scope = BeginOperation();
-            scope.PushCompensation(() => CleanupLobby(_currentLobby.Id));
+            string lobbyId = _currentLobby.Id;
+            scope.PushCompensation(() => CleanupLobby(lobbyId, scope));
 
             // 1) Allocate relay — maxConnections = joining clients (playerCount - 1)
             SetState(SessionState.Connecting, SessionOperation.AllocatingRelay);
             int relayConnections = _selectedPlayerCount - 1;
 
             var relayResult = await _relayGateway.AllocateAsync(relayConnections);
-            if (relayResult.IsFailure) { await scope.RunCompensations(); return FailAndRecover(relayResult.ErrorCode, relayResult.ErrorMessage); }
             if (scope.IsStale) return await scope.CancelWithCompensation();
+            if (relayResult.IsFailure) return await RecoverOperationFailure(scope, relayResult.ErrorCode, relayResult.ErrorMessage);
 
             // 2) Start host — register ConnectionApproval first
             SetState(SessionState.Connecting, SessionOperation.StartingHost);
             RegisterConnectionApproval();
-            scope.PushCompensation(() => { UnregisterConnectionApproval(); _networkRuntime.Shutdown(); return Task.CompletedTask; });
+            scope.PushCompensation(() => { if (!scope.IsStale) { UnregisterConnectionApproval(); _networkRuntime.Shutdown(); } return Task.CompletedTask; });
 
             var hostResult = _networkRuntime.StartHost(relayResult.Value.ServerData);
-            if (hostResult.IsFailure) { await scope.RunCompensations(); return FailAndRecover(hostResult.ErrorCode, hostResult.ErrorMessage); }
             if (scope.IsStale) return await scope.CancelWithCompensation();
+            if (hostResult.IsFailure) return await RecoverOperationFailure(scope, hostResult.ErrorCode, hostResult.ErrorMessage);
+            TrySubscribeSceneLoadCallback();
 
             // 3) Publish relay code to lobby
-            var updateResult = await _lobbyGateway.UpdateAsync(_currentLobby.Id, new UpdateLobbyOptions
+            var lobbyWork = EnsureLobbyWork();
+            long metadataEpoch = lobbyWork?.MetadataEpoch ?? 0;
+            var updateResult = await _lobbyGateway.UpdateAsync(lobbyId, new UpdateLobbyOptions
             {
                 Data = new Dictionary<string, DataObject>
                 {
@@ -333,10 +508,12 @@ namespace AbsoluteZero.Core.Session
                 }
             });
 
-            if (updateResult.IsSuccess)
-                _currentLobby = updateResult.Value;
-
             if (scope.IsStale) return await scope.CancelWithCompensation();
+            if (updateResult.IsFailure)
+                return await RecoverOperationFailure(scope, updateResult.ErrorCode, updateResult.ErrorMessage);
+            if (updateResult.Value == null)
+                return await RecoverOperationFailure(scope, OperationErrorCode.Unexpected, "Missing relay publication snapshot");
+            AcceptLobbyResponse(lobbyWork, updateResult.Value, metadataEpoch);
 
             // 4) Load game scene — branch by mode
             SetState(SessionState.LoadingGame);
@@ -347,8 +524,7 @@ namespace AbsoluteZero.Core.Session
             if (sceneResult.IsFailure)
             {
                 LobbyManager.Instance?.SetGameSessionActive(false);
-                await scope.RunCompensations();
-                return FailAndRecover(sceneResult.ErrorCode, sceneResult.ErrorMessage);
+                return await RecoverOperationFailure(scope, sceneResult.ErrorCode, sceneResult.ErrorMessage);
             }
 
             return await CompleteGameEntryAsync(scope, sceneName);
@@ -356,7 +532,12 @@ namespace AbsoluteZero.Core.Session
 
         public async Task<Result<Unit>> JoinGameAsync(string lobbyCode)
         {
-            if (_state != SessionState.Ready)
+            var initialization = EnsureInitializedAsync();
+            var lease = _lease;
+            var ready = await initialization;
+            if (ready.IsFailure) return ready;
+            if (!IsCurrentSession(lease)) return Result<Unit>.Failure(OperationErrorCode.Cancelled, "Online command was superseded");
+            if (_state != SessionState.Ready || _currentLobby != null)
                 return Result<Unit>.Failure(OperationErrorCode.InvalidState, $"Cannot join from state {_state}");
 
             TrySubscribeNgoCallbacks();
@@ -370,33 +551,39 @@ namespace AbsoluteZero.Core.Session
                 Player = CreatePlayerData()
             });
 
+            if (scope.IsStale)
+            {
+                if (joinResult.IsSuccess) scope.PushCompensation(() => LeaveLobbyCleanup(joinResult.Value.Id, scope));
+                return await scope.CancelWithCompensation();
+            }
             if (joinResult.IsFailure) return FailAndRecover(joinResult.ErrorCode, joinResult.ErrorMessage);
-            if (scope.IsStale) { scope.PushCompensation(() => LeaveLobbyCleanup(joinResult.Value.Id)); return await scope.CancelWithCompensation(); }
 
             _currentLobby = joinResult.Value;
             SyncLobbyManager(_currentLobby, false);
             LobbyManager.Instance?.FireJoinedEvent();
 
-            scope.PushCompensation(() => LeaveLobbyCleanup(_currentLobby.Id));
+            string joinedLobbyId = _currentLobby.Id;
+            scope.PushCompensation(() => LeaveLobbyCleanup(joinedLobbyId, scope));
 
             // 2) Wait for relay code
             SetState(SessionState.Connecting, SessionOperation.WaitingRelayCode);
             var relayCodeResult = await WaitForRelayCodeAsync(scope);
-            if (relayCodeResult.IsFailure) { await scope.RunCompensations(); return FailAndRecover(relayCodeResult.ErrorCode, relayCodeResult.ErrorMessage); }
             if (scope.IsStale) return await scope.CancelWithCompensation();
+            if (relayCodeResult.IsFailure) return await RecoverOperationFailure(scope, relayCodeResult.ErrorCode, relayCodeResult.ErrorMessage);
 
             // 3) Join relay
             SetState(SessionState.Connecting, SessionOperation.JoiningRelay);
             var relayResult = await _relayGateway.JoinAsync(relayCodeResult.Value);
-            if (relayResult.IsFailure) { await scope.RunCompensations(); return FailAndRecover(relayResult.ErrorCode, relayResult.ErrorMessage); }
             if (scope.IsStale) return await scope.CancelWithCompensation();
+            if (relayResult.IsFailure) return await RecoverOperationFailure(scope, relayResult.ErrorCode, relayResult.ErrorMessage);
 
             // 4) Start client
             SetState(SessionState.Connecting, SessionOperation.StartingClient);
-            scope.PushCompensation(() => { _networkRuntime.Shutdown(); return Task.CompletedTask; });
+            scope.PushCompensation(() => { if (!scope.IsStale) _networkRuntime.Shutdown(); return Task.CompletedTask; });
 
             var clientResult = _networkRuntime.StartClient(relayResult.Value.ServerData);
-            if (clientResult.IsFailure) { await scope.RunCompensations(); return FailAndRecover(clientResult.ErrorCode, clientResult.ErrorMessage); }
+            if (clientResult.IsFailure) return await RecoverOperationFailure(scope, clientResult.ErrorCode, clientResult.ErrorMessage);
+            TrySubscribeSceneLoadCallback();
 
             // 5) Scene will be loaded by host via NGO SceneManager
             SetState(SessionState.LoadingGame);
@@ -444,28 +631,75 @@ namespace AbsoluteZero.Core.Session
             return Result<Unit>.Failure(OperationErrorCode.Cancelled, "Game entry was cancelled");
         }
 
-        public async Task LeaveAsync()
+        public Task LeaveAsync()
         {
-            if (_state == SessionState.Offline || _state == SessionState.Disconnecting) return;
+            return OwnsOnlineSession ? SessionRouter.StopAsync() : Task.CompletedTask;
+        }
 
+        async Task LeaveOwnedAsync(MatchSessionLease lease)
+        {
+            var router = SessionRouter;
+            if (router == null || !router.Owns(lease)) return;
+
+            // Capture the old session before callbacks or a remote await can change ownership.
+            var oldLobby = _currentLobby;
+            bool oldHost = _isHostRole;
+            string oldPlayerId = _services.PlayerId;
+            uint generation = ++_operationGeneration;
+            DisposeLobbyWork();
             SetState(SessionState.Disconnecting);
-            _operationGeneration++;
+            // NGO can invoke this while its shutdown stack is still unwinding.
+            await Task.Yield();
+            if (this == null || generation != _operationGeneration || !router.Owns(lease)) return;
+
+            // NGO shutdown does not cancel Unity's native scene operation. Keep the
+            // invalidated owner until late activation settles, then choose the menu route.
+            float sceneDeadline = Time.realtimeSinceStartup + 35f;
+            while (_nativeSceneLoad != null && !_nativeSceneLoad.isDone)
+            {
+                if (Time.realtimeSinceStartup >= sceneDeadline)
+                    throw new TimeoutException("Online scene load is still pending; session ownership is retained");
+                await Task.Delay(20);
+            }
+            bool returnToLobby = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name != "LobbyScene";
+            UnregisterSceneLoadCallback();
+            _nativeSceneLoad = null;
+
+            // Do not release the lease or restore a scene while NGO is still stopping.
+            UnregisterConnectionApproval();
+            _networkRuntime.Shutdown();
+            if (_networkRuntime is NgoNetworkRuntime)
+            {
+                var nm = Unity.Netcode.NetworkManager.Singleton;
+                float deadline = Time.realtimeSinceStartup + 5f;
+                while (nm != null && (nm.IsListening || nm.ShutdownInProgress))
+                {
+                    if (Time.realtimeSinceStartup >= deadline)
+                        throw new TimeoutException("Online network shutdown did not complete; session ownership is retained");
+                    await Task.Yield();
+                }
+            }
 
             try
             {
-                UnregisterConnectionApproval();
-                _networkRuntime.Shutdown();
-
-                if (RelayManager.Instance != null)
-                    RelayManager.Instance.ClearState();
-
-                if (_currentLobby != null)
+                RelayManager.Instance?.ClearState();
+                var lobbyManager = LobbyManager.Instance;
+                if (lobbyManager != null)
                 {
-                    string lobbyId = _currentLobby.Id;
-                    if (_isHostRole)
-                        await _lobbyGateway.DeleteAsync(lobbyId);
+                    lobbyManager.SyncFromCoordinator(null, false);
+                    lobbyManager.SetGameSessionActive(false);
+                }
+                if (oldLobby != null)
+                {
+                    var cleanup = oldHost ? _lobbyGateway.DeleteAsync(oldLobby.Id)
+                        : _lobbyGateway.RemovePlayerAsync(oldLobby.Id, oldPlayerId);
+                    if (await Task.WhenAny(cleanup, Task.Delay(3000)) == cleanup)
+                        await cleanup;
                     else
-                        await _lobbyGateway.RemovePlayerAsync(lobbyId, _services.PlayerId);
+                    {
+                        Debug.LogWarning("[SessionCoordinator] Remote cleanup exceeded 3s; completing local recovery");
+                        ObserveRemoteCleanup(cleanup);
+                    }
                 }
             }
             catch (Exception e)
@@ -474,57 +708,135 @@ namespace AbsoluteZero.Core.Session
             }
             finally
             {
-                bool wasInGame = _state == SessionState.Disconnecting &&
-                    UnityEngine.SceneManagement.SceneManager.GetActiveScene().name != "LobbyScene";
-
-                _currentLobby = null;
-                _isHostRole = false;
-                _selectedMode = GameMode.OneVsOne;
-                _selectedPlayerCount = 2;
-                _participantTable?.Clear();
-                _participantTable = null;
-
-                var lobbyMgr = LobbyManager.Instance;
-                if (lobbyMgr != null)
+                // A destroyed coordinator or a newer operation owns all subsequent state.
+                if (this != null && generation == _operationGeneration && router.Owns(lease))
                 {
-                    lobbyMgr.SyncFromCoordinator(null, false);
-                    lobbyMgr.SetGameSessionActive(false);
-                    lobbyMgr.FireLeftEvent();
+                    _currentLobby = null;
+                    _isHostRole = false;
+                    _selectedMode = GameMode.OneVsOne;
+                    _selectedPlayerCount = 2;
+                    _participantTable?.Clear();
+                    _participantTable = null;
+                    var lobbyMgr = LobbyManager.Instance;
+                    if (lobbyMgr != null)
+                    {
+                        lobbyMgr.SyncFromCoordinator(null, false);
+                        lobbyMgr.SetGameSessionActive(false);
+                        lobbyMgr.FireLeftEvent();
+                    }
+                    try
+                    {
+                        if (returnToLobby)
+                        {
+                            if (_sceneTransition is IAsyncSceneTransitionService asyncScenes)
+                                await asyncScenes.LoadTitleSceneAsync();
+                            else
+                                _sceneTransition.LoadTitleScene();
+                        }
+                        if (this != null && generation == _operationGeneration && router.Owns(lease))
+                            SetState(_services.IsInitialized && _services.IsSignedIn
+                                ? SessionState.Ready : SessionState.Offline);
+                    }
+                    catch (Exception error)
+                    {
+                        if (this != null && generation == _operationGeneration && router.Owns(lease))
+                        {
+                            _lastError = error.Message;
+                            SetState(SessionState.Failed);
+                            OnError?.Invoke(_lastError);
+                        }
+                        throw;
+                    }
                 }
-
-                if (_services.IsInitialized && _services.IsSignedIn)
-                    SetState(SessionState.Ready);
-                else
-                    SetState(SessionState.Failed);
-
-                if (wasInGame)
-                    _sceneTransition.LoadTitleScene();
             }
+        }
+
+        static async void ObserveRemoteCleanup(Task<Result<Unit>> cleanup)
+        {
+            // This continuation can only observe the captured old request, never mutate session state.
+            try { await cleanup; }
+            catch (Exception error) { Debug.LogWarning("[SessionCoordinator] Late cleanup: " + error.Message); }
         }
 
         #endregion
 
         #region Internal Helpers
 
+        Unity.Netcode.NetworkSceneManager _sceneEvents;
+        MatchSessionLease _sceneLease;
+        Unity.Netcode.NetworkSceneManager.OnLoadDelegateHandler _sceneLoadHandler;
+        AsyncOperation _nativeSceneLoad;
+
+        void TrySubscribeSceneLoadCallback()
+        {
+            var nm = Unity.Netcode.NetworkManager.Singleton;
+            var events = nm != null ? nm.SceneManager : null;
+            if (events == null || !HasOnlineOwnership) return;
+            if (ReferenceEquals(events, _sceneEvents) && ReferenceEquals(_sceneLease, _lease)) return;
+            UnregisterSceneLoadCallback();
+            var lease = _lease;
+            _sceneEvents = events;
+            _sceneLease = lease;
+            _sceneLoadHandler = (client, scene, mode, operation) =>
+            {
+                if (nm == Unity.Netcode.NetworkManager.Singleton && ReferenceEquals(nm.SceneManager, events)
+                    && SessionRouter != null && SessionRouter.Owns(lease) && client == nm.LocalClientId)
+                    _nativeSceneLoad = operation;
+            };
+            events.OnLoad += _sceneLoadHandler;
+        }
+
+        void UnregisterSceneLoadCallback()
+        {
+            if (_sceneEvents != null) _sceneEvents.OnLoad -= _sceneLoadHandler;
+            _sceneEvents = null;
+            _sceneLease = null;
+            _sceneLoadHandler = null;
+        }
+
+        Unity.Netcode.NetworkManager _approvalManager;
+        Action<Unity.Netcode.NetworkManager.ConnectionApprovalRequest, Unity.Netcode.NetworkManager.ConnectionApprovalResponse> _approvalHandler;
+
         void RegisterConnectionApproval()
         {
             var nm = Unity.Netcode.NetworkManager.Singleton;
             if (nm == null) return;
-            nm.ConnectionApprovalCallback += ApproveConnection;
+            UnregisterConnectionApproval();
+            var lease = _lease;
+            _approvalManager = nm;
+            _approvalHandler = (request, response) =>
+            {
+                if (nm != Unity.Netcode.NetworkManager.Singleton || !IsCurrentSession(lease))
+                {
+                    response.Approved = false;
+                    response.CreatePlayerObject = false;
+                    response.Reason = "Session is no longer accepting connections";
+                    return;
+                }
+                ApproveConnection(request, response);
+            };
+            nm.ConnectionApprovalCallback += _approvalHandler;
             nm.NetworkConfig.ConnectionApproval = true;
         }
 
         void UnregisterConnectionApproval()
         {
-            var nm = Unity.Netcode.NetworkManager.Singleton;
-            if (nm == null) return;
-            nm.ConnectionApprovalCallback -= ApproveConnection;
+            if (_approvalManager != null) _approvalManager.ConnectionApprovalCallback -= _approvalHandler;
+            _approvalManager = null;
+            _approvalHandler = null;
         }
 
         void ApproveConnection(
             Unity.Netcode.NetworkManager.ConnectionApprovalRequest request,
             Unity.Netcode.NetworkManager.ConnectionApprovalResponse response)
         {
+            if (!HasOnlineOwnership)
+            {
+                response.Approved = false;
+                response.CreatePlayerObject = false;
+                response.Reason = "Session is no longer accepting connections";
+                return;
+            }
             var nm = Unity.Netcode.NetworkManager.Singleton;
             int connected = nm != null ? nm.ConnectedClientsIds.Count : 0;
 
@@ -538,6 +850,13 @@ namespace AbsoluteZero.Core.Session
 
             response.Approved = true;
             response.CreatePlayerObject = false;
+        }
+
+        async Task<Result<Unit>> RecoverOperationFailure(OperationScope scope, OperationErrorCode code, string message)
+        {
+            await scope.RunCompensations();
+            if (scope.IsStale) return Result<Unit>.Failure(OperationErrorCode.Cancelled, "Operation superseded during cleanup");
+            return FailAndRecover(code, message);
         }
 
         Result<Unit> FailAndRecover(OperationErrorCode code, string message)
@@ -575,24 +894,28 @@ namespace AbsoluteZero.Core.Session
 
         void SyncLobbyManager(Lobby lobby, bool isHostRole)
         {
+            if (lobby == null) DisposeLobbyWork();
+            else EnsureLobbyWork();
             var lobbyMgr = LobbyManager.Instance;
             if (lobbyMgr == null) return;
             lobbyMgr.SyncFromCoordinator(lobby, isHostRole);
         }
 
-        async Task CleanupLobby(string lobbyId)
+        async Task CleanupLobby(string lobbyId, OperationScope scope)
         {
             try { await _lobbyGateway.DeleteAsync(lobbyId); }
             catch (Exception e) { Debug.LogWarning($"[SessionCoordinator] Lobby cleanup failed: {e.Message}"); }
+            if (scope.IsStale) return;
             _currentLobby = null;
             _isHostRole = false;
             SyncLobbyManager(null, false);
         }
 
-        async Task LeaveLobbyCleanup(string lobbyId)
+        async Task LeaveLobbyCleanup(string lobbyId, OperationScope scope)
         {
             try { await _lobbyGateway.RemovePlayerAsync(lobbyId, _services.PlayerId); }
             catch (Exception e) { Debug.LogWarning($"[SessionCoordinator] Lobby leave failed: {e.Message}"); }
+            if (scope.IsStale) return;
             _currentLobby = null;
             SyncLobbyManager(null, false);
         }
@@ -600,10 +923,11 @@ namespace AbsoluteZero.Core.Session
         async Task<Result<string>> WaitForRelayCodeAsync(OperationScope scope)
         {
             var tcs = new TaskCompletionSource<string>();
+            string expectedLobbyId = _currentLobby?.Id;
 
             void OnLobbyUpdated(Lobby lobby)
             {
-                if (lobby?.Data != null &&
+                if (!scope.IsStale && lobby?.Id == expectedLobbyId && lobby?.Data != null &&
                     lobby.Data.TryGetValue("RelayJoinCode", out var data) &&
                     !string.IsNullOrEmpty(data.Value))
                 {
@@ -619,21 +943,21 @@ namespace AbsoluteZero.Core.Session
             try
             {
                 var current = lobbyMgr.CurrentLobby;
-                if (current?.Data != null &&
+                if (!scope.IsStale && current?.Id == expectedLobbyId && current?.Data != null &&
                     current.Data.TryGetValue("RelayJoinCode", out var existing) &&
                     !string.IsNullOrEmpty(existing.Value))
                 {
                     return Result<string>.Success(existing.Value);
                 }
 
-                int timeoutMs = (int)(relayCodeTimeoutSeconds * 1000);
-                var timeoutTask = Task.Delay(timeoutMs);
-                var completed = await Task.WhenAny(tcs.Task, timeoutTask);
+                float deadline = Time.realtimeSinceStartup + relayCodeTimeoutSeconds;
+                while (!tcs.Task.IsCompleted && !scope.IsStale && Time.realtimeSinceStartup < deadline)
+                    await Task.Delay(50);
 
                 if (scope.IsStale)
                     return Result<string>.Failure(OperationErrorCode.Cancelled, "Superseded");
 
-                if (completed == timeoutTask)
+                if (!tcs.Task.IsCompleted)
                     return Result<string>.Failure(OperationErrorCode.Timeout, "Relay code not received in time");
 
                 return Result<string>.Success(tcs.Task.Result);

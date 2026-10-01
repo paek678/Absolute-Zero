@@ -9,6 +9,7 @@ namespace AbsoluteZero.Core.Player.Identity
         int ReadyCount { get; }
         bool TryGetByPlayerIndex(byte index, out PlayerBinding player);
         bool TryGetByClientId(ulong clientId, out PlayerBinding player);
+        bool TryGetByParticipantId(string participantId, out PlayerBinding player);
         event Action<PlayerBinding> Registered;
         event Action<PlayerIdentity> Unregistered;
     }

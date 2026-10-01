@@ -10,7 +10,9 @@
         "Unity.Services.Relay",
         "Unity.Networking.Transport",
         "Unity.Collections",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "Unity.Behavior",
+        "Unity.Behavior.SerializableGUID"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

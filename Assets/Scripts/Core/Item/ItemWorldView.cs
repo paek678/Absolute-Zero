@@ -1,4 +1,6 @@
 using AbsoluteZero.Core.Common;
+using AbsoluteZero.Core.Item.Data;
+using AbsoluteZero.Core.Match;
 using UnityEngine;
 
 namespace AbsoluteZero.Core.Item
@@ -8,12 +10,23 @@ namespace AbsoluteZero.Core.Item
     {
         public int SlotIndex { get; private set; }
         public HoverEffect Hover { get; private set; }
+        public ItemDataSO Item { get; private set; }
 
         SpriteRenderer _mainSprite;
         SpriteRenderer _bannedOverlay;
         TextMesh _label;
+        Sprite _fallbackSprite;
 
         public void Initialize(int slotIndex, string itemName, Color itemColor)
+            => InitializeView(slotIndex, itemName, GameSprites.GetItemSprite(itemName));
+
+        public void InitializeItem(int slotIndex, ItemDataSO item, Color itemColor)
+        {
+            Item = item;
+            InitializeView(slotIndex, item != null ? item.ItemName : string.Empty, GameSprites.GetItemSpriteFor(item));
+        }
+
+        void InitializeView(int slotIndex, string itemName, Sprite itemSprite)
         {
             SlotIndex = slotIndex;
             gameObject.name = $"Item_{slotIndex}_{itemName}";
@@ -21,8 +34,7 @@ namespace AbsoluteZero.Core.Item
             var cardGO = new GameObject("Card");
             cardGO.transform.SetParent(transform, false);
             _mainSprite = cardGO.AddComponent<SpriteRenderer>();
-            var itemSprite = GameSprites.GetItemSprite(itemName);
-            _mainSprite.sprite = itemSprite != null ? itemSprite : CreateFallbackSprite();
+            _mainSprite.sprite = itemSprite != null ? itemSprite : (_fallbackSprite = CreateFallbackSprite());
             _mainSprite.sortingOrder = 5;
 
             var labelGO = new GameObject("Label");
@@ -53,7 +65,8 @@ namespace AbsoluteZero.Core.Item
             bannedGO.transform.SetParent(transform, false);
             bannedGO.transform.localPosition = new Vector3(0f, 0f, -0.02f);
             _bannedOverlay = bannedGO.AddComponent<SpriteRenderer>();
-            var bannedTex = Resources.Load<Sprite>("banned_tape");
+            var views = MatchViewBindings.ForScene(gameObject.scene);
+            var bannedTex = views != null ? views.GetSprite(MatchSpriteRole.BannedTape) : Resources.Load<Sprite>("banned_tape");
             if (bannedTex != null) _bannedOverlay.sprite = bannedTex;
             _bannedOverlay.sortingOrder = 7;
             bannedGO.SetActive(false);
@@ -63,6 +76,27 @@ namespace AbsoluteZero.Core.Item
         {
             if (_mainSprite == null) return;
             _mainSprite.color = interactable ? Color.white : new Color(1f, 1f, 1f, 0.35f);
+        }
+
+        // The same CopyId keeps its object. Reset transient hover/selection before the
+        // presenter reapplies current state; never duplicate Card/Label/listeners.
+        internal void RefreshItem(int slotIndex, ItemDataSO item, string uses, bool usable)
+        {
+            SlotIndex = slotIndex;
+            Item = item;
+            gameObject.name = $"Item_{slotIndex}_{item.ItemName}";
+            var sprite = GameSprites.GetItemSpriteFor(item);
+            if (sprite != null && _mainSprite != null) _mainSprite.sprite = sprite;
+            Hover?.ResetPresentation(_mainSprite);
+            SetBanned(false);
+            UpdateDisplay(item.ItemName, uses, usable);
+        }
+
+        void OnDestroy()
+        {
+            if (_fallbackSprite == null) return;
+            Destroy(_fallbackSprite.texture);
+            Destroy(_fallbackSprite);
         }
 
         public void SetBanned(bool banned)

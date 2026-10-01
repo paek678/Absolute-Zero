@@ -10,6 +10,8 @@ namespace AbsoluteZero.UI.Game.Bridge
         byte LocalSeatIndex { get; }
         bool TryGetSeat(byte seat, out SeatSnapshot snapshot);
         MatchSnapshot CurrentMatch { get; }
+        bool TryGetLatestResult(out MatchResultNotice result);
+        bool TryGetDisplayTemperature(byte seat, out float value);
 
         event Action<byte, SeatSnapshot> OnSeatSnapshotChanged;
         event Action<MatchSnapshot> OnMatchSnapshotChanged;

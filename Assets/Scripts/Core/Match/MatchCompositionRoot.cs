@@ -1,17 +1,24 @@
+using System;
 using System.Collections.Generic;
 using AbsoluteZero.Core.Item;
 using AbsoluteZero.Core.Network;
 using AbsoluteZero.Core.Player.Identity;
 using AbsoluteZero.Core.Session;
+using Unity.Collections;
 using UnityEngine;
 
 namespace AbsoluteZero.Core.Match
 {
+    public enum MatchInitializationState { NotStarted, Applying, Complete, Failed }
+
     public class MatchCompositionRoot : MonoBehaviour
     {
         public static MatchCompositionRoot Instance { get; private set; }
 
         [SerializeField] GameModeRuleSO[] gameModeRules;
+        [SerializeField] MatchViewBindings viewBindings;
+        [SerializeField] bool requireViewBindings;
+        public MatchViewBindings ViewBindings => viewBindings;
 
         PlayerRegistry _registry;
         public IReadOnlyPlayerRegistry Registry => _registry;
@@ -30,14 +37,66 @@ namespace AbsoluteZero.Core.Match
         public MatchConfig ActiveConfig => _activeConfig;
         public string InitializationFailure { get; private set; }
         public const float InitializationTimeout = 30f;
+        MatchSessionRouter _sessionRouter;
+        MatchSessionLease _sessionLease;
+        public long Generation { get; private set; }
+        public IReadOnlyList<MatchParticipantDescriptor> Participants { get; private set; }
+            = Array.Empty<MatchParticipantDescriptor>();
+        public MatchInitializationState InitializationState { get; private set; }
+        public int InitializationCount { get; private set; }
+        public bool IsSessionCurrent => _sessionLease == null || _sessionRouter.IsCurrent(_sessionLease);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        [SerializeField] bool allowHeadlessSoloValidation;
+#endif
+        public bool RequiresSoloPresentation
+        {
+            get
+            {
+                if (_activeConfig?.Mode != GameMode.Solo) return false;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                if (allowHeadlessSoloValidation && _sessionRouter?.LaunchContext?.Solo?.IsValidationFixture == true)
+                    return false;
+#endif
+                return true;
+            }
+        }
+
+        public bool TryBeginInitialization()
+        {
+            if (!IsSessionCurrent || InitializationFailure != null
+                || InitializationState != MatchInitializationState.NotStarted) return false;
+            InitializationState = MatchInitializationState.Applying;
+            return true;
+        }
+
+        public void CompleteInitialization()
+        {
+            if (!IsSessionCurrent || InitializationState != MatchInitializationState.Applying)
+                throw new InvalidOperationException("Match initialization no longer owns this session");
+            InitializationState = MatchInitializationState.Complete;
+            InitializationCount++;
+        }
 
         public void FailInitialization(string reason)
         {
             if (InitializationFailure != null) return;
             InitializationFailure = reason;
+            InitializationState = MatchInitializationState.Failed;
             if (_networkState != null && _networkState.IsSpawned && _networkState.IsServer)
-                _networkState.InitializationError.Value = new Unity.Collections.FixedString128Bytes(reason);
+            {
+                FixedString128Bytes summary = default;
+                summary.CopyFromTruncated(reason ?? "Match initialization failed");
+                _networkState.InitializationError.Value = summary;
+            }
             Debug.LogError("[MatchInitialization] " + reason);
+            if (_sessionLease?.Mode == GameMode.Solo && _sessionRouter.IsCurrent(_sessionLease))
+                StopFailedSolo();
+        }
+
+        async void StopFailedSolo()
+        {
+            try { await _sessionRouter.StopAsync(); }
+            catch (Exception error) { Debug.LogException(error); }
         }
 
         void Update()
@@ -75,6 +134,19 @@ namespace AbsoluteZero.Core.Match
                 Debug.LogWarning("[MatchCompositionRoot] MatchManager not found in scene");
             if (_networkState == null)
                 Debug.LogWarning("[MatchCompositionRoot] MatchNetworkState not found in scene");
+
+            // Headless test fixtures intentionally omit views. Migrated game scenes
+            // carry this serialized reference and must satisfy the complete contract.
+            if (requireViewBindings && viewBindings == null)
+                FailInitialization("Required match view bindings are missing.");
+            else if (viewBindings != null)
+            {
+                var errors = new List<string>();
+                if (viewBindings.gameObject.scene != gameObject.scene)
+                    errors.Add("Match view bindings belong to a different scene.");
+                viewBindings.Validate(_itemManager != null ? _itemManager.GetAllItems() : null, errors);
+                if (errors.Count > 0) FailInitialization(string.Join("; ", errors));
+            }
         }
 
         void SubscribeNetworkState()
@@ -112,6 +184,8 @@ namespace AbsoluteZero.Core.Match
 
         IGameModeRule FindRuleForMode(GameMode mode)
         {
+            if (mode == GameMode.Solo)
+                return AppBootstrapper.Instance?.SessionRouter.LaunchContext?.Solo?.SharedOneVsOneRule;
             if (gameModeRules == null) return null;
             foreach (var rule in gameModeRules)
             {
@@ -136,9 +210,14 @@ namespace AbsoluteZero.Core.Match
                 return false;
             }
             if (!_networkState.IsSpawned || !_networkState.IsServer) return false;
+            _sessionRouter = AppBootstrapper.Instance?.SessionRouter;
+            _sessionLease = _sessionRouter?.Current;
+            if (_sessionLease != null && !_sessionRouter.IsCurrent(_sessionLease)) return false;
+            Generation = _sessionLease?.Generation ?? 0;
             var nsc = NetworkSessionCoordinator.Instance;
-            GameMode mode = nsc != null ? nsc.SelectedMode : GameMode.OneVsOne;
-            int playerCount = nsc != null ? nsc.SelectedPlayerCount : 2;
+            var launch = _sessionRouter?.LaunchContext;
+            GameMode mode = launch?.Mode ?? (nsc != null ? nsc.SelectedMode : GameMode.OneVsOne);
+            int playerCount = launch?.RequiredSeats ?? (nsc != null ? nsc.SelectedPlayerCount : 2);
 
             if (_networkState != null)
             {
@@ -160,6 +239,18 @@ namespace AbsoluteZero.Core.Match
 
         public MatchRoster ServerCreateRoster(int requiredCount, IEnumerable<ulong> connectedClientIds)
         {
+            if (_roster != null) return _roster;
+            if (!IsSessionCurrent || _networkState == null || !_networkState.IsSpawned || !_networkState.IsServer)
+                return null;
+            if (_activeConfig?.Mode == GameMode.Solo)
+            {
+                var nm = _networkState.NetworkManager;
+                return CreateParticipantRoster(new[]
+                {
+                    new MatchParticipantDescriptor("solo:human", 0, PlayerControllerKind.Human, nm.LocalClientId, Generation),
+                    new MatchParticipantDescriptor("solo:bot", 1, PlayerControllerKind.Bot, null, Generation)
+                }, requiredCount);
+            }
             var nsc = NetworkSessionCoordinator.Instance;
             SessionParticipantTable spt;
 
@@ -187,9 +278,18 @@ namespace AbsoluteZero.Core.Match
                 }
             }
 
+            var participants = new List<MatchParticipantDescriptor>();
+            foreach (var entry in spt.AllEntries)
+                participants.Add(new MatchParticipantDescriptor(entry.ParticipantId, entry.SeatIndex,
+                    PlayerControllerKind.Human, entry.IsConnected ? entry.CurrentClientId : null, Generation));
+            return CreateParticipantRoster(participants, requiredCount);
+        }
+
+        MatchRoster CreateParticipantRoster(IReadOnlyList<MatchParticipantDescriptor> participants, int requiredCount)
+        {
             var roster = new MatchRoster(requiredCount);
             roster.SetRegistry(_registry);
-            if (!roster.Hydrate(spt.AllEntries))
+            if (!roster.Hydrate(participants))
             {
                 FailInitialization("Roster hydration failed");
                 roster.Dispose();
@@ -197,6 +297,9 @@ namespace AbsoluteZero.Core.Match
             }
 
             InitializeRoster(roster);
+            var copy = new MatchParticipantDescriptor[participants.Count];
+            for (int i = 0; i < copy.Length; i++) copy[i] = participants[i];
+            Participants = Array.AsReadOnly(copy);
 
             if (_activeConfig != null && _activeConfig.Mode == GameMode.Multi)
             {

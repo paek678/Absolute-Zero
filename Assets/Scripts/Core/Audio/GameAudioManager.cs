@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using AbsoluteZero.Core.Common;
+using AbsoluteZero.Core.Item.Data;
 using UnityEngine;
 
 namespace AbsoluteZero.Core.Audio
@@ -26,8 +28,7 @@ namespace AbsoluteZero.Core.Audio
         const float FanBase = 0.15f;
         const float ClockBase = 0.5f;
 
-        float _bgmMaster = 1f;
-        float _sfxMaster = 1f;
+        LocalSettingsService _settings;
 
         static readonly Dictionary<string, string> TriggerToSfx = new()
         {
@@ -68,47 +69,38 @@ namespace AbsoluteZero.Core.Audio
             _fanLoopSource = CreateSource("FanLoop", true, FanBase);
             _clockSource = CreateSource("Clock", true, ClockBase);
 
-            _bgmMaster = PlayerPrefs.GetFloat("bgm_volume", 1f);
-            _sfxMaster = PlayerPrefs.GetFloat("sfx_volume", 1f);
-            ApplyBGMVolume();
-            ApplySFXVolume();
+            _settings = LocalSettingsRuntime.Instance.Service;
+            _settings.Changed += ApplyVolumes;
+            ApplyVolumes();
         }
 
-        public float BGMVolume => _bgmMaster;
-        public float SFXVolume => _sfxMaster;
+        public float BGMVolume => _settings?.Current.Bgm ?? 1;
+        public float SFXVolume => _settings?.Current.Sfx ?? 1;
 
         public void SetBGMVolume(float master)
         {
-            _bgmMaster = Mathf.Clamp01(master);
-            PlayerPrefs.SetFloat("bgm_volume", _bgmMaster);
-            PlayerPrefs.Save();
-            ApplyBGMVolume();
+            if (_settings != null) _settings.SetVolumes(_settings.Current.Master, master, _settings.Current.Sfx);
         }
 
         public void SetSFXVolume(float master)
         {
-            _sfxMaster = Mathf.Clamp01(master);
-            PlayerPrefs.SetFloat("sfx_volume", _sfxMaster);
-            PlayerPrefs.Save();
-            ApplySFXVolume();
+            if (_settings != null) _settings.SetVolumes(_settings.Current.Master, _settings.Current.Bgm, master);
         }
 
-        void ApplyBGMVolume()
+        void ApplyVolumes()
         {
-            if (_bgmSource != null) _bgmSource.volume = BgmBase * _bgmMaster;
-        }
-
-        void ApplySFXVolume()
-        {
-            if (_sfxSource != null) _sfxSource.volume = SfxBase * _sfxMaster;
-            if (_uiSource != null) _uiSource.volume = UiBase * _sfxMaster;
-            if (_envSource != null) _envSource.volume = EnvBase * _sfxMaster;
-            if (_fanLoopSource != null) _fanLoopSource.volume = FanBase * _sfxMaster;
-            if (_clockSource != null) _clockSource.volume = ClockBase * _sfxMaster;
+            var value = _settings.Current;
+            if (_bgmSource != null) _bgmSource.volume = BgmBase * value.Bgm * value.Master;
+            if (_sfxSource != null) _sfxSource.volume = SfxBase * value.Sfx * value.Master;
+            if (_uiSource != null) _uiSource.volume = UiBase * value.Sfx * value.Master;
+            if (_envSource != null) _envSource.volume = EnvBase * value.Sfx * value.Master;
+            if (_fanLoopSource != null) _fanLoopSource.volume = FanBase * value.Sfx * value.Master;
+            if (_clockSource != null) _clockSource.volume = ClockBase * value.Sfx * value.Master;
         }
 
         void OnDestroy()
         {
+            if (_settings != null) _settings.Changed -= ApplyVolumes;
             if (Instance == this) Instance = null;
         }
 
@@ -160,9 +152,21 @@ namespace AbsoluteZero.Core.Audio
 
         // ═══ Item Animation SFX ═══
 
+        public void PlayItemSfxFor(string animTrigger, ItemDataSO item)
+        {
+            var catalog = ItemPresentation.Catalog;
+            if (catalog != null && catalog.TryResolveAudio(item, animTrigger, out var clip))
+            {
+                if (clip != null) _sfxSource.PlayOneShot(clip);
+                return;
+            }
+            ItemPresentation.WarnLegacy();
+            PlayItemSfx(animTrigger, item?.ItemName);
+        }
+
         public void PlayItemSfx(string animTrigger, string itemName)
         {
-            if (ItemNameToSfx.TryGetValue(itemName, out var specialClip))
+            if (!string.IsNullOrEmpty(itemName) && ItemNameToSfx.TryGetValue(itemName, out var specialClip))
             {
                 PlaySfx(specialClip);
                 Debug.Log($"[Audio] PlayItemSfx: '{itemName}' → {specialClip} (by itemName)");

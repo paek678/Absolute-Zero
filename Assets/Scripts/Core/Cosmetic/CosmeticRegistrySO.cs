@@ -78,7 +78,7 @@ namespace AbsoluteZero.Core.Cosmetic
 
                 if (duplicateIds.Contains(id)) continue;
 
-                if (AllowedTypes.TryGetValue(item.Part, out var allowed) && !allowed.Contains(item.Type))
+                if (!AllowedTypes.TryGetValue(item.Part, out var allowed) || !allowed.Contains(item.Type))
                 {
                     Debug.LogError($"[CosmeticRegistry] '{id}': Type {item.Type} not allowed for Part {item.Part}");
                     continue;
@@ -106,30 +106,18 @@ namespace AbsoluteZero.Core.Cosmetic
         public List<CosmeticItemSO> GetByPart(CosmeticPart part)
         {
             if (_partLookup == null) RebuildLookups();
-            return _partLookup.TryGetValue(part, out var list) ? list : new List<CosmeticItemSO>();
+            return _partLookup.TryGetValue(part, out var list) ? new List<CosmeticItemSO>(list) : new List<CosmeticItemSO>();
         }
 
 #if UNITY_EDITOR
+        // Authoring tools may update referenced item IDs without changing this asset's list.
+        public void RefreshEditorLookup() => RebuildLookups();
+
         void OnValidate()
         {
-            var ids = new HashSet<string>();
-            foreach (var item in _allItems)
-            {
-                if (item == null) continue;
-                string id = item.Id;
-                if (string.IsNullOrEmpty(id))
-                {
-                    Debug.LogError($"[CosmeticRegistry] Empty Id on '{item.name}'");
-                    continue;
-                }
-                if (!IdRegex.IsMatch(id))
-                    Debug.LogError($"[CosmeticRegistry] Invalid Id format '{id}' on '{item.name}'");
-                if (!ids.Add(id))
-                    Debug.LogError($"[CosmeticRegistry] Duplicate Id '{id}' on '{item.name}'");
-                if (AllowedTypes.TryGetValue(item.Part, out var allowed) && !allowed.Contains(item.Type))
-                    Debug.LogError($"[CosmeticRegistry] '{id}': Type {item.Type} not allowed for Part {item.Part}");
-            }
+            RebuildLookups();
         }
+
 #endif
     }
 }

@@ -102,6 +102,7 @@ namespace AbsoluteZero.Core.Solo
             {
                 _nm.ConnectionApprovalCallback = Approve;
                 if (!_nm.StartHost()) { Debug.LogError("[SCENARIO] Host failed"); yield break; }
+                NetworkSessionCoordinator.Instance?.DebugAdoptLocalNetworkSession();
                 Debug.Log("[SCENARIO] HOST_LISTENING");
                 while (_nm.ConnectedClientsIds.Count < 4) yield return null;
                 Debug.Log("[SCENARIO] FOUR_CONNECTED");
@@ -110,6 +111,7 @@ namespace AbsoluteZero.Core.Solo
             else
             {
                 if (!_nm.StartClient()) Debug.LogError("[SCENARIO] Client failed");
+                else NetworkSessionCoordinator.Instance?.DebugAdoptLocalNetworkSession();
             }
         }
 
@@ -195,7 +197,7 @@ namespace AbsoluteZero.Core.Solo
             if (!_acted && elapsed > 2f + local.PlayerIndex * 0.15f)
             {
                 _acted = true;
-                if (tm.TurnNumber.Value == 1) local.SelectItemServerRpc(254, 254);
+                if (tm.TurnNumber.Value == 1) ProbeInventoryCommands.SelectItem(local, 254, 254);
                 string item = local.PlayerIndex == 1 ? (tm.TurnNumber.Value == 1 ? "Windbreaker" : "Cat") : "Fan";
                 byte target = local.PlayerIndex == 0 ? (byte)3 : (byte)1;
                 var inv = local.GetInventory();
@@ -204,7 +206,7 @@ namespace AbsoluteZero.Core.Solo
                     {
                         if (item == "Windbreaker") target = ActionIntent.NoTarget;
                         else if (item == "Cat") target = 2;
-                        local.SelectItemServerRpc(s, target);
+                        ProbeInventoryCommands.SelectItem(local, s, target);
                         Debug.Log("[SCENARIO] INTENT local=" + local.PlayerIndex + " turn=" + tm.TurnNumber.Value + " item=" + item + " target=" + target);
                         break;
                     }
@@ -212,7 +214,7 @@ namespace AbsoluteZero.Core.Solo
             if (!_ready && elapsed > 3.5f + local.PlayerIndex * 0.2f)
             {
                 _ready = true;
-                local.PressReadyServerRpc();
+                ProbeInventoryCommands.Ready(local);
                 Debug.Log("[SCENARIO] READY local=" + local.PlayerIndex + " acceptedSelection=" + local.HasSelectedItem.Value);
             }
         }

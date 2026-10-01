@@ -19,9 +19,10 @@ namespace AbsoluteZero.UI.Game.Bridge
         readonly Dictionary<byte, SeatSnapshot> _seats = new();
         readonly HashSet<byte> _dirtySeatIndices = new();
         bool _matchDirty;
+        readonly MatchResultBuffer _results = new();
 
         MatchSnapshot _currentMatch;
-        byte _localSeatIndex;
+        byte _localSeatIndex = byte.MaxValue;
         bool _localSeatResolved;
 
         bool _roundResultPending;
@@ -34,8 +35,18 @@ namespace AbsoluteZero.UI.Game.Bridge
         TurnManager _tm;
         MatchManager _mm;
         MatchNetworkState _mns;
+        MatchCompositionRoot _root;
+        CombatVFXManager _vfx;
+        Coroutine _managerWait;
+        bool _binding;
+        bool _initialized;
+        bool IsMatchCurrent => _root != null && _root == MatchCompositionRoot.Instance
+            && _root.IsSessionCurrent && _root.InitializationFailure == null
+            && ReferenceEquals(_root.Registry, _registry)
+            && _root.gameObject.scene == gameObject.scene;
 
         readonly Dictionary<byte, PlayerState> _boundStates = new();
+        readonly Dictionary<byte, PlayerIdentity> _boundIdentities = new();
         readonly Dictionary<byte, SeatCallbacks> _seatCallbacks = new();
         readonly Dictionary<byte, LifeState> _cachedLifeStates = new();
 
@@ -54,6 +65,18 @@ namespace AbsoluteZero.UI.Game.Bridge
         public int SeatCount => _seats.Count;
         public byte LocalSeatIndex => _localSeatIndex;
         public MatchSnapshot CurrentMatch => _currentMatch;
+        public bool TryGetLatestResult(out MatchResultNotice result)
+        {
+            result = default;
+            return (!_initialized || (_binding && IsMatchCurrent && _localSeatResolved))
+                && _results.TryRead(out result);
+        }
+
+        public bool TryGetDisplayTemperature(byte seat, out float value)
+        {
+            value = default;
+            return _vfx != null && IsMatchCurrent && _vfx.TryGetDisplayTemperature(seat, out value);
+        }
 
         public event Action<byte, SeatSnapshot> OnSeatSnapshotChanged;
         public event Action<MatchSnapshot> OnMatchSnapshotChanged;
@@ -77,42 +100,74 @@ namespace AbsoluteZero.UI.Game.Bridge
 
         public void Initialize(IReadOnlyPlayerRegistry registry)
         {
+            if (registry == null) throw new ArgumentNullException(nameof(registry));
+            if (ReferenceEquals(_registry, registry)) return;
+            if (_registry != null) throw new InvalidOperationException("A scene bridge cannot be rebound to another match registry.");
+            _root = MatchCompositionRoot.Instance;
+            if (_root == null || !ReferenceEquals(_root.Registry, registry)
+                || _root.gameObject.scene != gameObject.scene)
+                throw new InvalidOperationException("Bridge requires its own scene's match registry.");
             _registry = registry;
+            _initialized = true;
+            BeginBinding();
+        }
+
+        void OnEnable() => BeginBinding();
+
+        void BeginBinding()
+        {
+            if (!_initialized || !isActiveAndEnabled || _binding || !IsMatchCurrent) return;
+            _binding = true;
             _registry.Registered += OnPlayerRegistered;
             _registry.Unregistered += OnPlayerUnregistered;
 
             foreach (var p in _registry.Players)
                 BindSeat(p);
 
-            StartCoroutine(WaitForManagers());
+            _managerWait = StartCoroutine(WaitForManagers());
         }
 
         IEnumerator WaitForManagers()
         {
-            while (TurnManager.Instance == null)
-                yield return null;
-            _tm = TurnManager.Instance;
-            SubscribeTurnManager();
-
-            var mcr = MatchCompositionRoot.Instance;
-            if (mcr != null)
-                _mm = mcr.MatchManager;
-
-            while (_mm == null)
+            float deadline = Time.realtimeSinceStartup + MatchCompositionRoot.InitializationTimeout;
+            while (IsMatchCurrent && isActiveAndEnabled)
             {
-                mcr = MatchCompositionRoot.Instance;
-                if (mcr != null) _mm = mcr.MatchManager;
-                if (_mm != null) break;
+                var turn = TurnManager.Instance;
+                var match = _root.MatchManager;
+                if (turn != null && turn.IsSpawned && turn.gameObject.scene == _root.gameObject.scene
+                    && match != null && match.IsSpawned)
+                {
+                    _tm = turn;
+                    _mm = match;
+                    _mns = _root.NetworkState;
+                    var visual = CombatVFXManager.Instance;
+                    _vfx = visual != null && visual.gameObject.scene == _root.gameObject.scene ? visual : null;
+                    SubscribeTurnManager();
+                    SubscribeMatchManager();
+                    if (_mns != null) SubscribeMatchNetworkState();
+                    var previousPhase = _currentMatch.CurrentPhase;
+                    ReadCurrentMatchValues();
+                    if (_currentMatch.MatchState != MatchState.MatchComplete
+                        && _currentMatch.CurrentPhase == TurnPhase.PrepPhase)
+                    {
+                        _results.Clear();
+                        _roundResultPending = false;
+                        _matchEndPending = false;
+                        // A disabled view can miss an entire round and return to Prep.
+                        OnPhaseChanged?.Invoke(previousPhase, _currentMatch.CurrentPhase);
+                    }
+                    _managerWait = null;
+                    yield break;
+                }
+                if (Time.realtimeSinceStartup >= deadline)
+                {
+                    Debug.LogWarning("[GameDataBridge] Current match managers did not become ready before the binding deadline.");
+                    break;
+                }
                 yield return null;
             }
-            SubscribeMatchManager();
-
-            if (mcr != null)
-                _mns = mcr.NetworkState;
-            if (_mns != null)
-                SubscribeMatchNetworkState();
-
-            ReadCurrentMatchValues();
+            _managerWait = null;
+            EndBinding();
         }
 
         void SubscribeTurnManager()
@@ -126,11 +181,18 @@ namespace AbsoluteZero.UI.Game.Bridge
             _tm.FirstReadySeat.OnValueChanged += OnMatchNVChanged_Byte;
 
             TurnManager.OnEnvironmentAnnounced += HandleEnvironmentAnnounced;
-            TurnManager.OnOpponentRevealed += HandleOpponentRevealed;
-            TurnManager.OnMultiMatchOutcome += HandleMultiMatchOutcome;
-            CombatVFXManager.OnTempOverridesClear += HandleTempOverridesClear;
-            CombatVFXManager.OnTempTargetsOverride += HandleTempTargetsOverride;
-            CombatVFXManager.OnPlayerTempOverride += HandlePlayerTempOverride;
+            _tm.OnOpponentRevealed += HandleOpponentRevealed;
+            _tm.OnMultiMatchOutcome += HandleMultiMatchOutcome;
+            if (_vfx != null)
+            {
+                _vfx.OnTempOverridesClear += HandleTempOverridesClear;
+                _vfx.OnTempTargetsOverride += HandleTempTargetsOverride;
+                _vfx.OnPlayerTempOverride += HandlePlayerTempOverride;
+                HandleTempOverridesClear();
+                foreach (var seat in _seats.Keys)
+                    if (_vfx.TryGetDisplayTemperature(seat, out var value))
+                        HandlePlayerTempOverride(seat, value);
+            }
             CombatVFXManager.OnAttackerChanged += HandleAttackerChanged;
             CombatVFXManager.OnPresentationSettled += HandlePresentationSettled;
         }
@@ -251,17 +313,26 @@ namespace AbsoluteZero.UI.Game.Bridge
 
         void OnPlayerUnregistered(PlayerIdentity identity)
         {
+            if (!_boundIdentities.TryGetValue(identity.PlayerIndex, out var bound) || bound != identity) return;
             UnbindSeat(identity.PlayerIndex);
+            ResolveLocalSeat();
             OnSeatUnregistered?.Invoke(identity.PlayerIndex);
         }
 
         void BindSeat(PlayerBinding binding)
         {
+            if (binding == null || !binding.IsValid || !binding.HasIdentity) return;
             byte idx = binding.Identity.PlayerIndex;
-            if (_boundStates.ContainsKey(idx)) return;
+            if (_boundStates.TryGetValue(idx, out var existing))
+            {
+                if (existing == binding.State && _boundIdentities.TryGetValue(idx, out var identity) && identity == binding.Identity)
+                { ResolveLocalSeat(); return; }
+                UnbindSeat(idx);
+            }
 
             var ps = binding.State;
             _boundStates[idx] = ps;
+            _boundIdentities[idx] = binding.Identity;
 
             var cb = new SeatCallbacks
             {
@@ -297,7 +368,7 @@ namespace AbsoluteZero.UI.Game.Bridge
 
         void UnbindSeat(byte idx)
         {
-            if (_boundStates.TryGetValue(idx, out var ps) && _seatCallbacks.TryGetValue(idx, out var cb))
+            if (_boundStates.TryGetValue(idx, out var ps) && ps != null && _seatCallbacks.TryGetValue(idx, out var cb))
             {
                 _cachedLifeStates[idx] = ps.CurrentLifeState.Value;
 
@@ -313,31 +384,35 @@ namespace AbsoluteZero.UI.Game.Bridge
             _seatCallbacks.Remove(idx);
             _seats.Remove(idx);
             _boundStates.Remove(idx);
+            _boundIdentities.Remove(idx);
             _dirtySeatIndices.Remove(idx);
             _matchDirty = true;
         }
 
         void ResolveLocalSeat()
         {
-            if (_localSeatResolved) return;
-            var nm = NetworkManager.Singleton;
-            if (nm == null) return;
-
-            if (_registry.TryGetByClientId(nm.LocalClientId, out var binding))
-            {
-                _localSeatIndex = binding.Identity.PlayerIndex;
-                _localSeatResolved = true;
-            }
+            byte previous = _localSeatIndex;
+            bool wasResolved = _localSeatResolved;
+            LocalMatchPerspective perspective = default;
+            _localSeatResolved = _registry != null
+                && ReferenceEquals(MatchCompositionRoot.Instance?.Registry, _registry)
+                && LocalMatchPerspective.TryResolveCurrent(out perspective);
+            _localSeatIndex = _localSeatResolved ? perspective.HumanSeat : byte.MaxValue;
+            if (previous == _localSeatIndex && wasResolved == _localSeatResolved) return;
+            _matchDirty = true;
+            foreach (byte seat in _boundStates.Keys) MarkSeatDirty(seat);
         }
 
         bool IsLocalSeat(byte idx) => _localSeatResolved && idx == _localSeatIndex;
 
         void BuildSeatSnapshot(byte idx, PlayerState ps)
         {
+            if (ps == null || !_boundIdentities.TryGetValue(idx, out var identity)) return;
             _seats[idx] = new SeatSnapshot
             {
                 SeatIndex = idx,
-                ClientId = ps.NetworkObject.OwnerClientId,
+                ClientId = identity.ClientId,
+                ControllerKind = identity.ControllerKind,
                 Temperature = ps.Temperature.Value,
                 FanSpeed = ps.FanSpeed.Value,
                 IsReady = ps.IsReady.Value,
@@ -356,7 +431,14 @@ namespace AbsoluteZero.UI.Game.Bridge
         void OnPhaseNVChanged(TurnPhase oldVal, TurnPhase newVal)
         {
             _currentMatch.CurrentPhase = newVal;
+            if (newVal == TurnPhase.PrepPhase)
+            {
+                _results.Clear();
+                _roundResultPending = false;
+                _matchEndPending = false;
+            }
             _matchDirty = true;
+            ResolveLocalSeat();
             FlushSeats();
             OnPhaseChanged?.Invoke(oldVal, newVal);
 
@@ -418,6 +500,13 @@ namespace AbsoluteZero.UI.Game.Bridge
 
         void LateUpdate()
         {
+            if (_initialized && !IsMatchCurrent)
+            {
+                EndBinding();
+                return;
+            }
+            if (_initialized && (!_binding || _tm == null || _mm == null)) return;
+            ResolveLocalSeat();
             FlushSeats();
             FlushMatch();
             ProcessRoundResult();
@@ -469,7 +558,7 @@ namespace AbsoluteZero.UI.Game.Bridge
 
         void ProcessRoundResult()
         {
-            if (!_roundResultPending) return;
+            if (!_roundResultPending || !_localSeatResolved) return;
 
             if (_currentMatch.Mode == GameMode.Multi)
             {
@@ -492,12 +581,12 @@ namespace AbsoluteZero.UI.Game.Bridge
             if (_roundResultTimer < SETTLE_TIME) return;
 
             _roundResultPending = false;
-            OnRoundResult?.Invoke(_currentMatch);
+            PublishResult(false);
         }
 
         void ProcessMatchEnd()
         {
-            if (!_matchEndPending) return;
+            if (!_matchEndPending || !_localSeatResolved) return;
 
             if (_currentMatch.Mode == GameMode.Multi)
             {
@@ -507,14 +596,14 @@ namespace AbsoluteZero.UI.Game.Bridge
                     || _currentMatch.MultiOutcome == MultiMatchOutcome.InProgress
                     || _currentMatch.MultiWinnerMask == 0)
                     return;
-                var vfx = CombatVFXManager.Instance;
+                var vfx = _vfx;
                 if (vfx != null && vfx.HasPendingPresentation(_currentMatch.MultiDecidingSequence))
                 {
                     vfx.ForceSettleMultiPresentation(_currentMatch.MultiDecidingSequence);
                     return;
                 }
                 _matchEndPending = false;
-                OnMatchEnd?.Invoke(_currentMatch);
+                PublishResult(true);
                 return;
             }
 
@@ -522,13 +611,33 @@ namespace AbsoluteZero.UI.Game.Bridge
             if (_matchEndTimer < SETTLE_TIME) return;
 
             _matchEndPending = false;
-            OnMatchEnd?.Invoke(_currentMatch);
+            PublishResult(true);
+        }
+
+        void PublishResult(bool matchEnd)
+        {
+            if (!_results.TryPublish(_currentMatch, matchEnd,
+                _tm != null ? _tm.PrepStartServerTime.Value : 0, out var notice)) return;
+            if (matchEnd) OnMatchEnd?.Invoke(notice.Snapshot);
+            else OnRoundResult?.Invoke(notice.Snapshot);
         }
 
         // ─── Cleanup ──────────────────────────────────────────────
 
+        void OnDisable() => EndBinding();
+
         void OnDestroy()
         {
+            EndBinding();
+            _results.Clear();
+        }
+
+        void EndBinding()
+        {
+            bool wasBound = _binding || _tm != null || _boundStates.Count > 0;
+            if (_managerWait != null) StopCoroutine(_managerWait);
+            _managerWait = null;
+            _binding = false;
             foreach (var idx in new List<byte>(_boundStates.Keys))
                 UnbindSeat(idx);
 
@@ -547,6 +656,8 @@ namespace AbsoluteZero.UI.Game.Bridge
                 _tm.LastRoundWinner.OnValueChanged -= OnMatchNVChanged_Int;
                 _tm.ActiveEnvironment.OnValueChanged -= OnMatchNVChanged_Env;
                 _tm.FirstReadySeat.OnValueChanged -= OnMatchNVChanged_Byte;
+                _tm.OnOpponentRevealed -= HandleOpponentRevealed;
+                _tm.OnMultiMatchOutcome -= HandleMultiMatchOutcome;
             }
 
             if (_mm != null)
@@ -568,13 +679,26 @@ namespace AbsoluteZero.UI.Game.Bridge
             }
 
             TurnManager.OnEnvironmentAnnounced -= HandleEnvironmentAnnounced;
-            TurnManager.OnOpponentRevealed -= HandleOpponentRevealed;
-            TurnManager.OnMultiMatchOutcome -= HandleMultiMatchOutcome;
-            CombatVFXManager.OnTempOverridesClear -= HandleTempOverridesClear;
-            CombatVFXManager.OnTempTargetsOverride -= HandleTempTargetsOverride;
-            CombatVFXManager.OnPlayerTempOverride -= HandlePlayerTempOverride;
+            if (_vfx != null)
+            {
+                _vfx.OnTempOverridesClear -= HandleTempOverridesClear;
+                _vfx.OnTempTargetsOverride -= HandleTempTargetsOverride;
+                _vfx.OnPlayerTempOverride -= HandlePlayerTempOverride;
+            }
             CombatVFXManager.OnAttackerChanged -= HandleAttackerChanged;
             CombatVFXManager.OnPresentationSettled -= HandlePresentationSettled;
+            _tm = null; _mm = null; _mns = null; _vfx = null;
+            _localSeatResolved = false;
+            _localSeatIndex = byte.MaxValue;
+            _dirtySeatIndices.Clear();
+            _roundResultPending = false;
+            _matchEndPending = false;
+            _roundResultTimer = _matchEndTimer = 0;
+            if (wasBound)
+            {
+                OnTempOverridesClear?.Invoke();
+                OnCurrentAttackerChanged?.Invoke(-1);
+            }
         }
     }
 }

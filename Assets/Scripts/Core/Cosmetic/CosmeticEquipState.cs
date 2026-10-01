@@ -6,7 +6,7 @@ namespace AbsoluteZero.Core.Cosmetic
 {
     public class CosmeticEquipState
     {
-        const string SaveKey = "cosmetic_equip_v1";
+        public long Revision { get; private set; }
 
         readonly Dictionary<CosmeticPart, CosmeticItemSO> _equipped = new();
 
@@ -20,14 +20,27 @@ namespace AbsoluteZero.Core.Cosmetic
         public void Equip(CosmeticItemSO item)
         {
             if (item == null) return;
+            if (GetEquipped(item.Part)?.Id == item.Id) return;
             _equipped[item.Part] = item;
-            OnEquipChanged?.Invoke();
+            Changed();
         }
 
         public void Unequip(CosmeticPart part)
         {
-            if (_equipped.Remove(part))
-                OnEquipChanged?.Invoke();
+            if (_equipped.Remove(part)) Changed();
+        }
+
+        void Changed()
+        {
+            Revision++;
+            OnEquipChanged?.Invoke();
+        }
+
+        internal void ApplyValidated(CosmeticDto dto, CosmeticRegistrySO registry)
+        {
+            if (CosmeticCodec.SameIds(ToDto(), dto)) return;
+            FromDto(dto, registry);
+            Changed();
         }
 
         public CosmeticDto ToDto()
@@ -70,41 +83,5 @@ namespace AbsoluteZero.Core.Cosmetic
             _equipped[expectedPart] = item;
         }
 
-        public void Save()
-        {
-            string json = JsonUtility.ToJson(ToDto());
-            PlayerPrefs.SetString(SaveKey, json);
-            PlayerPrefs.Save();
-        }
-
-        public void Load(CosmeticRegistrySO registry)
-        {
-            string json = PlayerPrefs.GetString(SaveKey, "");
-            if (string.IsNullOrEmpty(json))
-            {
-                _equipped.Clear();
-                return;
-            }
-
-            CosmeticDto dto;
-            try
-            {
-                dto = JsonUtility.FromJson<CosmeticDto>(json);
-            }
-            catch
-            {
-                Debug.LogWarning("[CosmeticEquipState] Failed to parse saved equip data — resetting");
-                _equipped.Clear();
-                return;
-            }
-
-            if (dto == null || dto.v != 1)
-            {
-                _equipped.Clear();
-                return;
-            }
-
-            FromDto(dto, registry);
-        }
     }
 }

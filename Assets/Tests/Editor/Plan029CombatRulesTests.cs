@@ -149,10 +149,10 @@ namespace AbsoluteZero.Tests
             {
                 var vfx = owner.AddComponent<CombatVFXManager>();
                 var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
-                typeof(CombatVFXManager).GetField("_activeSequence", flags).SetValue(vfx, (uint)19);
-                typeof(CombatVFXManager).GetField("_movedCamera", flags).SetValue(vfx, camera.transform);
+                vfx.BeginPresentation(19, null);
                 var original = new Vector3(0, 5, -5);
-                typeof(CombatVFXManager).GetField("_savedCameraPos", flags).SetValue(vfx, original);
+                camera.transform.position = original;
+                vfx.CapturePresentationTransform(camera.transform);
                 camera.transform.position = new Vector3(1, 2, 3);
                 vfx.ForceSettleMultiPresentation(19);
                 vfx.ForceSettleMultiPresentation(19);
@@ -165,6 +165,37 @@ namespace AbsoluteZero.Tests
                 CombatVFXManager.OnPresentationSettled -= handler;
                 UnityEngine.Object.DestroyImmediate(owner);
                 UnityEngine.Object.DestroyImmediate(camera);
+            }
+        }
+
+        [Test]
+        public void ForcedPresentationSettlement_PreservesNewerQueuedRecord()
+        {
+            var owner = new GameObject("Plan029VfxQueueTest");
+            try
+            {
+                var vfx = owner.AddComponent<CombatVFXManager>();
+                var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+                vfx.BeginPresentation(19, null);
+                var pendingType = typeof(CombatVFXManager).GetNestedType(
+                    "PendingMultiPresentation", System.Reflection.BindingFlags.NonPublic);
+                var pending = System.Activator.CreateInstance(pendingType);
+                pendingType.GetField("Sequence", System.Reflection.BindingFlags.Public
+                    | System.Reflection.BindingFlags.Instance).SetValue(pending, (uint)20);
+                var queue = typeof(CombatVFXManager).GetField("_pendingMultiPresentations", flags)
+                    .GetValue(vfx);
+                queue.GetType().GetMethod("Enqueue").Invoke(queue, new[] { pending });
+
+                vfx.ForceSettleMultiPresentation(20);
+                Assert.That(vfx.HasPendingPresentation(19), Is.True);
+                Assert.That(vfx.HasPendingPresentation(20), Is.True);
+                vfx.ForceSettleMultiPresentation(19);
+                Assert.That(vfx.HasPendingPresentation(19), Is.False);
+                Assert.That(vfx.HasPendingPresentation(20), Is.True);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(owner);
             }
         }
 
@@ -426,7 +457,7 @@ namespace AbsoluteZero.Tests
         }
 
         [Test]
-        public void MultiDropFilter_ExcludesTarotWithoutChangingRawRegistryEligibility()
+        public void GlobalAvailability_ExcludesTarotBeforeAnyAdditionalDropFilter()
         {
             var tarot = Create<SpecialItemDataSO>();
             tarot.DropWeight = 100f;
@@ -439,7 +470,8 @@ namespace AbsoluteZero.Tests
                 item is not SpecialItemDataSO special
                 || special.SpecialEffect != SpecialEffectType.RevealOpponent);
 
-            Assert.That(raw.Roll(item => ReferenceEquals(item, tarot)), Is.SameAs(tarot));
+            Assert.That(raw.Roll(item => ReferenceEquals(item, tarot)), Is.Null);
+            Assert.That(raw.Roll(), Is.SameAs(attack));
             Assert.That(multi.Roll(item => ReferenceEquals(item, tarot)), Is.Null);
             Assert.That(multi.Roll(), Is.SameAs(attack));
         }

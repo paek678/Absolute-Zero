@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Linq;
 using AbsoluteZero.Core.Audio;
 using AbsoluteZero.Core.Common;
 using AbsoluteZero.Core.Match;
@@ -47,6 +48,9 @@ namespace AbsoluteZero.UI.Game.Presenters
         bool _rematchDecisionSent;
         bool _lobbyClickPending;
         bool _declinedHandled;
+        bool _disposed;
+        bool _attached;
+        ulong _resultRevision;
 
         public RoundResultPresenter(IGameDataBridge bridge, ILocalPlayerCommands commands,
                                      GameHudRefs refs, MonoBehaviour host)
@@ -65,22 +69,40 @@ namespace AbsoluteZero.UI.Game.Presenters
             _lobbyButton.onClick.AddListener(OnBackToLobbyClicked);
             _rematchButton.onClick.AddListener(OnRematchClicked);
 
-            _bridge.OnRoundResult += HandleRoundResult;
-            _bridge.OnMatchEnd += HandleMatchEnd;
+            _overlay.gameObject.SetActive(false);
+            Resume();
+        }
+
+        public void Resume()
+        {
+            if (_disposed || _attached) return;
+            _attached = true;
+            _bridge.OnRoundResult += ReconcileResult;
+            _bridge.OnMatchEnd += ReconcileResult;
             _bridge.OnPhaseChanged += HandlePhaseChanged;
             _bridge.OnMatchSnapshotChanged += HandleMatchSnapshotChanged;
             _bridge.OnRematchDecisionChanged += HandleRematchDecisionChanged;
+            ReconcileResult(default);
+        }
 
-            _overlay.gameObject.SetActive(false);
+        public void Suspend()
+        {
+            _bridge.OnRoundResult -= ReconcileResult;
+            _bridge.OnMatchEnd -= ReconcileResult;
+            _bridge.OnPhaseChanged -= HandlePhaseChanged;
+            _bridge.OnMatchSnapshotChanged -= HandleMatchSnapshotChanged;
+            _bridge.OnRematchDecisionChanged -= HandleRematchDecisionChanged;
+            _attached = false;
+            _resultRevision = 0; // A canceled cinematic must be rendered when the view returns.
+            CancelCinematic();
+            StopAutoLeave();
+            StopTimer();
         }
 
         public void Dispose()
         {
-            _bridge.OnRoundResult -= HandleRoundResult;
-            _bridge.OnMatchEnd -= HandleMatchEnd;
-            _bridge.OnPhaseChanged -= HandlePhaseChanged;
-            _bridge.OnMatchSnapshotChanged -= HandleMatchSnapshotChanged;
-            _bridge.OnRematchDecisionChanged -= HandleRematchDecisionChanged;
+            _disposed = true;
+            Suspend();
 
             if (_lobbyButton != null)
                 _lobbyButton.onClick.RemoveListener(OnBackToLobbyClicked);
@@ -105,6 +127,7 @@ namespace AbsoluteZero.UI.Game.Presenters
 
         void HandleMatchSnapshotChanged(MatchSnapshot match)
         {
+            ReconcileResult(match);
             ReconcileRematchVoteUI();
         }
 
@@ -114,6 +137,15 @@ namespace AbsoluteZero.UI.Game.Presenters
         }
 
         // ─── Round / Match result ─────────────────────────────────
+
+        void ReconcileResult(MatchSnapshot ignored)
+        {
+            if (_disposed || !_bridge.TryGetLatestResult(out var result)
+                || result.Revision <= _resultRevision) return;
+            _resultRevision = result.Revision;
+            if (result.IsMatchEnd) HandleMatchEnd(result.Snapshot);
+            else HandleRoundResult(result.Snapshot);
+        }
 
         void HandleRoundResult(MatchSnapshot match)
         {
@@ -206,6 +238,17 @@ namespace AbsoluteZero.UI.Game.Presenters
         void ReconcileRematchVoteUI()
         {
             var match = _bridge.CurrentMatch;
+            if (match.Mode == GameMode.Solo)
+            {
+                StopTimer(); StopAutoLeave();
+                if (match.MatchState != MatchState.MatchComplete || !_matchCompleteCinematicFinished || _leaveInProgress) return;
+                _rematchButton.gameObject.SetActive(true); _rematchButton.interactable = true;
+                _lobbyButton.gameObject.SetActive(true); _lobbyButton.interactable = true;
+                var label = _rematchButton.GetComponentInChildren<TextMeshProUGUI>();
+                if (label != null) label.text = "다시 하기";
+                _rematchStatusText.gameObject.SetActive(true); _rematchStatusText.text = "1대 봇 대전 종료";
+                return;
+            }
 
             if (match.MatchState == MatchState.RematchDeclined)
             {
@@ -281,6 +324,7 @@ namespace AbsoluteZero.UI.Game.Presenters
         void UpdateOpponentDecisionDisplay(byte? overrideMask = null)
         {
             var match = _bridge.CurrentMatch;
+            if (match.Mode == GameMode.Solo) return;
             if (match.MatchState != MatchState.RematchVote) return;
             if (match.RematchVoteEpoch != _activeVoteEpoch) return;
 
@@ -346,8 +390,28 @@ namespace AbsoluteZero.UI.Game.Presenters
 
         // ─── Button handlers ──────────────────────────────────────
 
-        void OnRematchClicked()
+        async void OnRematchClicked()
         {
+            if (_bridge.CurrentMatch.Mode == GameMode.Solo)
+            {
+                if (_disposed || _leaveInProgress || !_matchCompleteCinematicFinished
+                    || _bridge.CurrentMatch.MatchState != MatchState.MatchComplete) return;
+                _leaveInProgress = true;
+                _rematchButton.interactable = false; _lobbyButton.interactable = false;
+                _rematchStatusText.text = "다시 시작합니다...";
+                try
+                {
+                    bool restarted = await _commands.ReplaySoloAsync();
+                    if (!restarted && !_disposed && _host != null)
+                    { _leaveInProgress = false; ReconcileRematchVoteUI(); _rematchStatusText.text = "재시작 실패 — 다시 시도하거나 로비로 돌아가세요"; }
+                }
+                catch (Exception error)
+                {
+                    Debug.LogWarning("[RoundResultPresenter] Solo replay failed: " + error.Message);
+                    if (!_disposed && _host != null) { _leaveInProgress = false; ReconcileRematchVoteUI(); }
+                }
+                return;
+            }
             if (_rematchDecisionSent) return;
             _rematchDecisionSent = true;
 
@@ -363,7 +427,7 @@ namespace AbsoluteZero.UI.Game.Presenters
 
         async void OnBackToLobbyClicked()
         {
-            if (_leaveInProgress) return;
+            if (_disposed || _leaveInProgress) return;
 
             if (GameAudioManager.Instance != null)
                 GameAudioManager.Instance.PlayButtonClick();
@@ -392,8 +456,8 @@ namespace AbsoluteZero.UI.Game.Presenters
             catch (Exception e)
             {
                 Debug.LogWarning($"[RoundResultPresenter] Leave failed: {e.Message}");
-                _lobbyButton.interactable = true;
-                _leaveInProgress = false;
+                if (!_disposed && _lobbyButton != null)
+                { _lobbyButton.interactable = true; _leaveInProgress = false; }
             }
         }
 
@@ -474,6 +538,40 @@ namespace AbsoluteZero.UI.Game.Presenters
                     _rematchStatusText.text = "매치 종료";
                     StopAutoLeave();
                     _autoLeaveHandle = _host.StartCoroutine(AutoLeaveRoutine(_waitDeclinedLeave));
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    for (int sample = 0; sample < 3; sample++)
+                    {
+                        yield return new WaitForEndOfFrame();
+                        Debug.Log("[MatchResult] RenderState seq=" + match.MultiDecidingSequence
+                            + " local=" + _bridge.LocalSeatIndex + " frame=" + Time.frameCount
+                            + " text=" + _text.text + " active=" + _text.gameObject.activeInHierarchy
+                            + " alpha=" + _text.color.a + " canvas=" + _text.canvas.sortingOrder
+                            + " button=" + (_lobbyButton.gameObject.activeInHierarchy && _lobbyButton.interactable)
+                            + " rect=" + _lobbyButton.transform.position
+                            + " scale=" + _lobbyButton.transform.lossyScale
+                            + " imageEnabled=" + _lobbyButton.GetComponent<Image>().enabled
+                            + " cull=" + _lobbyButton.GetComponent<Image>().canvasRenderer.cull
+                            + " imageAlpha=" + _lobbyButton.GetComponent<Image>().canvasRenderer.GetAlpha()
+                            + " overlays=" + UnityEngine.Object.FindObjectsByType<Image>(FindObjectsSortMode.None)
+                                .Count(image => image.name == "CinematicOverlay"));
+                        if (sample == 0 && System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "--az-render-diagnostics") >= 0)
+                        {
+                            foreach (var graphic in _overlay.GetComponentsInChildren<UnityEngine.UI.Graphic>())
+                            {
+                                var mesh = graphic.canvasRenderer.GetMesh();
+                                Debug.Log("[MatchResult] Geometry local=" + _bridge.LocalSeatIndex
+                                    + " name=" + graphic.name + " verts=" + (mesh != null ? mesh.vertexCount : 0)
+                                    + " depth=" + graphic.depth + " color=" + graphic.color
+                                    + " rendererColor=" + graphic.canvasRenderer.GetColor()
+                                    + " rect=" + graphic.rectTransform.rect
+                                    + " pos=" + graphic.transform.position
+                                    + " material=" + graphic.materialForRendering.name
+                                    + " shader=" + graphic.materialForRendering.shader.name);
+                            }
+                        }
+                        yield return new WaitForSecondsRealtime(0.5f);
+                    }
+#endif
                 }
                 else
                 {

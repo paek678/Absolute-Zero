@@ -19,3 +19,7 @@ Before any Editor operation, discover the current connection and verify that its
 Never invoke forced `recompile_scripts`. Do not move scene objects or alter assets just to make validation easier. Preserve `.meta` pairings and use a verified Editor automation path for serialized changes.
 
 Report the command/tool, scope, observed result, and remaining gaps. Documentation/harness edits do not require gameplay tests. Do not label a planned test, tool availability check, or old validation report as a successful run.
+
+For work that spans sessions, maintain a single current deferred-validation ledger in the relevant `Docs/Validation/` result file. Give each unresolved check a stable ID, exact stimulus, status, and evidence needed to close it. After a relevant run, update that ledger with the observed build/report/captures; do not silently drop a deferred check or promote it from an older or narrower pass. Link to the ledger from the current plan or handoff rather than copying its full contents.
+
+For Windows multi-process development builds, check whether this host already has an allowed, fixed executable path in Windows Firewall and reuse that exact output path for later builds and runs. A versioned temporary executable path is a different program rule and may trigger another prompt. Do not disable the firewall or create a broad all-program exception to avoid development prompts. Verify the rule and the Editor project on the current host before relying on either.

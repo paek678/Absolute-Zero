@@ -40,6 +40,9 @@ namespace AbsoluteZero.UI.Game.Presenters
 
             _bridge.OnTempOverride += HandleTempOverride;
             _bridge.OnTempOverridesClear += HandleTempOverridesClear;
+            for (byte seat = 0; seat < 4; seat++)
+                if (_bridge.TryGetDisplayTemperature(seat, out var value))
+                    HandleTempOverride(seat, value);
         }
 
         public void Tick(float deltaTime)

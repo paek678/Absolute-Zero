@@ -6,6 +6,7 @@ namespace AbsoluteZero.UI.LobbyUI
         ModeSelect,
         Room,
         Settings,
-        Closet
+        Closet,
+        SoloSelect
     }
 }

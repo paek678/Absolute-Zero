@@ -4,6 +4,10 @@
   <Project Path="AbsoluteZero.Core.csproj" />
   <Project Path="Assembly-CSharp.csproj" />
   <Project Path="Unity.Networking.Editor.csproj" />
-  <Project Path="Assembly-CSharp-Editor.csproj" />
   <Project Path="AbsoluteZero.EditorTests.csproj" />
+  <Project Path="Assembly-CSharp-Editor.csproj" />
+  <Project Path="AbsoluteZero.ActionFixture.csproj" />
+  <Project Path="AbsoluteZero.PresentationFixture.csproj" />
+  <Project Path="AbsoluteZero.SoloFixture.csproj" />
+  <Project Path="AbsoluteZero.BehaviorFixture.csproj" />
 </Solution>

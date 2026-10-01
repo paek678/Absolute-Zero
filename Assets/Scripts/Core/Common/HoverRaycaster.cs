@@ -13,6 +13,13 @@ namespace AbsoluteZero.Core.Common
 
         public HoverEffect CurrentHovered => _currentHovered;
 
+        internal void Forget(HoverEffect view)
+        {
+            if (_currentHovered != view) return;
+            _currentHovered.SetHovered(false);
+            _currentHovered = null;
+        }
+
         void Awake()
         {
             Instance = this;

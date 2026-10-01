@@ -15,6 +15,7 @@ MonoBehaviour:
   _id: hat_01
   _part: 0
   _type: 0
-  _sprite: {fileID: 0}
+  _sprite: {fileID: 298814629, guid: 369bf032b8a800c4488751aebe375d2a, type: 3}
+  _atlas: {fileID: 11400000, guid: d6c3ee472ae2772489c987dd40db0ad8, type: 2}
   _sortOrderOffset: 10
   _displayName: "\uAE30\uBCF8 \uBAA8\uC790"

@@ -1,0 +1,415 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 714b29b4b3f899b4b8aea59bc6114907, type: 3}
+  m_Name: top_ref_atlas
+  m_EditorClassIdentifier: AbsoluteZero.Core::AbsoluteZero.Core.Cosmetic.CosmeticAtlasSO
+  Bindings:
+  - Note: Static/default | Assets/Art/testProject/LastPrefab2/player_idle.png
+    View: 0
+    RendererPath: body
+    Overlay: 0
+    Source: {fileID: -2043691983, guid: ec63200d8496c0342bcd80e1c07adb88, type: 3}
+    Replacement: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Rotation: 0
+    SortOffset: 0
+  - Note: body/defence | Assets/Art/testProject/LastPrefab2/player_defence.png
+    View: 0
+    RendererPath: body
+    Overlay: 0
+    Source: {fileID: 1380271861, guid: b6f47e83e0f5bea4abe4facc37142e9c, type: 3}
+    Replacement: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Rotation: 0
+    SortOffset: 0
+  - Note: body/hug | Assets/Art/gameGem/MainFolder/Sprite/player_hug.png
+    View: 0
+    RendererPath: body
+    Overlay: 0
+    Source: {fileID: 2139391654, guid: 22d9fc50d6f3ab54cacdd86a9d8da8c2, type: 3}
+    Replacement: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Rotation: 0
+    SortOffset: 0
+  - Note: Static/default | Assets/Art/testProject/LastPrefab2/player_idle.png
+    View: 0
+    RendererPath: body/arm1
+    Overlay: 0
+    Source: {fileID: -1969666723, guid: ec63200d8496c0342bcd80e1c07adb88, type: 3}
+    Replacement: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Rotation: 0
+    SortOffset: 0
+  - Note: arm_Left/attack | Assets/Art/testProject/LastPrefab2/player_attack.png
+    View: 0
+    RendererPath: body/arm1
+    Overlay: 0
+    Source: {fileID: 1244968829, guid: fdb695ca8d73155439de53cb22a2ed75, type: 3}
+    Replacement: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Rotation: 0
+    SortOffset: 0
+  - Note: arm_Left/defence | Assets/Art/testProject/LastPrefab2/player_defence.png
+    View: 0
+    RendererPath: body/arm1
+    Overlay: 0
+    Source: {fileID: 1255021449, guid: b6f47e83e0f5bea4abe4facc37142e9c, type: 3}
+    Replacement: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Rotation: 0
+    SortOffset: 0
+  - Note: arm_Left/drink | Assets/Art/testProject/LastPrefab2/player_drink.png
+    View: 0
+    RendererPath: body/arm1
+    Overlay: 0
+    Source: {fileID: 329067971, guid: 4bc0576ac45fa8547af46164300ba452, type: 3}
+    Replacement: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Rotation: 0
+    SortOffset: 0
+  - Note: arm_Left/button | Assets/Art/testProject/LastPrefab2/player_button.png
+    View: 0
+    RendererPath: body/arm1
+    Overlay: 0
+    Source: {fileID: 48834986, guid: 0f877cb0b68d0424a9704a83b5cfdff5, type: 3}
+    Replacement: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Rotation: 0
+    SortOffset: 0
+  - Note: arm_Left/damage | Assets/Art/testProject/LastPrefab/Sprite/player_damaged.png
+    View: 0
+    RendererPath: body/arm1
+    Overlay: 0
+    Source: {fileID: 817816771, guid: 842616ad3096a194db6a14209a9b6e8d, type: 3}
+    Replacement: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Rotation: 0
+    SortOffset: 0
+  - Note: arm_Left/lowDegree | Assets/Art/testProject/LastPrefab/Sprite/player_lowDegree.png
+    View: 0
+    RendererPath: body/arm1
+    Overlay: 0
+    Source: {fileID: 512478006, guid: 5e324185934bc5c4d878c8d6177b13ce, type: 3}
+    Replacement: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Rotation: 0
+    SortOffset: 0
+  - Note: arm_Left/eat1 | Assets/Art/gameGem/MainFolder/Sprite/player_eat1.png
+    View: 0
+    RendererPath: body/arm1
+    Overlay: 0
+    Source: {fileID: 205502555, guid: 99396921813a54b488d52166d5548477, type: 3}
+    Replacement: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Rotation: 0
+    SortOffset: 0
+  - Note: arm_Left/eat2 | Assets/Art/gameGem/MainFolder/Sprite/player_eat2.png
+    View: 0
+    RendererPath: body/arm1
+    Overlay: 0
+    Source: {fileID: 1583961396, guid: 7b5f9a2d9bd6869419c3eed468771949, type: 3}
+    Replacement: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Rotation: 0
+    SortOffset: 0
+  - Note: arm_Left/heal | Assets/Art/gameGem/MainFolder/Sprite/player_heal.png
+    View: 0
+    RendererPath: body/arm1
+    Overlay: 0
+    Source: {fileID: 2049869791, guid: 2b734b56312067e4e9decbf5c3c0e37a, type: 3}
+    Replacement: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Rotation: 0
+    SortOffset: 0
+  - Note: arm_Left/hug | Assets/Art/gameGem/MainFolder/Sprite/player_hug.png
+    View: 0
+    RendererPath: body/arm1
+    Overlay: 0
+    Source: {fileID: -649811074, guid: 22d9fc50d6f3ab54cacdd86a9d8da8c2, type: 3}
+    Replacement: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Rotation: 0
+    SortOffset: 0
+  - Note: arm_Left/jump | Assets/Art/gameGem/MainFolder/Sprite/player_jump.png
+    View: 0
+    RendererPath: body/arm1
+    Overlay: 0
+    Source: {fileID: 774947161, guid: 48b695d3c6872504aa9f8d8295530982, type: 3}
+    Replacement: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Rotation: 0
+    SortOffset: 0
+  - Note: arm_Left/swing1 | Assets/Art/gameGem/MainFolder/Sprite/player_swing1.png
+    View: 0
+    RendererPath: body/arm1
+    Overlay: 0
+    Source: {fileID: -439988450, guid: c5533ff6b6320fd49baa9870ee4d2a2f, type: 3}
+    Replacement: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Rotation: 0
+    SortOffset: 0
+  - Note: arm_Left/swing2 | Assets/Art/gameGem/MainFolder/Sprite/player_swing2.png
+    View: 0
+    RendererPath: body/arm1
+    Overlay: 0
+    Source: {fileID: -1439095492, guid: 6fc4080058497634dac4a901b0265bf6, type: 3}
+    Replacement: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Rotation: 0
+    SortOffset: 0
+  - Note: arm_Left/feed | Assets/Art/gameGem/MainFolder/Sprite/player_feed.png
+    View: 0
+    RendererPath: body/arm1
+    Overlay: 0
+    Source: {fileID: -1502683639, guid: 88f890c96d0f2c447bb58a7926d3ef14, type: 3}
+    Replacement: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Rotation: 0
+    SortOffset: 0
+  - Note: arm_Left/card | Assets/Art/gameGem/MainFolder/Sprite/player_card.png
+    View: 0
+    RendererPath: body/arm1
+    Overlay: 0
+    Source: {fileID: 2014971822, guid: 0592cae5cce5ac54291b7b51daf52d14, type: 3}
+    Replacement: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Rotation: 0
+    SortOffset: 0
+  - Note: Static/default | Assets/Art/testProject/LastPrefab2/player_idle.png
+    View: 0
+    RendererPath: body/arm2
+    Overlay: 0
+    Source: {fileID: -1513238855, guid: ec63200d8496c0342bcd80e1c07adb88, type: 3}
+    Replacement: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Rotation: 0
+    SortOffset: 0
+  - Note: arm_Right/attack | Assets/Art/testProject/LastPrefab2/player_attack.png
+    View: 0
+    RendererPath: body/arm2
+    Overlay: 0
+    Source: {fileID: -358112328, guid: fdb695ca8d73155439de53cb22a2ed75, type: 3}
+    Replacement: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Rotation: 0
+    SortOffset: 0
+  - Note: arm_Right/defence | Assets/Art/testProject/LastPrefab2/player_defence.png
+    View: 0
+    RendererPath: body/arm2
+    Overlay: 0
+    Source: {fileID: -722124022, guid: b6f47e83e0f5bea4abe4facc37142e9c, type: 3}
+    Replacement: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Rotation: 0
+    SortOffset: 0
+  - Note: arm_Right/drink | Assets/Art/testProject/LastPrefab2/player_drink.png
+    View: 0
+    RendererPath: body/arm2
+    Overlay: 0
+    Source: {fileID: 36108802, guid: 4bc0576ac45fa8547af46164300ba452, type: 3}
+    Replacement: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Rotation: 0
+    SortOffset: 0
+  - Note: arm_Right/button | Assets/Art/testProject/LastPrefab2/player_button.png
+    View: 0
+    RendererPath: body/arm2
+    Overlay: 0
+    Source: {fileID: 1205683622, guid: 0f877cb0b68d0424a9704a83b5cfdff5, type: 3}
+    Replacement: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Rotation: 0
+    SortOffset: 0
+  - Note: arm_Right/damage | Assets/Art/testProject/LastPrefab/Sprite/player_damaged.png
+    View: 0
+    RendererPath: body/arm2
+    Overlay: 0
+    Source: {fileID: 1235607034, guid: 842616ad3096a194db6a14209a9b6e8d, type: 3}
+    Replacement: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Rotation: 0
+    SortOffset: 0
+  - Note: arm_Right/lowDegree | Assets/Art/testProject/LastPrefab/Sprite/player_lowDegree.png
+    View: 0
+    RendererPath: body/arm2
+    Overlay: 0
+    Source: {fileID: -2050103762, guid: 5e324185934bc5c4d878c8d6177b13ce, type: 3}
+    Replacement: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Rotation: 0
+    SortOffset: 0
+  - Note: arm_Right/eat1 | Assets/Art/gameGem/MainFolder/Sprite/player_eat1.png
+    View: 0
+    RendererPath: body/arm2
+    Overlay: 0
+    Source: {fileID: -1031478732, guid: 99396921813a54b488d52166d5548477, type: 3}
+    Replacement: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Rotation: 0
+    SortOffset: 0
+  - Note: arm_Right/eat2 | Assets/Art/gameGem/MainFolder/Sprite/player_eat2.png
+    View: 0
+    RendererPath: body/arm2
+    Overlay: 0
+    Source: {fileID: 1012827400, guid: 7b5f9a2d9bd6869419c3eed468771949, type: 3}
+    Replacement: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Rotation: 0
+    SortOffset: 0
+  - Note: arm_Right/heal | Assets/Art/gameGem/MainFolder/Sprite/player_heal.png
+    View: 0
+    RendererPath: body/arm2
+    Overlay: 0
+    Source: {fileID: -614284413, guid: 2b734b56312067e4e9decbf5c3c0e37a, type: 3}
+    Replacement: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Rotation: 0
+    SortOffset: 0
+  - Note: arm_Right/hug | Assets/Art/gameGem/MainFolder/Sprite/player_hug.png
+    View: 0
+    RendererPath: body/arm2
+    Overlay: 0
+    Source: {fileID: -2129899593, guid: 22d9fc50d6f3ab54cacdd86a9d8da8c2, type: 3}
+    Replacement: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Rotation: 0
+    SortOffset: 0
+  - Note: arm_Right/jump | Assets/Art/gameGem/MainFolder/Sprite/player_jump.png
+    View: 0
+    RendererPath: body/arm2
+    Overlay: 0
+    Source: {fileID: -523621252, guid: 48b695d3c6872504aa9f8d8295530982, type: 3}
+    Replacement: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Rotation: 0
+    SortOffset: 0
+  - Note: arm_Right/feed | Assets/Art/gameGem/MainFolder/Sprite/player_feed.png
+    View: 0
+    RendererPath: body/arm2
+    Overlay: 0
+    Source: {fileID: -1440203680, guid: 88f890c96d0f2c447bb58a7926d3ef14, type: 3}
+    Replacement: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Rotation: 0
+    SortOffset: 0
+  - Note: FPS_card | Assets/Resources/FPS/FPS_card.png
+    View: 1
+    RendererPath: hand1
+    Overlay: 0
+    Source: {fileID: -1921118679, guid: 9c52c12895fc3a4478aa58aab446fb23, type: 3}
+    Replacement: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Rotation: 0
+    SortOffset: 0
+  - Note: FPS_card | Assets/Resources/FPS/FPS_eat.png
+    View: 1
+    RendererPath: hand2
+    Overlay: 0
+    Source: {fileID: -949562436, guid: d3079f2843344fc4d99477ca7bcfa388, type: 3}
+    Replacement: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Rotation: 0
+    SortOffset: 0
+  - Note: FPS_defence | Assets/Resources/FPS/FPS_ziper.png
+    View: 1
+    RendererPath: hand2
+    Overlay: 0
+    Source: {fileID: 375185174, guid: d07e942b72fcdc443947af606e041488, type: 3}
+    Replacement: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Rotation: 0
+    SortOffset: 0
+  - Note: FPS_eat | Assets/Resources/FPS/FPS_eat.png
+    View: 1
+    RendererPath: hand1
+    Overlay: 0
+    Source: {fileID: 1943281075, guid: d3079f2843344fc4d99477ca7bcfa388, type: 3}
+    Replacement: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Rotation: 0
+    SortOffset: 0
+  - Note: FPS_feed | Assets/Resources/FPS/FPS_hug.png
+    View: 1
+    RendererPath: hand1
+    Overlay: 0
+    Source: {fileID: -376308013, guid: 73fb21cfd5473f5429fab572e5678c0c, type: 3}
+    Replacement: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Rotation: 0
+    SortOffset: 0
+  - Note: FPS_feed | Assets/Resources/FPS/FPS_hug.png
+    View: 1
+    RendererPath: hand2
+    Overlay: 0
+    Source: {fileID: -449986840, guid: 73fb21cfd5473f5429fab572e5678c0c, type: 3}
+    Replacement: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Rotation: 0
+    SortOffset: 0
+  - Note: FPS_tape | Assets/Resources/FPS/FPS_tape.png
+    View: 1
+    RendererPath: hand1
+    Overlay: 0
+    Source: {fileID: -1458612310, guid: 57df9e578239c784c883df7c84914779, type: 3}
+    Replacement: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Rotation: 0
+    SortOffset: 0
+  - Note: FPS_tape | Assets/Resources/FPS/FPS_tape.png
+    View: 1
+    RendererPath: hand2
+    Overlay: 0
+    Source: {fileID: -589366632, guid: 57df9e578239c784c883df7c84914779, type: 3}
+    Replacement: {fileID: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalScale: {x: 1, y: 1, z: 1}
+    Rotation: 0
+    SortOffset: 0

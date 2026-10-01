@@ -1,5 +1,9 @@
 # Side-view sprite atlas and prefab
 
+## Side animation prototype withdrawn (2026-09-24)
+- The user rejected the arm-redraw-and-sprite-swap drinking animation and paused side-view animation work. The isolated rigged test scene, prefab, clip, controller, generated drink-arm atlas, builder, preview script, and generator were removed. Old capture output remains as historical evidence only.
+- The edited `side_idle.png`, static V4 prefab with adjusted arm placement, and front/side comparison scene remain. No side-view drinking animation is currently implemented or approved for game integration.
+
 ## Desktop archive (2026-09-22)
 - Moved 988 obsolete output files (214.78 MiB) into `C:/Users/paek6/OneDrive/Desktop/AbsoluteZero_SideArchive_20260922_225950`, preserving relative paths. Includes old side animation frames, draft atlases, V3, redundant V4 backups/captures/review ZIP, old concept images and the earlier cleanup backup.
 - Every moved file was verified against a SHA256 manifest stored in the archive. No Unity assets were moved. Current V4 source files, approved assembled reference and front animation reference remain.

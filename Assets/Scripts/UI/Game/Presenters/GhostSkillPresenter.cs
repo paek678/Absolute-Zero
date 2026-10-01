@@ -1,6 +1,7 @@
 using AbsoluteZero.Core.Common;
 using AbsoluteZero.Core.Match;
 using AbsoluteZero.Core.Player;
+using AbsoluteZero.Core.Turn;
 using AbsoluteZero.UI.Game.Bridge;
 using AbsoluteZero.UI.Game.Build;
 using TMPro;
@@ -28,14 +29,22 @@ namespace AbsoluteZero.UI.Game.Presenters
 
         byte _lastSentSkill = byte.MaxValue;
         float _skillPendingTimer;
+        uint _nextRequestId;
+        uint _lastRequestId;
         const float SKILL_PENDING_TIMEOUT = 2f;
 
         NetworkList<GhostCooldownNetData> _subscribedList;
+        MatchNetworkState _subscribedState;
+        MatchCompositionRoot _root;
+        bool _attached;
+        bool IsCurrent => _root != null && _root == MatchCompositionRoot.Instance
+            && _root.IsSessionCurrent && _root.gameObject.scene == gameObject.scene;
 
         public void Initialize(IGameDataBridge bridge, ILocalPlayerCommands commands, GameHudRefs refs)
         {
             _bridge = bridge;
             _commands = commands;
+            _root = MatchCompositionRoot.Instance;
 
             _panel = refs.GhostSkillPanel;
             _frostBtn = refs.FrostStrikeButton;
@@ -47,33 +56,60 @@ namespace AbsoluteZero.UI.Game.Presenters
             if (_frostBtn != null) _frostBtn.onClick.AddListener(OnFrostStrikeClicked);
             if (_chillBtn != null) _chillBtn.onClick.AddListener(OnChillAuraClicked);
 
+            Attach();
+        }
+
+        void OnEnable() => Attach();
+        void Attach()
+        {
+            if (_bridge == null || _attached || !isActiveAndEnabled || !IsCurrent) return;
+            _attached = true;
             _bridge.OnPhaseChanged += OnPhaseChanged;
             _bridge.OnMatchSnapshotChanged += OnMatchSnapshotChanged;
+            TurnManager.OnGhostSkillRequestResult += OnSkillRequestResult;
 
             TrySubscribeCooldownList();
             UpdateVisibility(_bridge.CurrentMatch.CurrentPhase);
             UpdateCooldowns();
         }
 
-        void OnDestroy()
+        void OnDisable()
         {
+            _attached = false;
             if (_bridge != null)
             {
                 _bridge.OnPhaseChanged -= OnPhaseChanged;
                 _bridge.OnMatchSnapshotChanged -= OnMatchSnapshotChanged;
             }
+            UnsubscribeCooldownList();
+            UnsubscribeState();
+            TurnManager.OnGhostSkillRequestResult -= OnSkillRequestResult;
+            CancelTargetSelection();
+            ClearPending();
+            if (_panel != null) _panel.SetActive(false);
+        }
+
+        void OnDestroy()
+        {
+            OnDisable();
             if (_frostBtn != null) _frostBtn.onClick.RemoveListener(OnFrostStrikeClicked);
             if (_chillBtn != null) _chillBtn.onClick.RemoveListener(OnChillAuraClicked);
-            UnsubscribeCooldownList();
         }
 
         void TrySubscribeCooldownList()
         {
-            var mcr = MatchCompositionRoot.Instance;
-            if (mcr == null || mcr.NetworkState == null)
+            var mcr = _root;
+            if (!IsCurrent || mcr.NetworkState == null)
             {
                 UnsubscribeCooldownList();
+                UnsubscribeState();
                 return;
+            }
+            if (_subscribedState != mcr.NetworkState)
+            {
+                UnsubscribeState();
+                _subscribedState = mcr.NetworkState;
+                _subscribedState.GhostPossessionSpentMask.OnValueChanged += OnPossessionSpentChanged;
             }
             var current = mcr.NetworkState.GhostCooldowns;
             if (_subscribedList == current) return;
@@ -95,6 +131,28 @@ namespace AbsoluteZero.UI.Game.Presenters
         {
             CheckPendingResolved();
             UpdateCooldowns();
+        }
+
+        void OnPossessionSpentChanged(byte previous, byte current)
+        {
+            CheckPendingResolved();
+            UpdateCooldowns();
+        }
+
+        void OnSkillRequestResult(uint requestId, GhostSkillRequestResult result)
+        {
+            if (!_attached || !IsCurrent || requestId != _lastRequestId) return;
+            ClearPending();
+            if (result != GhostSkillRequestResult.Accepted && _statusText != null)
+                _statusText.text = $"스킬 사용 불가: {result}";
+            UpdateCooldowns();
+        }
+
+        void UnsubscribeState()
+        {
+            if (_subscribedState == null) return;
+            _subscribedState.GhostPossessionSpentMask.OnValueChanged -= OnPossessionSpentChanged;
+            _subscribedState = null;
         }
 
         void OnPhaseChanged(TurnPhase oldPhase, TurnPhase newPhase)
@@ -140,7 +198,9 @@ namespace AbsoluteZero.UI.Game.Presenters
             var mcr = MatchCompositionRoot.Instance;
             if (mcr == null || mcr.NetworkState == null) return;
             byte seat = _bridge.LocalSeatIndex;
-            if (GetCooldown(mcr.NetworkState, seat, _lastSentSkill) > 0)
+            if (GetCooldown(mcr.NetworkState, seat, _lastSentSkill) > 0
+                || (_lastSentSkill == GhostSkillService.SKILL_POSSESSION
+                    && (mcr.NetworkState.GhostPossessionSpentMask.Value & (1 << seat)) != 0))
                 ClearPending();
         }
 
@@ -161,19 +221,20 @@ namespace AbsoluteZero.UI.Game.Presenters
             }
 
             var nState = mcr.NetworkState;
-            byte frostCd = GetCooldown(nState, seat, GhostSkillService.SKILL_FROST_STRIKE);
-            byte chillCd = GetCooldown(nState, seat, GhostSkillService.SKILL_CHILL_AURA);
+            byte frostCd = GetCooldown(nState, seat, GhostSkillService.SKILL_GRUDGE);
+            bool possessionSpent = (nState.GhostPossessionSpentMask.Value & (1 << seat)) != 0;
 
             bool pending = IsSkillPending;
             if (_frostBtn != null)
                 _frostBtn.interactable = frostCd == 0 && !pending;
             if (_chillBtn != null)
-                _chillBtn.interactable = chillCd == 0 && !pending;
+                _chillBtn.interactable = !possessionSpent && !pending;
 
             if (_frostCdText != null)
-                _frostCdText.text = frostCd > 0 ? $"CD: {frostCd}" : "";
+                _frostCdText.text = frostCd > 0
+                    ? $"사용 가능: T+{frostCd}" : "";
             if (_chillCdText != null)
-                _chillCdText.text = chillCd > 0 ? $"CD: {chillCd}" : "";
+                _chillCdText.text = possessionSpent ? "사용 완료" : "경기당 1회";
         }
 
         void SetButtonsDisabled()
@@ -195,12 +256,12 @@ namespace AbsoluteZero.UI.Game.Presenters
 
         void OnFrostStrikeClicked()
         {
-            BeginTargetSelection(GhostSkillService.SKILL_FROST_STRIKE);
+            BeginTargetSelection(GhostSkillService.SKILL_GRUDGE);
         }
 
         void OnChillAuraClicked()
         {
-            BeginTargetSelection(GhostSkillService.SKILL_CHILL_AURA);
+            BeginTargetSelection(GhostSkillService.SKILL_POSSESSION);
         }
 
         void BeginTargetSelection(byte skillIndex)
@@ -214,14 +275,16 @@ namespace AbsoluteZero.UI.Game.Presenters
             {
                 byte seat = _bridge.LocalSeatIndex;
                 if (GetCooldown(mcr.NetworkState, seat, skillIndex) > 0) return;
+                if (skillIndex == GhostSkillService.SKILL_POSSESSION
+                    && (mcr.NetworkState.GhostPossessionSpentMask.Value & (1 << seat)) != 0) return;
             }
 
             _pendingSkill = skillIndex;
             _selectingTarget = true;
             if (_statusText != null)
             {
-                string skillName = skillIndex == GhostSkillService.SKILL_FROST_STRIKE
-                    ? "Frost Strike" : "Chill Aura";
+                string skillName = skillIndex == GhostSkillService.SKILL_GRUDGE
+                    ? "귀신의 한" : "빙의";
                 _statusText.text = $"{skillName} — click a target";
             }
         }
@@ -236,6 +299,7 @@ namespace AbsoluteZero.UI.Game.Presenters
 
         void Update()
         {
+            if (!IsCurrent) { if (_attached) OnDisable(); return; }
             if (IsSkillPending)
             {
                 _skillPendingTimer += Time.unscaledDeltaTime;
@@ -267,8 +331,10 @@ namespace AbsoluteZero.UI.Game.Presenters
             if (target == byte.MaxValue) return;
 
             _lastSentSkill = _pendingSkill;
+            _lastRequestId = ++_nextRequestId;
+            if (_lastRequestId == 0) _lastRequestId = ++_nextRequestId;
             _skillPendingTimer = 0f;
-            _commands.UseGhostSkill(_pendingSkill, target);
+            _commands.UseGhostSkill(_pendingSkill, target, _lastRequestId);
             CancelTargetSelection();
             UpdateCooldowns();
         }

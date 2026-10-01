@@ -1,4 +1,3 @@
-using System.Collections;
 using UnityEngine;
 
 namespace AbsoluteZero.Core.Common
@@ -7,7 +6,10 @@ namespace AbsoluteZero.Core.Common
     {
         public static CameraShake Instance { get; private set; }
 
-        Vector3 _originalPos;
+        OwnedPositionOffset _offset;
+        LocalSettingsService _settings;
+        readonly System.Random _random = new();
+        float _remaining, _magnitude;
 
         void Awake()
         {
@@ -17,8 +19,17 @@ namespace AbsoluteZero.Core.Common
 
         void OnEnable()
         {
-            _originalPos = transform.localPosition;
+            _offset ??= new OwnedPositionOffset(() => transform.localPosition, value => transform.localPosition = value);
+            _settings = LocalSettingsRuntime.Instance?.Service;
+            if (_settings != null) _settings.Changed += OnSettingsChanged;
         }
+
+        void OnDisable()
+        {
+            if (_settings != null) _settings.Changed -= OnSettingsChanged;
+            _remaining = 0; _offset?.Clear();
+        }
+        void OnSettingsChanged() { if (!_settings.Current.Shake) { _remaining = 0; _offset?.Clear(); } }
 
         void OnDestroy()
         {
@@ -27,22 +38,19 @@ namespace AbsoluteZero.Core.Common
 
         public void Shake(float duration, float magnitude)
         {
-            StopAllCoroutines();
-            StartCoroutine(ShakeRoutine(duration, magnitude));
+            if (!isActiveAndEnabled || (_settings != null && !_settings.Current.Shake)) return;
+            _remaining = Mathf.Max(0, duration); _magnitude = Mathf.Max(0, magnitude);
         }
 
-        IEnumerator ShakeRoutine(float duration, float magnitude)
+        void LateUpdate()
         {
-            float elapsed = 0f;
-            while (elapsed < duration)
+            if (_remaining > 0)
             {
-                float x = Random.Range(-1f, 1f) * magnitude;
-                float y = Random.Range(-1f, 1f) * magnitude;
-                transform.localPosition = new Vector3(_originalPos.x + x, _originalPos.y + y, _originalPos.z);
-                elapsed += Time.deltaTime;
-                yield return null;
+                _offset.Apply(new Vector3((float)(_random.NextDouble() * 2 - 1) * _magnitude,
+                    (float)(_random.NextDouble() * 2 - 1) * _magnitude, 0));
+                _remaining -= Time.deltaTime;
             }
-            transform.localPosition = _originalPos;
+            else _offset?.Clear();
         }
     }
 }

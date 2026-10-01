@@ -5,7 +5,9 @@ using AbsoluteZero.Core.Combat;
 using AbsoluteZero.Core.Common;
 using AbsoluteZero.Core.Cosmetic;
 using AbsoluteZero.Core.Match;
+using AbsoluteZero.Core.Maps;
 using AbsoluteZero.Core.Network;
+using AbsoluteZero.Core.Player.Identity;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -35,6 +37,25 @@ namespace AbsoluteZero.Core.Player
         Coroutine _animEndCoroutine;
         Coroutine _deathCoroutine;
         Coroutine _bindCoroutine;
+        IReadOnlyPlayerRegistry _registry;
+        MatchViewBindings _targetViews;
+        bool _roleResolved;
+        bool _localHuman;
+        bool _presentationReady;
+        public bool IsLocalHuman => _roleResolved && LocalMatchPerspective.IsLocalHuman(_playerState);
+        public bool IsPresentationReady => _presentationReady && IsSpawned
+            && (_localHuman ? FPSVisualController.Instance != null && FPSVisualController.Instance.IsPresentationUsable
+                : _visualRoot != null && _animator != null && _animator.runtimeAnimatorController != null
+                    && _itemRenderer != null)
+            && LocalMatchPerspective.TryResolveCurrent(out var perspective)
+            && perspective.TryGetBinding(_playerState.PlayerIndex, out var binding)
+            && ReferenceEquals(binding.State, _playerState);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        public static System.Func<PlayerState, bool> DebugHoldPresentationBinding;
+        public int DebugPresentationBindCount { get; private set; }
+        public string DebugLastCombatTrigger { get; private set; }
+        public int DebugCombatAnimationCount { get; private set; }
+#endif
         bool _isDead;
         bool _deathPresentationCompleted;
         bool _pendingGhostTransition;
@@ -61,7 +82,6 @@ namespace AbsoluteZero.Core.Player
         ParticleSystem _finalBreakParticle;
 
         CosmeticVisualController _cosmeticController;
-        string _pendingCosmeticDto;
 
         readonly WaitForSeconds _waitFlashEnd = new(0.5f);
         readonly WaitForSeconds _waitAnimEnd = new(0.6f);
@@ -76,26 +96,47 @@ namespace AbsoluteZero.Core.Player
         {
             base.OnNetworkSpawn();
             _playerState = GetComponent<PlayerState>();
-
-            if (IsOwner)
-            {
-                Debug.Log($"[PlayerVisual] OnNetworkSpawn IsOwner — initializing FPS");
-                FPSVisualController.EnsureInstance();
-                return;
-            }
-
-            Debug.Log($"[PlayerVisual] OnNetworkSpawn IsRemote — setting up EnemyPlayer visuals");
-            _playerState.CurrentLifeState.OnValueChanged += OnLifeStateChanged;
+            _roleResolved = _presentationReady = false;
+            _registry = MatchCompositionRoot.Instance?.Registry;
+            if (_registry != null) _registry.Registered += OnBindingReady;
+            if (_playerState != null) _playerState.BindingReady += OnBindingReady;
+            TryResolveRole();
             _bindCoroutine = StartCoroutine(DeferredBindRoutine());
+        }
+
+        void OnBindingReady(PlayerBinding binding) => TryResolveRole();
+
+        void TryResolveRole()
+        {
+            if (_roleResolved || !IsSpawned || _playerState == null || !_playerState.IsParticipantReady
+                || !LocalMatchPerspective.TryResolveCurrent(out var perspective)
+                || !perspective.TryGetBinding(_playerState.PlayerIndex, out var binding)
+                || !ReferenceEquals(binding.State, _playerState)) return;
+            _localHuman = perspective.IsHumanSeat(_playerState.PlayerIndex);
+            _roleResolved = true;
+            if (!_localHuman) _playerState.CurrentLifeState.OnValueChanged += OnLifeStateChanged;
         }
 
         public override void OnNetworkDespawn()
         {
-            if (_bindCoroutine != null) StopCoroutine(_bindCoroutine);
+            StopAllCoroutines();
             _bindCoroutine = null;
+            _flashCoroutine = _animEndCoroutine = _deathCoroutine = null;
+            _presentationReady = _roleResolved = false;
+            if (_registry != null) _registry.Registered -= OnBindingReady;
+            _registry = null;
             if (_playerState != null)
+            {
+                _playerState.BindingReady -= OnBindingReady;
                 _playerState.CurrentLifeState.OnValueChanged -= OnLifeStateChanged;
+                FPSVisualController.ReleaseLocalHuman(_playerState);
+            }
+            _cosmeticController?.Clear();
+            _cosmeticController = null;
             ClearSeatMarker();
+            _visualRoot = null;
+            _animator = null;
+            _isDead = _deathPresentationCompleted = _pendingGhostTransition = _isGhost = false;
             base.OnNetworkDespawn();
         }
 
@@ -114,10 +155,12 @@ namespace AbsoluteZero.Core.Player
         IEnumerator DeferredBindRoutine()
         {
             float identityDeadline = Time.realtimeSinceStartup + MatchCompositionRoot.InitializationTimeout;
-            while (ComputeVisualSlot() < 0)
+            while (!_roleResolved)
             {
                 if (!IsSpawned || MatchCompositionRoot.Instance == null) yield break;
                 if (MatchCompositionRoot.Instance.InitializationFailure != null) yield break;
+                TryResolveRole();
+                if (_roleResolved) break;
                 if (Time.realtimeSinceStartup >= identityDeadline)
                 {
                     Debug.LogError("[PlayerVisual] Seat identity was not assigned before the initialization deadline");
@@ -130,14 +173,44 @@ namespace AbsoluteZero.Core.Player
 
             while (elapsed < timeout)
             {
+                if (!IsSpawned || MatchCompositionRoot.Instance == null
+                    || !MatchCompositionRoot.Instance.IsSessionCurrent) yield break;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                if (DebugHoldPresentationBinding?.Invoke(_playerState) == true)
+                {
+                    yield return null;
+                    elapsed += Time.unscaledDeltaTime;
+                    continue;
+                }
+#endif
+                if (_localHuman)
+                {
+                    if (FPSVisualController.TryBindLocalHuman(_playerState))
+                    {
+                        _presentationReady = true;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                        DebugPresentationBindCount++;
+#endif
+                        _bindCoroutine = null;
+                        yield break;
+                    }
+                    yield return null;
+                    elapsed += Time.unscaledDeltaTime;
+                    continue;
+                }
                 int visualSlot = ComputeVisualSlot();
                 if (visualSlot >= 0)
                 {
-                    string slotName = ResolveSlotName(visualSlot);
-                    if (TryBindToSlot(slotName))
+                    var views = MatchViewBindings.ForScene(gameObject.scene);
+                    string slotName = views != null ? views.GetRemoteVisual(visualSlot)?.name : ResolveSlotName(visualSlot);
+                    if (TryBindToSlot(slotName, visualSlot))
                     {
                         Debug.Log($"[PlayerVisual] Bound to {slotName} (slot={visualSlot}, seat={_playerState.PlayerIndex})");
                         SyncGhostFromLifeState(initialSnapshot: true);
+                        _presentationReady = true;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                        DebugPresentationBindCount++;
+#endif
                         _bindCoroutine = null;
                         yield break;
                     }
@@ -153,13 +226,10 @@ namespace AbsoluteZero.Core.Player
 
         int ComputeVisualSlot()
         {
-            if (_playerState == null || _playerState.PlayerIndex < 0) return -1;
-
-            int mySeat = _playerState.PlayerIndex;
-            int localSeat = GetLocalPlayerSeat();
-            if (localSeat < 0) return -1;
-
-            return GetRemoteVisualSlot(mySeat, localSeat);
+            if (_playerState == null || !LocalMatchPerspective.TryResolveCurrent(out var perspective)
+                || !perspective.TryGetBinding(_playerState.PlayerIndex, out var binding)
+                || !ReferenceEquals(binding.State, _playerState)) return -1;
+            return GetRemoteVisualSlot(binding.Identity.PlayerIndex, perspective.HumanSeat);
         }
 
         // Stable seats retain their visual slot even while other seats spawn/despawn.
@@ -178,20 +248,6 @@ namespace AbsoluteZero.Core.Player
             return null;
         }
 
-        int GetLocalPlayerSeat()
-        {
-            var nm = NetworkManager.Singleton;
-            if (nm == null) return -1;
-
-            var allStates = FindObjectsByType<PlayerState>(FindObjectsSortMode.None);
-            foreach (var ps in allStates)
-            {
-                if (ps.NetworkObject != null && ps.NetworkObject.OwnerClientId == nm.LocalClientId)
-                    return ps.PlayerIndex;
-            }
-            return -1;
-        }
-
         string ResolveSlotName(int visualSlot)
         {
             string indexed = $"EnemyPlayer_{visualSlot}";
@@ -201,13 +257,20 @@ namespace AbsoluteZero.Core.Player
             return indexed;
         }
 
-        bool TryBindToSlot(string slotName)
+        bool TryBindToSlot(string slotName, int visualSlot)
         {
-            var enemyGO = FindSceneVisual(slotName);
+            var views = MatchViewBindings.ForScene(gameObject.scene);
+            var enemyGO = views != null ? views.GetRemoteVisual(visualSlot)?.gameObject : FindSceneVisual(slotName);
             if (enemyGO == null) return false;
             var claimed = enemyGO.GetComponent<PlayerSeatMarker>();
             if (claimed != null && claimed.Player != null && claimed.Player != _playerState)
                 return false;
+            if (MapCharacterLayout.TryFind(gameObject.scene, out var layout))
+            {
+                var mode = MatchCompositionRoot.Instance?.ActiveConfig?.Mode ?? GameMode.OneVsOne;
+                if (!layout.TryApplyRemoteVisual(MapCharacterLayout.ModeFor(mode), ComputeVisualSlot(), enemyGO.transform))
+                    return false;
+            }
             enemyGO.SetActive(true);
 
             _visualRoot = enemyGO.transform;
@@ -250,11 +313,8 @@ namespace AbsoluteZero.Core.Player
 
             InitCosmeticController(_visualRoot);
 
-            if (!string.IsNullOrEmpty(_pendingCosmeticDto))
-            {
-                ApplyRemoteCosmetic(_pendingCosmeticDto);
-                _pendingCosmeticDto = null;
-            }
+            // Retained state may arrive before this visual binds; never rely solely on change events.
+            ApplyRemoteCosmetic(_playerState.CosmeticDataNV.Value.ToString());
 
             SetupSeatMarker(enemyGO);
 
@@ -268,6 +328,9 @@ namespace AbsoluteZero.Core.Player
                 marker = visualGO.AddComponent<PlayerSeatMarker>();
             marker.SeatIndex = (byte)_playerState.PlayerIndex;
             marker.Player = _playerState;
+            _targetViews = MatchViewBindings.ForScene(gameObject.scene);
+            if (_registry != null && _registry.TryGetByPlayerIndex(marker.SeatIndex, out var binding))
+                _targetViews?.RegisterTarget(binding, marker);
 
             var col = visualGO.GetComponent<BoxCollider>();
             if (col == null)
@@ -286,6 +349,8 @@ namespace AbsoluteZero.Core.Player
             if (marker != null && marker.Player != _playerState) return;
             if (marker != null)
             {
+                _targetViews?.ReleaseTarget(marker, _playerState);
+                _targetViews = null;
                 marker.Player = null;
                 marker.SeatIndex = byte.MaxValue;
             }
@@ -296,9 +361,10 @@ namespace AbsoluteZero.Core.Player
 
         void BuildFreezeObject(Transform visual)
         {
-            _freeze1 = Resources.Load<Sprite>("freeze1");
-            _freeze2 = Resources.Load<Sprite>("freeze2");
-            _freeze3 = Resources.Load<Sprite>("freeze3");
+            var views = MatchViewBindings.ForScene(gameObject.scene);
+            _freeze1 = views != null ? views.GetSprite(MatchSpriteRole.Freeze1) : Resources.Load<Sprite>("freeze1");
+            _freeze2 = views != null ? views.GetSprite(MatchSpriteRole.Freeze2) : Resources.Load<Sprite>("freeze2");
+            _freeze3 = views != null ? views.GetSprite(MatchSpriteRole.Freeze3) : Resources.Load<Sprite>("freeze3");
             if (_freeze1 == null) return;
 
             var existing = visual.Find("freezeice");
@@ -753,6 +819,10 @@ namespace AbsoluteZero.Core.Player
             }
 
             _animator.SetTrigger(resolved);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            DebugLastCombatTrigger = resolved;
+            DebugCombatAnimationCount++;
+#endif
         }
 
         bool HasParameter(string paramName)
@@ -792,36 +862,13 @@ namespace AbsoluteZero.Core.Player
         {
             _cosmeticController = new CosmeticVisualController();
 
-            var head = root.Find("head") ?? root.Find("Head");
-            var body = root.Find("body") ?? root.Find("Body");
-            var lowerBody = root.Find("lowerbody") ?? root.Find("LowerBody");
-
-            if (head != null) _cosmeticController.SetPartRoot(CosmeticPart.Head, head);
-            if (body != null)
-            {
-                _cosmeticController.SetPartRoot(CosmeticPart.Top, body);
-                _cosmeticController.SetPartRoot(CosmeticPart.Back, body);
-            }
-            if (lowerBody != null) _cosmeticController.SetPartRoot(CosmeticPart.Bottom, lowerBody);
-
-            var tail = root.Find("tail") ?? root.Find("Tail");
-            if (tail == null && lowerBody != null)
-            {
-                var tailGO = new GameObject("tail");
-                tailGO.transform.SetParent(lowerBody, false);
-                tailGO.transform.localPosition = new Vector3(-0.3f, -0.1f, 0f);
-                tail = tailGO.transform;
-            }
-            if (tail != null) _cosmeticController.SetPartRoot(CosmeticPart.Tail, tail);
+            _cosmeticController.BindCharacter(root);
         }
 
         public void ApplyRemoteCosmetic(string json)
         {
-            if (_cosmeticController == null)
-            {
-                _pendingCosmeticDto = json;
-                return;
-            }
+            // Before binding, the retained NetworkVariable is the source of truth.
+            if (_cosmeticController == null) return;
 
             var service = CosmeticProfileService.Instance;
             if (service != null && service.Registry != null)

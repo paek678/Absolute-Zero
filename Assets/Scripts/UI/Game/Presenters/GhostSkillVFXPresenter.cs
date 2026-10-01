@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using AbsoluteZero.Core.Combat;
 using AbsoluteZero.Core.Match;
 using AbsoluteZero.Core.Player;
 using AbsoluteZero.Core.Turn;
@@ -10,31 +11,113 @@ namespace AbsoluteZero.UI.Game.Presenters
     /// <summary>Client-side world presentation for authoritative ghost skill events.</summary>
     public sealed class GhostSkillVFXPresenter : MonoBehaviour
     {
+        public static GhostSkillVFXPresenter Instance { get; private set; }
+        MatchCompositionRoot _match;
+        bool IsCurrent => _match != null && _match == MatchCompositionRoot.Instance
+            && _match.IsSessionCurrent && _match.gameObject.scene == gameObject.scene;
         static Sprite _orbSprite;
         static Sprite _ringSprite;
+        readonly System.Collections.Generic.List<GameObject> _liveEffects = new();
+        readonly GameObject[] _possessionMarkers = new GameObject[4];
 
         public static event Action<byte, byte, byte> PresentationStarted;
         public static event Action<byte, byte, byte> PresentationImpact;
 
-        void OnEnable() => TurnManager.OnGhostSkillUsed += OnGhostSkillUsed;
-        void OnDisable() => TurnManager.OnGhostSkillUsed -= OnGhostSkillUsed;
-
-        void OnGhostSkillUsed(byte ghostSeat, byte skillIndex, byte targetSeat)
+        void OnEnable()
         {
-            StartCoroutine(Play(ghostSeat, skillIndex, targetSeat));
+            _match = MatchCompositionRoot.Instance;
+            Instance = this;
+            TurnManager.OnGhostSkillUsedSequenced += OnGhostSkillUsed;
+            CombatVFXManager.OnSuppressedItemCue += ShowSuppressedItemCue;
         }
 
-        IEnumerator Play(byte ghostSeat, byte skillIndex, byte targetSeat)
+        void OnDisable()
+        {
+            TurnManager.OnGhostSkillUsedSequenced -= OnGhostSkillUsed;
+            CombatVFXManager.OnSuppressedItemCue -= ShowSuppressedItemCue;
+            StopAllCoroutines();
+            foreach (var effect in _liveEffects)
+                if (effect != null) Destroy(effect);
+            _liveEffects.Clear();
+            for (int i = 0; i < _possessionMarkers.Length; i++)
+            {
+                if (_possessionMarkers[i] != null) Destroy(_possessionMarkers[i]);
+                _possessionMarkers[i] = null;
+            }
+            if (Instance == this) Instance = null;
+        }
+
+        void Update()
+        {
+            if (!IsCurrent) { if (Instance == this) OnDisable(); return; }
+            byte possessed = _match.NetworkState?.GhostPossessedMask.Value ?? 0;
+            for (byte seat = 0; seat < _possessionMarkers.Length; seat++)
+            {
+                bool active = (possessed & (1 << seat)) != 0;
+                var marker = _possessionMarkers[seat];
+                if (!active)
+                {
+                    if (marker != null) Destroy(marker);
+                    _possessionMarkers[seat] = null;
+                    continue;
+                }
+                Vector3 position = ResolveSeatPosition(seat) + Vector3.up * 0.15f;
+                if (marker == null)
+                {
+                    marker = CreateSprite($"PossessedSeat{seat}", GetRingSprite(), position,
+                        new Color(0.56f, 0.38f, 0.96f, 0.75f), 114);
+                    marker.transform.localScale = Vector3.one * 1.4f;
+                    _possessionMarkers[seat] = marker;
+                }
+                else marker.transform.position = position;
+            }
+        }
+
+        public void ShowSuppressedItemCue(byte actorSeat)
+        { if (IsCurrent && isActiveAndEnabled) StartCoroutine(PlaySuppressedItemCue(actorSeat)); }
+
+        IEnumerator PlaySuppressedItemCue(byte actorSeat)
+        {
+            var position = ResolveSeatPosition(actorSeat) + Vector3.up * 0.3f;
+            var ring = CreateSprite("PossessionItemSuppressed", GetRingSprite(), position,
+                new Color(0.58f, 0.4f, 1f, 0.92f), 120);
+            _liveEffects.Add(ring);
+            const float duration = 0.6f;
+            float elapsed = 0f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                if (ring != null)
+                {
+                    float t = Mathf.Clamp01(elapsed / duration);
+                    ring.transform.localScale = Vector3.one * Mathf.Lerp(0.5f, 1.7f, t);
+                    var color = ring.GetComponent<SpriteRenderer>().color;
+                    color.a = 0.92f * (1f - t);
+                    ring.GetComponent<SpriteRenderer>().color = color;
+                }
+                yield return null;
+            }
+            _liveEffects.Remove(ring);
+            if (ring != null) Destroy(ring);
+        }
+
+        void OnGhostSkillUsed(byte ghostSeat, byte skillIndex, byte targetSeat, uint castId)
+        {
+            if (!IsCurrent || !isActiveAndEnabled) return;
+            StartCoroutine(Play(ghostSeat, skillIndex, targetSeat, castId));
+        }
+
+        IEnumerator Play(byte ghostSeat, byte skillIndex, byte targetSeat, uint castId)
         {
             Vector3 from = ResolveSeatPosition(ghostSeat) + Vector3.up * 0.8f;
             Vector3 to = ResolveSeatPosition(targetSeat) + Vector3.up * 0.85f;
-            Color color = skillIndex == GhostSkillService.SKILL_FROST_STRIKE
+            Color color = skillIndex == GhostSkillService.SKILL_GRUDGE
                 ? new Color(0.35f, 0.92f, 1f, 0.95f)
                 : new Color(0.45f, 0.55f, 1f, 0.92f);
 
             var cast = CreateSprite("GhostCastPulse", GetRingSprite(), from, color, 116);
-            var projectile = CreateSprite(skillIndex == GhostSkillService.SKILL_FROST_STRIKE
-                ? "FrostStrikeProjectile" : "ChillAuraWisp", GetOrbSprite(), from, color, 118);
+            var projectile = CreateSprite(skillIndex == GhostSkillService.SKILL_GRUDGE
+                ? "GrudgeProjectile" : "PossessionWisp", GetOrbSprite(), from, color, 118);
             PresentationStarted?.Invoke(ghostSeat, skillIndex, targetSeat);
 
             const float duration = 0.72f;
@@ -65,18 +148,19 @@ namespace AbsoluteZero.UI.Game.Presenters
             if (cast != null) Destroy(cast);
             if (projectile != null) Destroy(projectile);
 
-            var impact = CreateSprite(skillIndex == GhostSkillService.SKILL_FROST_STRIKE
-                ? "FrostStrikeImpact" : "ChillAuraImpact", GetRingSprite(), to, color, 119);
+            var impact = CreateSprite(skillIndex == GhostSkillService.SKILL_GRUDGE
+                ? "GrudgeImpact" : "PossessionImpact", GetRingSprite(), to, color, 119);
             PresentationImpact?.Invoke(ghostSeat, skillIndex, targetSeat);
+            CombatVFXManager.Instance?.SignalGhostImpact(castId);
             elapsed = 0f;
-            float impactDuration = skillIndex == GhostSkillService.SKILL_FROST_STRIKE ? 0.55f : 1.1f;
+            float impactDuration = skillIndex == GhostSkillService.SKILL_GRUDGE ? 0.55f : 1.1f;
             while (elapsed < impactDuration)
             {
                 elapsed += Time.unscaledDeltaTime;
                 float t = Mathf.Clamp01(elapsed / impactDuration);
                 if (impact != null)
                 {
-                    float size = skillIndex == GhostSkillService.SKILL_FROST_STRIKE
+                    float size = skillIndex == GhostSkillService.SKILL_GRUDGE
                         ? Mathf.Lerp(0.45f, 3.15f, t)
                         : Mathf.Lerp(0.7f, 4.15f, t);
                     impact.transform.localScale = Vector3.one * size;

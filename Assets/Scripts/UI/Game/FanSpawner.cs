@@ -1,4 +1,5 @@
 using AbsoluteZero.Core.Common;
+using AbsoluteZero.Core.Match;
 using UnityEngine;
 
 namespace AbsoluteZero.UI.Game
@@ -15,12 +16,15 @@ namespace AbsoluteZero.UI.Game
         [SerializeField] Vector2 fanGrilleScale = new(0.92f, 1.02f);
         [SerializeField] float fanBladesZ = -0.015f;
         [SerializeField] float fanGrilleZ = -0.03f;
+        Transform _localFan;
+        Transform _opponentFan;
 
         public void SpawnStayItemFans()
         {
-            var bodySprite = Resources.Load<Sprite>("Fan/fan_body");
-            var bladesSprite = Resources.Load<Sprite>("Fan/fan_blades");
-            var grilleSprite = Resources.Load<Sprite>("Fan/fan_grille");
+            var views = MatchViewBindings.ForScene(gameObject.scene);
+            var bodySprite = views != null ? views.GetSprite(MatchSpriteRole.FanBody) : Resources.Load<Sprite>("Fan/fan_body");
+            var bladesSprite = views != null ? views.GetSprite(MatchSpriteRole.FanBlades) : Resources.Load<Sprite>("Fan/fan_blades");
+            var grilleSprite = views != null ? views.GetSprite(MatchSpriteRole.FanGrille) : Resources.Load<Sprite>("Fan/fan_grille");
             var fallback = GameSprites.GetStayItemSprite();
 
             SpawnFanAt("PlayerStayItem", true, bodySprite, bladesSprite, grilleSprite, fallback);
@@ -30,14 +34,17 @@ namespace AbsoluteZero.UI.Game
         void SpawnFanAt(string markerName, bool isPlayer,
             Sprite bodySprite, Sprite bladesSprite, Sprite grilleSprite, Sprite fallback)
         {
-            var marker = GameObject.Find(markerName);
+            var views = MatchViewBindings.ForScene(gameObject.scene);
+            var marker = views != null ? (isPlayer ? views.LocalStayItem : views.OpponentStayItem)
+                : GameObject.Find(markerName)?.transform;
             if (marker == null) return;
 
             float s = isPlayer ? playerFanScale : enemyFanScale;
             int playerIndex = isPlayer ? -1 : -2;
 
             var go = new GameObject($"{markerName}_Fan");
-            go.transform.SetParent(marker.transform, false);
+            if (isPlayer) _localFan = go.transform; else _opponentFan = go.transform;
+            go.transform.SetParent(marker, false);
             go.transform.localPosition = new Vector3(0f, fanLiftBase * s, 0f);
             go.transform.localScale = isPlayer ? Vector3.one * s : new Vector3(-s, s, s);
 
@@ -92,7 +99,7 @@ namespace AbsoluteZero.UI.Game
 
         void ReapplyFanOne(string fanName, bool isPlayer)
         {
-            var go = GameObject.Find(fanName);
+            var go = (isPlayer ? _localFan : _opponentFan)?.gameObject;
             if (go == null) return;
 
             float s = isPlayer ? playerFanScale : enemyFanScale;

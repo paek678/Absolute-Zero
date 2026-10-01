@@ -1,5 +1,6 @@
 using System.Collections;
 using AbsoluteZero.Core.Audio;
+using AbsoluteZero.Core.Match;
 using UnityEngine;
 
 namespace AbsoluteZero.Core.Common
@@ -35,8 +36,7 @@ namespace AbsoluteZero.Core.Common
 
         void Start()
         {
-            var sp = GameObject.Find("BoxSpawnPoint");
-            if (sp != null) _boxSpawnPoint = sp.transform;
+            _boxSpawnPoint = ResolveSpawn();
 
             Debug.Log($"[Icebox] Start: BoxSpawnPoint={(_boxSpawnPoint != null)}, prefab={(_iceboxPrefab != null)}");
 
@@ -128,15 +128,20 @@ namespace AbsoluteZero.Core.Common
         {
             if (_boxSpawnPoint == null)
             {
-                var spawnPoint = GameObject.Find("BoxSpawnPoint");
-                if (spawnPoint == null) return false;
-                _boxSpawnPoint = spawnPoint.transform;
+                _boxSpawnPoint = ResolveSpawn();
+                if (_boxSpawnPoint == null) return false;
             }
 
             _boxSpawnPoint.position = worldPosition;
             if (_iceboxInstance != null)
                 _iceboxInstance.transform.position = worldPosition;
             return true;
+        }
+
+        Transform ResolveSpawn()
+        {
+            var views = MatchViewBindings.ForScene(gameObject.scene);
+            return views != null ? views.IceboxSpawn : GameObject.Find("BoxSpawnPoint")?.transform;
         }
 
         public void PlayDistribution(Transform[] itemTransforms)

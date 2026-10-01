@@ -20,6 +20,7 @@ namespace AbsoluteZero.Core.Combat
         public readonly EnvironmentType Environment;
         public readonly GameModeRuleSnapshot Rule;
         public readonly ItemEffectRuleSnapshot[] ItemRules;
+        public readonly byte SuppressedItemMask;
 
         public int SeatCount => CurrentTemperatures?.Length ?? 0;
 
@@ -34,7 +35,8 @@ namespace AbsoluteZero.Core.Combat
             bool[] isReady,
             EnvironmentType environment,
             GameModeRuleSnapshot rule,
-            ItemEffectRuleSnapshot[] itemRules)
+            ItemEffectRuleSnapshot[] itemRules,
+            byte suppressedItemMask = 0)
         {
             TemperaturesAtTurnStart = (float[])temperaturesAtTurnStart?.Clone();
             CurrentTemperatures = (float[])currentTemperatures?.Clone();
@@ -47,6 +49,7 @@ namespace AbsoluteZero.Core.Combat
             Environment = environment;
             Rule = rule;
             ItemRules = DeepCopyItemRules(itemRules);
+            SuppressedItemMask = suppressedItemMask;
         }
 
         static InventorySnapshot[] DeepCopyInventories(InventorySnapshot[] source)

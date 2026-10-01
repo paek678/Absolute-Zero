@@ -8,6 +8,7 @@ namespace AbsoluteZero.Core.Item
         public short ItemId;
         public byte RemainingUses;
         public byte Flags;
+        public uint CopyId;
 
         public bool IsUnlimited => RemainingUses == 255;
         public bool IsEmpty => ItemId < 0;
@@ -20,16 +21,18 @@ namespace AbsoluteZero.Core.Item
             serializer.SerializeValue(ref ItemId);
             serializer.SerializeValue(ref RemainingUses);
             serializer.SerializeValue(ref Flags);
+            serializer.SerializeValue(ref CopyId);
         }
 
         public bool Equals(ItemSlotNetData other)
         {
             return ItemId == other.ItemId
                 && RemainingUses == other.RemainingUses
-                && Flags == other.Flags;
+                && Flags == other.Flags
+                && CopyId == other.CopyId;
         }
 
         public override bool Equals(object obj) => obj is ItemSlotNetData other && Equals(other);
-        public override int GetHashCode() => HashCode.Combine(ItemId, RemainingUses, Flags);
+        public override int GetHashCode() => HashCode.Combine(ItemId, RemainingUses, Flags, CopyId);
     }
 }

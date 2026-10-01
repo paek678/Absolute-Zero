@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7af9c70404ac3474cbeed81daa4fa9f3, type: 3}
+  m_Name: top_tanktop1
+  m_EditorClassIdentifier: AbsoluteZero.Core::AbsoluteZero.Core.Cosmetic.CosmeticItemSO
+  _id: top_05
+  _part: 1
+  _type: 1
+  _sprite: {fileID: -1897659340, guid: a63b830f1670eb7408bc026bd4ba74dd, type: 3}
+  _atlas: {fileID: 11400000, guid: 64166637f1bb623419f83afc17aecb75, type: 2}
+  _sortOrderOffset: 0
+  _displayName: "\uBBFC\uC18C\uB9E4 1"

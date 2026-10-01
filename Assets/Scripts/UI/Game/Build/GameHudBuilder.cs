@@ -12,6 +12,7 @@ namespace AbsoluteZero.UI.Game.Build
         static readonly Vector3 READY_BTN_POS = new(0f, 0.35f, 1.2f);
         const float WORLD_CANVAS_SCALE = 0.005f;
         const float OPP_BAR_SCALE = 0.007f;
+        static Sprite _crownSprite;
 
         public static GameHudRefs Build(int seatCount = 2)
         {
@@ -290,7 +291,9 @@ namespace AbsoluteZero.UI.Game.Build
             canvasGO.transform.localScale = Vector3.one * OPP_BAR_SCALE;
 
             canvasGO.AddComponent<CanvasScaler>();
-            canvasGO.AddComponent<GraphicRaycaster>();
+            // Display-only world HUD. Its invisible text rect must not intercept
+            // clicks aimed at the character beneath it.
+            canvasGO.AddComponent<CanvasGroup>().blocksRaycasts = false;
 
             var hpBar = new GameObject("HPBar");
             hpBar.transform.SetParent(canvasGO.transform, false);
@@ -484,9 +487,60 @@ namespace AbsoluteZero.UI.Game.Build
             r.ScoreText.color = new Color(0.9f, 0.9f, 0.6f);
 
             r.CrownText = CreateText(container.transform, "Crown",
-                new Vector2(-80, 0), new Vector2(24, 24), "♛", 18);
-            r.CrownText.color = new Color(1f, 0.85f, 0.2f);
+                new Vector2(-80, 0), new Vector2(24, 24), "", 18);
+            r.CrownText.raycastTarget = false;
+            var crownGO = new GameObject("CrownIcon", typeof(RectTransform));
+            crownGO.transform.SetParent(r.CrownText.transform, false);
+            var crownRect = crownGO.GetComponent<RectTransform>();
+            crownRect.anchorMin = Vector2.zero;
+            crownRect.anchorMax = Vector2.one;
+            crownRect.offsetMin = Vector2.zero;
+            crownRect.offsetMax = Vector2.zero;
+            var crownImage = crownGO.AddComponent<Image>();
+            crownImage.sprite = GetCrownSprite();
+            crownImage.color = new Color(1f, 0.85f, 0.2f);
+            crownImage.raycastTarget = false;
             r.CrownText.gameObject.SetActive(false);
+        }
+
+        static Sprite GetCrownSprite()
+        {
+            if (_crownSprite != null) return _crownSprite;
+            const int size = 48;
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false)
+            {
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp
+            };
+            var outline = new[]
+            {
+                new Vector2(6, 11), new Vector2(5, 36), new Vector2(17, 25),
+                new Vector2(24, 42), new Vector2(31, 25), new Vector2(43, 36),
+                new Vector2(42, 11)
+            };
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                bool inside = y >= 5 && y <= 10 && x >= 6 && x <= 42;
+                if (!inside)
+                {
+                    bool crossing = false;
+                    for (int i = 0, j = outline.Length - 1; i < outline.Length; j = i++)
+                    {
+                        var a = outline[i];
+                        var b = outline[j];
+                        if ((a.y > y) != (b.y > y)
+                            && x < (b.x - a.x) * (y - a.y) / (b.y - a.y) + a.x)
+                            crossing = !crossing;
+                    }
+                    inside = crossing;
+                }
+                texture.SetPixel(x, y, inside ? Color.white : Color.clear);
+            }
+            texture.Apply(false, true);
+            _crownSprite = Sprite.Create(texture, new Rect(0, 0, size, size),
+                new Vector2(0.5f, 0.5f), size);
+            return _crownSprite;
         }
 
         static void BuildCinematicOverlay(GameHudRefs r, Transform root)
@@ -542,7 +596,7 @@ namespace AbsoluteZero.UI.Game.Build
             r.GhostStatusText.color = new Color(0.7f, 0.8f, 1f);
 
             r.FrostStrikeButton = CreateButton(panel.transform, "FrostStrikeBtn",
-                new Vector2(-110, -15), new Vector2(190, 50), "Frost Strike",
+                new Vector2(-110, -15), new Vector2(190, 50), "귀신의 한",
                 new Color(0.2f, 0.4f, 0.7f));
 
             r.FrostStrikeCooldownText = CreateText(panel.transform, "FrostCD",
@@ -550,7 +604,7 @@ namespace AbsoluteZero.UI.Game.Build
             r.FrostStrikeCooldownText.color = new Color(0.6f, 0.7f, 1f);
 
             r.ChillAuraButton = CreateButton(panel.transform, "ChillAuraBtn",
-                new Vector2(110, -15), new Vector2(190, 50), "Chill Aura",
+                new Vector2(110, -15), new Vector2(190, 50), "빙의",
                 new Color(0.3f, 0.2f, 0.6f));
 
             r.ChillAuraCooldownText = CreateText(panel.transform, "ChillCD",

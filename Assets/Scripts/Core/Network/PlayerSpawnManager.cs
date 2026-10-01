@@ -1,8 +1,13 @@
+using System;
+using System.Collections.Generic;
 using AbsoluteZero.Core.Match;
+using AbsoluteZero.Core.Maps;
+using AbsoluteZero.Core.Player;
+using AbsoluteZero.Core.Player.Identity;
+using AbsoluteZero.Core.Session;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using System.Collections.Generic;
 
 namespace AbsoluteZero.Core.Network
 {
@@ -21,353 +26,460 @@ namespace AbsoluteZero.Core.Network
         [SerializeField] private float defaultSpawnRadius = 5f;
         [SerializeField] private float topDownFallbackY = 1f;
 
-        private readonly Dictionary<ulong, NetworkObject> spawnedPlayers = new Dictionary<ulong, NetworkObject>();
-        private readonly HashSet<ulong> pendingSpawnClients = new HashSet<ulong>();
-        private readonly List<Transform> resolvedSpawnPoints = new List<Transform>();
-        private bool networkCallbacksSubscribed;
-        private bool sceneCallbacksSubscribed;
-        private bool dispatcherRegistered;
-        private bool directDisconnectSubscribed;
+        readonly Dictionary<ulong, NetworkObject> spawnedPlayers = new();
+        readonly Dictionary<string, NetworkObject> spawnedParticipants = new(StringComparer.Ordinal);
+        readonly HashSet<ulong> pendingSpawnClients = new();
+        readonly List<Transform> resolvedSpawnPoints = new();
+        NetworkManager _subscribedManager;
+        NetworkSceneManager _subscribedSceneManager;
+        MatchSessionRouter _router;
+        MatchSessionLease _lease;
+        long _bindingVersion;
+        Scene _preparedScene;
+        bool _sceneReady;
+        bool _localLoadPending;
+        string _loadingScene;
+        string _mapLayoutError;
+        Action<ulong> _connected, _disconnected;
+        Action _serverStarted;
+        Action _routerChanged;
+        Action<bool> _stopped;
+        NetworkSceneManager.OnLoadDelegateHandler _sceneLoading;
+        NetworkSceneManager.OnLoadCompleteDelegateHandler _sceneLoaded;
+        DisconnectDispatcher _dispatcher;
+        bool _directDisconnect;
 
-        private void Awake()
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        public bool DebugReverseSoloSpawnOrder { get; set; }
+        public bool DebugIsSceneLoadPending => _localLoadPending;
+        public Action<ulong, string, LoadSceneMode> DebugCaptureSceneLoadCallback()
         {
-            if (Instance == null)
-            {
-                Instance = this;
-                DontDestroyOnLoad(gameObject);
-            }
-            else
-            {
-                Destroy(gameObject);
-            }
+            var callback = _sceneLoaded;
+            return (clientId, scene, mode) => callback?.Invoke(clientId, scene, mode);
+        }
+#endif
+
+        void Awake()
+        {
+            if (Instance != null && Instance != this) { Destroy(gameObject); return; }
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
         }
 
-        private void Start()
+        void Start() => RefreshSubscriptions();
+
+        void Update()
         {
-            RefreshResolvedSpawnPoints();
-            TryRegisterCallbacks();
-            QueueExistingClients();
+            RefreshSubscriptions();
             TrySpawnPendingClients();
         }
 
-        private void Update()
+        void RefreshSubscriptions()
         {
-            if (!networkCallbacksSubscribed || !sceneCallbacksSubscribed)
-                TryRegisterCallbacks();
-
-            if (!dispatcherRegistered)
-                TryRegisterDispatcher();
-
-            if (pendingSpawnClients.Count > 0)
-                TrySpawnPendingClients();
-        }
-
-        private void TryRegisterCallbacks()
-        {
-            var networkManager = NetworkManager.Singleton;
-            if (networkManager == null) return;
-
-            if (!networkCallbacksSubscribed)
+            var nm = NetworkManager.Singleton;
+            var sceneManager = nm != null ? nm.SceneManager : null;
+            var router = AppBootstrapper.Instance?.SessionRouter;
+            var lease = router?.Current;
+            if (ReferenceEquals(nm, _subscribedManager) && ReferenceEquals(sceneManager, _subscribedSceneManager)
+                && ReferenceEquals(router, _router) && ReferenceEquals(lease, _lease))
             {
-                networkManager.OnClientConnectedCallback += OnClientConnectedCallback;
+                RefreshDisconnectRoute();
+                return;
+            }
 
-                if (!dispatcherRegistered)
+            // Existing direct-UTP validation adopts an already-running online session.
+            // This is the same network lifetime, not another match to spawn again.
+            bool adoption = ReferenceEquals(nm, _subscribedManager) && nm != null && nm.IsListening
+                && ReferenceEquals(sceneManager, _subscribedSceneManager) && _lease == null
+                && lease != null && lease.Mode != GameMode.Solo;
+            DetachCallbacks();
+            if (!adoption) ClearSessionRecords();
+            else CloseSceneGate();
+            _subscribedManager = nm;
+            _subscribedSceneManager = sceneManager;
+            _router = router;
+            _lease = lease;
+            long version = ++_bindingVersion;
+            if (router != null)
+            {
+                _routerChanged = () =>
                 {
-                    networkManager.OnClientDisconnectCallback += OnPlayerDisconnected;
-                    directDisconnectSubscribed = true;
-                }
-
-                networkCallbacksSubscribed = true;
+                    if (this == null || !ReferenceEquals(router, _router)
+                        || !ReferenceEquals(router, AppBootstrapper.Instance?.SessionRouter)) return;
+                    if (router.IsStopping) CloseSceneGate();
+                    // TryBegin raises Changed before StartHost. Rebind now so its
+                    // synchronous OnServerStarted/OnLoad cannot fall between Updates.
+                    RefreshSubscriptions();
+                };
+                router.Changed += _routerChanged;
             }
+            if (nm == null) return;
 
-            if (!sceneCallbacksSubscribed && networkManager.SceneManager != null)
+            _connected = clientId =>
             {
-                networkManager.SceneManager.OnLoadComplete += OnSceneLoadComplete;
-                sceneCallbacksSubscribed = true;
+                if (!CanAct(nm, version)) return;
+                pendingSpawnClients.Add(clientId);
+                TrySpawnPendingClients();
+            };
+            _disconnected = clientId =>
+            {
+                if (CanAct(nm, version)) OnPlayerDisconnected(clientId);
+            };
+            _serverStarted = () =>
+            {
+                if (!IsExactBinding(nm, version)) return;
+                RefreshSubscriptions();
+                TrySpawnPendingClients();
+            };
+            _stopped = wasHost =>
+            {
+                if (IsExactBinding(nm, version)) ClearSessionRecords();
+            };
+            nm.OnClientConnectedCallback += _connected;
+            nm.OnServerStarted += _serverStarted;
+            nm.OnServerStopped += _stopped;
+            nm.OnClientStopped += _stopped;
+
+            if (sceneManager != null)
+            {
+                _sceneLoading = (clientId, sceneName, mode, operation) =>
+                {
+                    if (!CanAct(nm, version) || !ReferenceEquals(sceneManager, _subscribedSceneManager)
+                        || clientId != nm.LocalClientId) return;
+                    _localLoadPending = true;
+                    _loadingScene = sceneName;
+                    CloseSceneGate();
+                };
+                _sceneLoaded = (clientId, sceneName, mode) =>
+                {
+                    if (!CanAct(nm, version) || !ReferenceEquals(sceneManager, _subscribedSceneManager)
+                        || clientId != nm.LocalClientId) return;
+                    if (_localLoadPending && !string.Equals(_loadingScene, sceneName, StringComparison.Ordinal)) return;
+                    _localLoadPending = false;
+                    _loadingScene = null;
+                    TrySpawnPendingClients();
+                };
+                sceneManager.OnLoad += _sceneLoading;
+                sceneManager.OnLoadComplete += _sceneLoaded;
             }
+            RefreshDisconnectRoute();
         }
 
-        private void OnDestroy()
+        bool IsExactBinding(NetworkManager nm, long version)
+            => this != null && ReferenceEquals(nm, _subscribedManager) && version == _bindingVersion
+                && ReferenceEquals(nm, NetworkManager.Singleton)
+                && ReferenceEquals(_router, AppBootstrapper.Instance?.SessionRouter)
+                && ReferenceEquals(_lease, _router?.Current);
+
+        bool CanAct(NetworkManager nm, long version)
+            => IsExactBinding(nm, version) && nm != null && nm.IsServer && nm.IsListening
+                && ReferenceEquals(nm.SceneManager, _subscribedSceneManager)
+                && !nm.ShutdownInProgress && (_lease == null || _router.IsCurrent(_lease));
+
+        bool IsSolo => _lease?.Mode == GameMode.Solo || MatchCompositionRoot.Instance?.ActiveConfig?.Mode == GameMode.Solo;
+
+        void RefreshDisconnectRoute()
         {
-            UnregisterCallbacks();
+            var dispatcher = DisconnectDispatcher.Instance;
+            if (!ReferenceEquals(dispatcher, _dispatcher))
+            {
+                if (_dispatcher != null) _dispatcher.ClearDefaultIfCurrent(this);
+                _dispatcher = dispatcher;
+                if (_dispatcher != null) _dispatcher.SetDefaultHandler(this);
+            }
+            bool direct = _dispatcher == null && _subscribedManager != null && _disconnected != null;
+            if (direct == _directDisconnect) return;
+            if (_subscribedManager != null)
+            {
+                if (direct) _subscribedManager.OnClientDisconnectCallback += _disconnected;
+                else _subscribedManager.OnClientDisconnectCallback -= _disconnected;
+            }
+            _directDisconnect = direct;
+        }
+
+        void DetachCallbacks()
+        {
+            // Unsubscribe from the actual publisher, even if Singleton already changed.
+            if (_router != null) _router.Changed -= _routerChanged;
+            _routerChanged = null;
+            var nm = _subscribedManager;
+            if (!ReferenceEquals(nm, null))
+            {
+                nm.OnClientConnectedCallback -= _connected;
+                nm.OnServerStarted -= _serverStarted;
+                nm.OnServerStopped -= _stopped;
+                nm.OnClientStopped -= _stopped;
+                if (_directDisconnect) nm.OnClientDisconnectCallback -= _disconnected;
+            }
+            if (_subscribedSceneManager != null)
+            {
+                _subscribedSceneManager.OnLoad -= _sceneLoading;
+                _subscribedSceneManager.OnLoadComplete -= _sceneLoaded;
+            }
+            _connected = _disconnected = null;
+            _serverStarted = null;
+            _stopped = null;
+            _sceneLoading = null;
+            _sceneLoaded = null;
+            _directDisconnect = false;
+            _subscribedManager = null;
+            _subscribedSceneManager = null;
+        }
+
+        void OnDestroy()
+        {
+            ++_bindingVersion;
+            DetachCallbacks();
+            if (_dispatcher != null) _dispatcher.ClearDefaultIfCurrent(this);
+            ClearSessionRecords();
             if (Instance == this) Instance = null;
         }
 
-        private void UnregisterCallbacks()
+        void CloseSceneGate()
         {
-            var networkManager = NetworkManager.Singleton;
-            if (networkManager == null)
-            {
-                networkCallbacksSubscribed = false;
-                sceneCallbacksSubscribed = false;
-                return;
-            }
-
-            if (networkCallbacksSubscribed)
-            {
-                networkManager.OnClientConnectedCallback -= OnClientConnectedCallback;
-                if (directDisconnectSubscribed)
-                {
-                    networkManager.OnClientDisconnectCallback -= OnPlayerDisconnected;
-                    directDisconnectSubscribed = false;
-                }
-                networkCallbacksSubscribed = false;
-            }
-
-            if (sceneCallbacksSubscribed && networkManager.SceneManager != null)
-            {
-                networkManager.SceneManager.OnLoadComplete -= OnSceneLoadComplete;
-                sceneCallbacksSubscribed = false;
-            }
+            _sceneReady = false;
+            _preparedScene = default;
+            resolvedSpawnPoints.Clear();
+            _mapLayoutError = null;
         }
 
-        private void TryRegisterDispatcher()
+        void ClearSessionRecords()
         {
-            if (dispatcherRegistered) return;
-            if (DisconnectDispatcher.Instance == null) return;
-
-            DisconnectDispatcher.Instance.SetDefaultHandler(this);
-            dispatcherRegistered = true;
-
-            if (directDisconnectSubscribed)
-            {
-                var nm = NetworkManager.Singleton;
-                if (nm != null)
-                    nm.OnClientDisconnectCallback -= OnPlayerDisconnected;
-                directDisconnectSubscribed = false;
-            }
+            pendingSpawnClients.Clear();
+            spawnedPlayers.Clear();
+            spawnedParticipants.Clear();
+            _localLoadPending = false;
+            _loadingScene = null;
+            CloseSceneGate();
         }
 
-        private bool IsGameplayScene()
+        public bool TryPrepareMatchScene(long generation, out string error)
         {
-            return MatchCompositionRoot.Instance != null;
-        }
-
-        private void QueueExistingClients()
-        {
-            var networkManager = NetworkManager.Singleton;
-            if (networkManager == null || !networkManager.IsServer) return;
-
-            foreach (var client in networkManager.ConnectedClientsList)
-            {
-                if (!spawnedPlayers.ContainsKey(client.ClientId))
-                    pendingSpawnClients.Add(client.ClientId);
-            }
-        }
-
-        private void TrySpawnPendingClients()
-        {
-            var networkManager = NetworkManager.Singleton;
-            if (networkManager == null || !networkManager.IsServer) return;
-            if (!IsGameplayScene()) return;
-
+            RefreshSubscriptions();
+            error = null;
             var mcr = MatchCompositionRoot.Instance;
-            var roster = mcr?.Roster;
-
-            if (roster != null && !roster.RosterReady)
-                return;
-
-            QueueExistingClients();
-            if (pendingSpawnClients.Count == 0) return;
-
-            List<ulong> spawnQueue = new List<ulong>(pendingSpawnClients);
-            foreach (ulong clientId in spawnQueue)
+            if (!CanAct(_subscribedManager, _bindingVersion) || mcr == null || !mcr.IsSessionCurrent)
+            { error = "The current server match is not available."; return false; }
+            if (generation != mcr.Generation || (IsSolo && (_lease == null || _lease.Generation != generation)))
+            { error = "The match belongs to a different session generation."; return false; }
+            Scene scene = mcr.gameObject.scene;
+            if (_localLoadPending || !scene.IsValid() || !scene.isLoaded || scene != SceneManager.GetActiveScene())
+            { error = "The current gameplay scene is still loading."; return false; }
+            if (_subscribedSceneManager == null || !_subscribedSceneManager.GetSynchronizedScenes().Contains(scene))
+            { error = "The gameplay scene has not completed network synchronization."; return false; }
+            if (!_sceneReady || _preparedScene != scene)
             {
-                if (!networkManager.ConnectedClients.ContainsKey(clientId))
-                {
-                    pendingSpawnClients.Remove(clientId);
-                    continue;
-                }
+                ResolveSpawnPoints(scene);
+                if (_mapLayoutError != null) { error = _mapLayoutError; return false; }
+                _preparedScene = scene;
+                _sceneReady = true;
+            }
+            return true;
+        }
 
-                if (spawnedPlayers.ContainsKey(clientId))
-                {
-                    pendingSpawnClients.Remove(clientId);
-                    continue;
-                }
+        public bool IsSpawnSceneReady(long generation)
+            => TryPrepareMatchScene(generation, out _);
 
-                SpawnPlayerForClient(clientId, roster);
-                pendingSpawnClients.Remove(clientId);
+        void QueueExistingClients()
+        {
+            foreach (var client in _subscribedManager.ConnectedClientsList)
+                if (!spawnedPlayers.TryGetValue(client.ClientId, out var obj) || obj == null || !obj.IsSpawned)
+                    pendingSpawnClients.Add(client.ClientId);
+        }
+
+        void TrySpawnPendingClients()
+        {
+            if (!CanAct(_subscribedManager, _bindingVersion) || IsSolo) return;
+            var mcr = MatchCompositionRoot.Instance;
+            if (mcr == null || !TryPrepareMatchScene(mcr.Generation, out _)) return;
+            var roster = mcr.Roster;
+            if (roster != null && !roster.RosterReady) return;
+            QueueExistingClients();
+            foreach (ulong clientId in new List<ulong>(pendingSpawnClients))
+            {
+                if (!_subscribedManager.ConnectedClients.ContainsKey(clientId))
+                { pendingSpawnClients.Remove(clientId); continue; }
+                if (SpawnPlayerForClient(clientId, roster)) pendingSpawnClients.Remove(clientId);
             }
         }
 
-        private void OnClientConnectedCallback(ulong clientId)
+        bool SpawnPlayerForClient(ulong clientId, MatchRoster roster)
         {
-            if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsServer) return;
+            if (!spawnPlayerCharacter || playerPrefab == null) return false;
+            if (spawnedPlayers.TryGetValue(clientId, out var existing) && existing != null && existing.IsSpawned) return true;
+            if (_subscribedManager.ConnectedClients[clientId].PlayerObject != null)
+            {
+                spawnedPlayers[clientId] = _subscribedManager.ConnectedClients[clientId].PlayerObject;
+                return true;
+            }
+            byte seat = 0;
+            bool hasSeat = roster != null && roster.TryGetSeatByClientId(clientId, out seat);
+            var position = hasSeat ? GetSpawnPositionBySeat(seat) : GetSpawnPositionLegacy(clientId);
+            var instance = Instantiate(playerPrefab, position, Quaternion.identity);
+            SceneManager.MoveGameObjectToScene(instance, _preparedScene);
+            var networkObject = instance.GetComponent<NetworkObject>();
+            if (networkObject == null)
+            {
+                Debug.LogError("[PlayerSpawnManager] Player prefab is missing NetworkObject.");
+                Destroy(instance);
+                return false;
+            }
+            networkObject.SpawnAsPlayerObject(clientId, destroyWithScene: true);
+            spawnedPlayers[clientId] = networkObject;
+            return true;
+        }
 
-            pendingSpawnClients.Add(clientId);
-            Debug.Log($"[PlayerSpawnManager] Client {clientId} connected, queued for spawn.");
-            TrySpawnPendingClients();
+        public bool TrySpawnSoloParticipants(IReadOnlyList<MatchParticipantDescriptor> participants, out string error)
+        {
+            error = null;
+            RefreshSubscriptions();
+            var mcr = MatchCompositionRoot.Instance;
+            if (!IsSolo || mcr == null || mcr.ActiveConfig?.Mode != GameMode.Solo || mcr.Roster == null || !mcr.Roster.RosterReady)
+            { error = "Solo participants require the current ready Solo roster."; return false; }
+            if (!TryPrepareMatchScene(mcr.Generation, out error)) return false;
+            if (!spawnPlayerCharacter || playerPrefab == null || playerPrefab.GetComponent<NetworkObject>() == null
+                || playerPrefab.GetComponent<PlayerState>() == null || playerPrefab.GetComponent<PlayerInventory>() == null)
+            { error = "The Solo player prefab requires NetworkObject, PlayerState and PlayerInventory."; return false; }
+            if (!MatchParticipantDescriptor.TryValidateSet(participants, mcr.ActiveConfig.RequiredPlayerCount, out var bySeat, out error))
+                return false;
+            int humans = 0;
+            foreach (var participant in bySeat)
+            {
+                if (participant.Generation != mcr.Generation || !ContainsDescriptor(mcr.Participants, participant))
+                { error = "A participant does not match the current Solo roster."; return false; }
+                if (participant.Seat >= resolvedSpawnPoints.Count || resolvedSpawnPoints[participant.Seat] == null)
+                { error = $"The current scene has no spawn marker for seat {participant.Seat}."; return false; }
+                if (participant.ControllerKind == PlayerControllerKind.Human)
+                {
+                    humans++;
+                    if (!participant.ClientId.HasValue || participant.ClientId.Value != _subscribedManager.LocalClientId
+                        || !_subscribedManager.ConnectedClients.ContainsKey(participant.ClientId.Value))
+                    { error = "The Solo human must use the connected local host client."; return false; }
+                    var player = _subscribedManager.ConnectedClients[participant.ClientId.Value].PlayerObject;
+                    if (player != null && (!spawnedParticipants.TryGetValue(participant.ParticipantId, out var tracked) || tracked != player))
+                    { error = "The Solo host already owns another player object."; return false; }
+                }
+            }
+            if (humans != 1 || bySeat.Length != 2)
+            { error = "Solo requires one human and one bot."; return false; }
+
+            for (int index = 0; index < bySeat.Length; index++)
+            {
+                int order = index;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                if (DebugReverseSoloSpawnOrder) order = bySeat.Length - index - 1;
+#endif
+                var participant = bySeat[order];
+                if (spawnedParticipants.TryGetValue(participant.ParticipantId, out var existing) && existing != null && existing.IsSpawned)
+                    continue;
+                GameObject instance = null;
+                try
+                {
+                    if (!CanAct(_subscribedManager, _bindingVersion))
+                    { error = "Solo session stopped during participant creation."; return false; }
+                    instance = Instantiate(playerPrefab, GetSpawnPositionBySeat(participant.Seat), Quaternion.identity);
+                    SceneManager.MoveGameObjectToScene(instance, _preparedScene);
+                    var state = instance.GetComponent<PlayerState>();
+                    var networkObject = instance.GetComponent<NetworkObject>();
+                    state.ConfigureParticipant(participant);
+                    if (participant.ControllerKind == PlayerControllerKind.Human)
+                        networkObject.SpawnAsPlayerObject(participant.ClientId.Value, destroyWithScene: true);
+                    else networkObject.Spawn(destroyWithScene: true);
+                    spawnedParticipants[participant.ParticipantId] = networkObject;
+                    if (participant.ClientId.HasValue) spawnedPlayers[participant.ClientId.Value] = networkObject;
+                    if (mcr.InitializationFailure != null)
+                    { error = mcr.InitializationFailure; return false; }
+                }
+                catch (Exception exception)
+                {
+                    // Spawned objects remain owned by this session for the caller's NGO rollback.
+                    if (instance != null && !instance.GetComponent<NetworkObject>().IsSpawned) Destroy(instance);
+                    error = "Solo participant creation failed: " + exception.Message;
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        static bool ContainsDescriptor(IReadOnlyList<MatchParticipantDescriptor> participants, MatchParticipantDescriptor expected)
+        {
+            foreach (var descriptor in participants) if (expected.Equals(descriptor)) return true;
+            return false;
         }
 
         public void OnPlayerDisconnected(ulong clientId)
         {
-            if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsServer) return;
-
+            if (!CanAct(_subscribedManager, _bindingVersion)) return;
+            // Multi's dispatcher calls its roster first, preserving the ghost snapshot before despawn.
             pendingSpawnClients.Remove(clientId);
-            Debug.Log($"[PlayerSpawnManager] Client {clientId} disconnected, despawning player...");
-            DespawnPlayerForClient(clientId);
-        }
-
-        private void OnSceneLoadComplete(ulong clientId, string sceneName, LoadSceneMode loadSceneMode)
-        {
-            var networkManager = NetworkManager.Singleton;
-            if (networkManager == null || !networkManager.IsServer) return;
-            if (clientId != networkManager.LocalClientId) return;
-
-            RefreshResolvedSpawnPoints();
-            TrySpawnPendingClients();
-        }
-
-        private void SpawnPlayerForClient(ulong clientId, MatchRoster roster)
-        {
-            if (!spawnPlayerCharacter) return;
-
-            if (playerPrefab == null)
-            {
-                Debug.LogError("[PlayerSpawnManager] Player prefab is not assigned.");
-                return;
-            }
-
-            if (spawnedPlayers.ContainsKey(clientId))
-            {
-                Debug.LogWarning($"[PlayerSpawnManager] Player already spawned for client {clientId}");
-                return;
-            }
-
-            byte seat = 0;
-            bool usedSeat = roster != null && roster.TryGetSeatByClientId(clientId, out seat);
-            Vector3 spawnPosition = usedSeat
-                ? GetSpawnPositionBySeat(seat)
-                : GetSpawnPositionLegacy(clientId);
-
-            GameObject playerInstance = Instantiate(playerPrefab, spawnPosition, Quaternion.identity);
-
-            NetworkObject networkObject = playerInstance.GetComponent<NetworkObject>();
-            if (networkObject == null)
-            {
-                Debug.LogError("[PlayerSpawnManager] Player prefab is missing NetworkObject.");
-                Destroy(playerInstance);
-                return;
-            }
-
-            networkObject.SpawnAsPlayerObject(clientId);
-            spawnedPlayers[clientId] = networkObject;
-
-            Debug.Log($"[PlayerSpawnManager] Player spawned for client {clientId} at {spawnPosition}" +
-                      (usedSeat ? $" (seat={seat})" : " (legacy)"));
-        }
-
-        private void DespawnPlayerForClient(ulong clientId)
-        {
-            if (spawnedPlayers.TryGetValue(clientId, out NetworkObject networkObject))
-            {
-                if (networkObject != null && networkObject.IsSpawned)
-                {
-                    networkObject.Despawn();
-                    Destroy(networkObject.gameObject);
-                }
-
-                spawnedPlayers.Remove(clientId);
-                Debug.Log($"[PlayerSpawnManager] Player despawned for client {clientId}");
-            }
+            if (!spawnedPlayers.TryGetValue(clientId, out var obj)) return;
+            spawnedPlayers.Remove(clientId);
+            if (obj != null && obj.IsSpawned) obj.Despawn();
         }
 
         public Vector3 GetSpawnPositionBySeat(byte seatIndex)
         {
             if (seatIndex < resolvedSpawnPoints.Count && resolvedSpawnPoints[seatIndex] != null)
                 return resolvedSpawnPoints[seatIndex].position;
-
             return GetFallbackSpawn(seatIndex);
         }
 
-        private Vector3 GetSpawnPositionLegacy(ulong clientId)
+        Vector3 GetSpawnPositionLegacy(ulong clientId)
         {
             if (resolvedSpawnPoints.Count > 0)
             {
-                int index = (int)(clientId % (ulong)resolvedSpawnPoints.Count);
-                if (resolvedSpawnPoints[index] != null)
-                    return resolvedSpawnPoints[index].position;
-
-                resolvedSpawnPoints.RemoveAll(t => t == null);
-                if (resolvedSpawnPoints.Count > 0)
-                {
-                    index = (int)(clientId % (ulong)resolvedSpawnPoints.Count);
-                    return resolvedSpawnPoints[index].position;
-                }
+                var point = resolvedSpawnPoints[(int)(clientId % (ulong)resolvedSpawnPoints.Count)];
+                if (point != null) return point.position;
             }
-
             return GetFallbackSpawn(clientId);
         }
 
-
         public void RefreshResolvedSpawnPoints()
         {
-            resolvedSpawnPoints.Clear();
-            HashSet<Transform> unique = new HashSet<Transform>();
-
-            if (spawnPoints != null)
-            {
-                foreach (Transform point in spawnPoints)
-                {
-                    if (point == null) continue;
-                    if (unique.Add(point))
-                        resolvedSpawnPoints.Add(point);
-                }
-            }
-
-            if (useSceneSpawnPointMarkers)
-            {
-                PlayerSpawnPoint3D[] markers = FindObjectsByType<PlayerSpawnPoint3D>(
-                    includeInactiveSceneSpawnMarkers ? FindObjectsInactive.Include : FindObjectsInactive.Exclude,
-                    FindObjectsSortMode.None
-                );
-                if (markers != null && markers.Length > 0)
-                {
-                    System.Array.Sort(markers, (a, b) => a.Order.CompareTo(b.Order));
-                    foreach (PlayerSpawnPoint3D marker in markers)
-                    {
-                        if (marker == null) continue;
-                        Transform markerTransform = marker.transform;
-                        if (unique.Add(markerTransform))
-                            resolvedSpawnPoints.Add(markerTransform);
-                    }
-                }
-            }
-
-            Debug.Log($"[PlayerSpawnManager] Resolved spawn points: {resolvedSpawnPoints.Count}");
+            CloseSceneGate();
+            var mcr = MatchCompositionRoot.Instance;
+            if (mcr != null) TryPrepareMatchScene(mcr.Generation, out _);
         }
 
-        private Vector3 GetFallbackSpawn(ulong clientId)
+        void ResolveSpawnPoints(Scene scene)
         {
-            Vector3 center = new Vector3(0f, topDownFallbackY, 0f);
-            float angleDeg = (clientId + 1) * 137.5f;
-            float angleRad = angleDeg * Mathf.Deg2Rad;
-            Vector3 offset = new Vector3(
-                Mathf.Cos(angleRad) * defaultSpawnRadius,
-                0f,
-                Mathf.Sin(angleRad) * defaultSpawnRadius
-            );
-            return center + offset;
+            resolvedSpawnPoints.Clear();
+            _mapLayoutError = null;
+            if (MapCharacterLayout.TryFind(scene, out var layout))
+            {
+                var mode = MatchCompositionRoot.Instance?.ActiveConfig?.Mode ?? GameMode.OneVsOne;
+                if (layout.TryGetSpawnAnchors(MapCharacterLayout.ModeFor(mode), out var anchors, out _mapLayoutError))
+                    resolvedSpawnPoints.AddRange(anchors);
+                return;
+            }
+            var unique = new HashSet<Transform>();
+            if (spawnPoints != null)
+                foreach (var point in spawnPoints)
+                    if (point != null && point.gameObject.scene == scene && unique.Add(point)) resolvedSpawnPoints.Add(point);
+            if (!useSceneSpawnPointMarkers) return;
+            var markers = new List<PlayerSpawnPoint3D>();
+            foreach (var root in scene.GetRootGameObjects())
+                markers.AddRange(root.GetComponentsInChildren<PlayerSpawnPoint3D>(includeInactiveSceneSpawnMarkers));
+            markers.Sort((a, b) => a.Order.CompareTo(b.Order));
+            foreach (var marker in markers)
+                if (marker != null && (includeInactiveSceneSpawnMarkers || marker.gameObject.activeInHierarchy)
+                    && unique.Add(marker.transform)) resolvedSpawnPoints.Add(marker.transform);
+        }
+
+        Vector3 GetFallbackSpawn(ulong clientId)
+        {
+            float angle = (clientId + 1) * 137.5f * Mathf.Deg2Rad;
+            return new Vector3(Mathf.Cos(angle) * defaultSpawnRadius, topDownFallbackY, Mathf.Sin(angle) * defaultSpawnRadius);
         }
 
         public NetworkObject GetPlayerForClient(ulong clientId)
-        {
-            spawnedPlayers.TryGetValue(clientId, out NetworkObject player);
-            return player;
-        }
-
-        public IReadOnlyDictionary<ulong, NetworkObject> GetAllPlayers()
-        {
-            return spawnedPlayers;
-        }
-
+            => spawnedPlayers.TryGetValue(clientId, out var player) ? player : null;
+        public IReadOnlyDictionary<ulong, NetworkObject> GetAllPlayers() => spawnedPlayers;
         public Vector3 GetRespawnPosition(ulong clientId)
         {
-            var mcr = MatchCompositionRoot.Instance;
-            var roster = mcr?.Roster;
-            if (roster != null && roster.TryGetSeatByClientId(clientId, out byte seat))
-                return GetSpawnPositionBySeat(seat);
-            return GetSpawnPositionLegacy(clientId);
+            var roster = MatchCompositionRoot.Instance?.Roster;
+            return roster != null && roster.TryGetSeatByClientId(clientId, out byte seat)
+                ? GetSpawnPositionBySeat(seat) : GetSpawnPositionLegacy(clientId);
         }
     }
 }

@@ -1,5 +1,6 @@
 using AbsoluteZero.Core.Common;
 using AbsoluteZero.Core.Item;
+using AbsoluteZero.Core.Match;
 using AbsoluteZero.Core.Player;
 using Unity.Netcode;
 using UnityEngine;
@@ -77,7 +78,11 @@ namespace AbsoluteZero.Core.Solo
                 _readyDelay -= Time.deltaTime;
                 if (_readyDelay <= 0f)
                 {
-                    _playerState.PressReadyServerRpc();
+                    var state = MatchCompositionRoot.Instance?.NetworkState;
+                    var grant = state?.DeathmatchGrant.Value ?? default;
+                    _playerState.PressReadyServerRpc(state?.GhostMatchEpoch.Value ?? 0,
+                        state?.GhostRoundEpoch.Value ?? 0,
+                        grant.Stage == DeathmatchGrantStage.Completed ? grant.TransactionId : 0);
                     _readyDone = true;
                 }
             }
@@ -109,23 +114,25 @@ namespace AbsoluteZero.Core.Solo
             if (_playerState != null) _playerState.OnMiniGameStart -= OnMiniGameStart;
         }
 
-        void OnMiniGameStart(byte slotIndex, MiniGameType type, float timeLimit, int goal)
+        void OnMiniGameStart(MiniGameTicket ticket)
         {
             if (_playerState == null || !_playerState.IsSpawned) return;
-            float delay = _difficulty == BotDifficulty.Hard ? 0.3f : Random.Range(0.5f, timeLimit * 0.5f);
+            float delay = _difficulty == BotDifficulty.Hard ? 0.3f : Random.Range(0.5f, ticket.TimeLimit * 0.5f);
             if (_miniGameCoroutine != null) StopCoroutine(_miniGameCoroutine);
-            _miniGameCoroutine = StartCoroutine(AutoSubmitMiniGame(slotIndex, delay));
+            _miniGameCoroutine = StartCoroutine(AutoSubmitMiniGame(ticket, delay));
         }
 
-        System.Collections.IEnumerator AutoSubmitMiniGame(byte slotIndex, float delay)
+        System.Collections.IEnumerator AutoSubmitMiniGame(MiniGameTicket ticket, float delay)
         {
             float elapsed = 0f;
             while (elapsed < delay) { elapsed += Time.deltaTime; yield return null; }
             if (_playerState != null && _playerState.IsSpawned)
             {
                 bool success = _difficulty != BotDifficulty.Easy || Random.value > 0.3f;
-                _playerState.SubmitMiniGameResultServerRpc(slotIndex, success);
-                Debug.Log($"[Bot] Mini-game auto-submit: slot={slotIndex}, success={success}");
+                _playerState.SubmitMiniGameResultServerRpc(ticket.Slot, success,
+                    ticket.MatchEpoch, ticket.RoundEpoch, ticket.Turn,
+                    ticket.AttemptId, ticket.CopyId);
+                Debug.Log($"[Bot] Mini-game auto-submit: slot={ticket.Slot}, success={success}");
             }
             _miniGameCoroutine = null;
         }
@@ -154,7 +161,11 @@ namespace AbsoluteZero.Core.Solo
 
             if (bestSlot >= 0)
             {
-                _playerState.SelectItemServerRpc((byte)bestSlot);
+                var state = MatchCompositionRoot.Instance?.NetworkState;
+                _playerState.SelectItemServerRpc((byte)bestSlot,
+                      ActionIntent.NoTarget, inventory.SlotStates[bestSlot].CopyId,
+                      state?.GhostMatchEpoch.Value ?? 0, state?.GhostRoundEpoch.Value ?? 0,
+                      state?.InventoryReadModel?.CommittedGrantTransaction ?? 0);
                 Debug.Log($"[Bot] Selected slot {bestSlot} (score={bestScore:F1})");
             }
         }

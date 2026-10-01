@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 64d3b428240bc714b9354983f6ec4325, type: 3}
+  m_Name: ForestNight
+  m_EditorClassIdentifier: AbsoluteZero.Core::AbsoluteZero.Core.Maps.MapDefinitionSO
+  _id: forest-night
+  _displayName: "\uBC24 \uC232 \uB370\uD06C"
+  _environmentPrefab: {fileID: 6858898314045437474, guid: b34f511188206e54ea0e297d56608b49, type: 3}
+  _lighting:
+    AmbientMode: 1
+    AmbientSkyColor: {r: 0.14, g: 0.2, b: 0.31, a: 1}
+    AmbientEquatorColor: {r: 0.1, g: 0.14, b: 0.22, a: 1}
+    AmbientGroundColor: {r: 0.05, g: 0.065, b: 0.1, a: 1}
+    AmbientIntensity: 1
+    Skybox: {fileID: 0}
+    ReflectionIntensity: 0.2
+    ReflectionMode: 0
+    CustomReflection: {fileID: 0}
+    ReflectionResolution: 128
+    ReflectionBounces: 1
+    Fog: 0
+    FogColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+    FogMode: 3
+    FogDensity: 0.01
+    FogStart: 0
+    FogEnd: 300
+    SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
+    UseMapDirectionalAsSun: 1

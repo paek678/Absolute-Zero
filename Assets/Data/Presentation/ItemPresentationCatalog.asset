@@ -1,0 +1,124 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 156b16b22c0a62f48942e1b71194bc5b, type: 3}
+  m_Name: ItemPresentationCatalog
+  m_EditorClassIdentifier: AbsoluteZero.Core::AbsoluteZero.Core.Common.ItemPresentationCatalogSO
+  entries:
+  - item: {fileID: 11400000, guid: fe08e0a080cc95c47830ea27f2ce42c2, type: 2}
+    sprite: {fileID: 21300000, guid: 0ac143814519bb341b0fd3023f62910b, type: 3}
+    audioOverride: {fileID: 0}
+    choreography: 0
+  - item: {fileID: 11400000, guid: 1ec5571502df09f48b404caef7c9e8e7, type: 2}
+    sprite: {fileID: 21300000, guid: ee0d0fe34d70b0947a1fd821c1536716, type: 3}
+    audioOverride: {fileID: 0}
+    choreography: 0
+  - item: {fileID: 11400000, guid: a8ac347a1e934484da41ab0867a910e1, type: 2}
+    sprite: {fileID: 21300000, guid: 186d8179fba766f44a8467bf47a66706, type: 3}
+    audioOverride: {fileID: 8300000, guid: 6f452d1d1535ec644b8b7d49335a1bbb, type: 3}
+    choreography: 0
+  - item: {fileID: 11400000, guid: 11ccba00b4b187142a962b017e7a5d6c, type: 2}
+    sprite: {fileID: 21300000, guid: 06eeb138ed2fd1946a400921e6d36f33, type: 3}
+    audioOverride: {fileID: 8300000, guid: eef0b958ba8b0f043bbbdcbb9e61d623, type: 3}
+    choreography: 3
+  - item: {fileID: 11400000, guid: ac27b589e67e13342a7b1ecad5e315bd, type: 2}
+    sprite: {fileID: 21300000, guid: e0e340632dd30c94aaf26be57913018e, type: 3}
+    audioOverride: {fileID: 0}
+    choreography: 0
+  - item: {fileID: 11400000, guid: 698ea637984b73d42b7f9bcb8f5c3562, type: 2}
+    sprite: {fileID: 21300000, guid: 6fd5b776b70aaa148ab79073317fba67, type: 3}
+    audioOverride: {fileID: 0}
+    choreography: 1
+  - item: {fileID: 11400000, guid: b458012dc3906684abbf096d953ca688, type: 2}
+    sprite: {fileID: 21300000, guid: 679f83c88ecf6744f84494d9d5f59bce, type: 3}
+    audioOverride: {fileID: 0}
+    choreography: 1
+  - item: {fileID: 11400000, guid: c4d117d1b18797346af4c169895f9fe2, type: 2}
+    sprite: {fileID: 21300000, guid: 0fb62e73237477b4a9e0be28141f99ab, type: 3}
+    audioOverride: {fileID: 0}
+    choreography: 0
+  - item: {fileID: 11400000, guid: 191e0ef4e55bdff44bacd25b29af03e2, type: 2}
+    sprite: {fileID: 21300000, guid: 2a15dd286ada7984f9beab4b10934fe8, type: 3}
+    audioOverride: {fileID: 0}
+    choreography: 2
+  - item: {fileID: 11400000, guid: 6d1695a5f576f1e47acb5083171515e6, type: 2}
+    sprite: {fileID: 21300000, guid: 7d418d0178f8aba419a357479b576835, type: 3}
+    audioOverride: {fileID: 8300000, guid: 6f452d1d1535ec644b8b7d49335a1bbb, type: 3}
+    choreography: 0
+  - item: {fileID: 11400000, guid: 3f14b1be8e136d34980fe47470304dff, type: 2}
+    sprite: {fileID: 21300000, guid: ed983f2f12c36a342bda9b8156ba52d4, type: 3}
+    audioOverride: {fileID: 0}
+    choreography: 0
+  - item: {fileID: 11400000, guid: 714a10f70bc33a447865090febe0a58a, type: 2}
+    sprite: {fileID: 21300000, guid: dc8d16b9523226e448988ae510594283, type: 3}
+    audioOverride: {fileID: 0}
+    choreography: 0
+  - item: {fileID: 11400000, guid: 5da4e056e33440b46805cd78c7d81fa0, type: 2}
+    sprite: {fileID: 21300000, guid: 0fe46daae45a2e14cb19b12ae65c2e54, type: 3}
+    audioOverride: {fileID: 0}
+    choreography: 0
+  - item: {fileID: 11400000, guid: b6386604625a0e841ab408e838c4b4a9, type: 2}
+    sprite: {fileID: 21300000, guid: 04f0e34d1fb24850882b4b61f5b1f840, type: 3}
+    audioOverride: {fileID: 0}
+    choreography: 1
+  - item: {fileID: 11400000, guid: 46afc8ce31a5cc643a2b09a77e4fe68b, type: 2}
+    sprite: {fileID: 21300000, guid: 20b3c7572a4ddf041835caeecb912380, type: 3}
+    audioOverride: {fileID: 8300000, guid: 6f452d1d1535ec644b8b7d49335a1bbb, type: 3}
+    choreography: 0
+  - item: {fileID: 11400000, guid: f6945e7d7d1d57648996223888e2aafc, type: 2}
+    sprite: {fileID: 21300000, guid: d9c678e72e963754bb9375c1d0ce2766, type: 3}
+    audioOverride: {fileID: 0}
+    choreography: 4
+  - item: {fileID: 11400000, guid: f15e28658bbf6524dab61068c6558215, type: 2}
+    sprite: {fileID: 21300000, guid: 3a5c28b115214d818eff46a25359de51, type: 3}
+    audioOverride: {fileID: 8300000, guid: 42e6e353678cf2f4f8640d9387914842, type: 3}
+    choreography: 5
+  - item: {fileID: 11400000, guid: e00d878160acb6b4eb4a02f7d8f9a279, type: 2}
+    sprite: {fileID: 21300000, guid: d449ac55de98c8c43b79384bb2799461, type: 3}
+    audioOverride: {fileID: 8300000, guid: 97ee86d7e6b89e34883ebde7b3cbc4b5, type: 3}
+    choreography: 0
+  - item: {fileID: 11400000, guid: 6bd5804b5593b34468337afee6213c75, type: 2}
+    sprite: {fileID: 21300000, guid: 7d5fb5bd51f047de8783e4b715f7593d, type: 3}
+    audioOverride: {fileID: 8300000, guid: 40b5de3a6ce6d064cae536ea0464d9a3, type: 3}
+    choreography: 0
+  - item: {fileID: 11400000, guid: 6b745d0ce72e6e940842949d9a31fe24, type: 2}
+    sprite: {fileID: 21300000, guid: 00828bd375c8564438d2ac98723491a3, type: 3}
+    audioOverride: {fileID: 0}
+    choreography: 0
+  - item: {fileID: 11400000, guid: 3d2062c58ae8c904f8dc663447f4bdab, type: 2}
+    sprite: {fileID: 21300000, guid: b9bd341a75124db49bb910c662e56127, type: 3}
+    audioOverride: {fileID: 0}
+    choreography: 6
+  triggerAudio:
+  - trigger: swing
+    clip: {fileID: 8300000, guid: b5512a5577354b244ae872d03ea773d5, type: 3}
+  - trigger: fan
+    clip: {fileID: 8300000, guid: 6350825364c372949b4a4ec20df34a2d, type: 3}
+  - trigger: gun
+    clip: {fileID: 8300000, guid: 9fbd34862c4546f4aa91650b2d13c6c2, type: 3}
+  - trigger: drink
+    clip: {fileID: 8300000, guid: 6f452d1d1535ec644b8b7d49335a1bbb, type: 3}
+  - trigger: eat
+    clip: {fileID: 8300000, guid: c07b4adbed9fee94b8ea324cb5d5b20b, type: 3}
+  - trigger: feed
+    clip: {fileID: 8300000, guid: cf0947cb3f6f99449853b171e12e74da, type: 3}
+  - trigger: hug
+    clip: {fileID: 8300000, guid: 4803099b34674c3448beecdfdcfe9092, type: 3}
+  - trigger: defence
+    clip: {fileID: 8300000, guid: fe35b0b313ad8864096bdb3a0e28ca23, type: 3}
+  - trigger: mask
+    clip: {fileID: 8300000, guid: 16ec0524c08aafe43988ff23092314a1, type: 3}
+  - trigger: tape
+    clip: {fileID: 8300000, guid: 229314c366ffea742b8e8202dba6d246, type: 3}
+  - trigger: card
+    clip: {fileID: 8300000, guid: 4a10fdac14470af4081b42ee02d145e2, type: 3}
+  - trigger: heal
+    clip: {fileID: 8300000, guid: 97ee86d7e6b89e34883ebde7b3cbc4b5, type: 3}

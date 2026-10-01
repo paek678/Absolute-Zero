@@ -4,6 +4,8 @@
 > **Visual**: 3D Korean pavilion (정자) + 2D hand-drawn characters/items
 > **Network**: Host-authoritative, Unity Relay (1v1/Multi) / Local (Solo)
 
+> **Scope update — 2026-09-29:** Tarot will not be implemented. Bot starting stats/loadouts and difficulty selection belong to later BT work. Customization uses sprite/atlas replacement without color editing. The finished Closet follows the game-wide refactor. These decisions override older Tarot/color proposals below; current runtime availability is not yet changed by this documentation update. See [PLAN 037](Plans/PLAN_037_gameplay_modular_refactor.md).
+
 ---
 
 ## Overview
@@ -44,7 +46,7 @@ Starting Temp: 37°  |  Fan: -1°/sec  |  Prep Time: 20s  |  Defeat: 0°  |  Rec
 - Same rules as 1v1
 - BT AI bot with 2~3 difficulty levels
 - No Relay needed, local host execution
-- Bot execution: TBD (server virtual bot vs client process)
+- Bot execution: single executable with an internal NGO local host and a server-controlled bot participant (confirmed 2026-09-28; implementation planned in [PLAN_036](Plans/PLAN_036_solo_duel_bt_graph.md))
 
 ---
 
@@ -615,18 +617,19 @@ When a player dies:
 | Parameter | Value |
 |-----------|-------|
 | Rules | Same as 1v1 (Bo3) |
-| Network | Separate client process (no Relay, no multiplayer sync) |
-| Bot execution | Solo dedicated client — NOT server virtual player |
+| Network | Internal NGO local host; no Relay or UGS login required for Solo (planned) |
+| Bot execution | One executable; server-controlled logical bot participant, no separate bot client (confirmed 2026-09-28) |
 | Difficulty | 2~3 levels |
-| Logic | Separate from network multiplayer logic |
+| Logic | Shared 1v1 rules and combat; dedicated Solo lifecycle and BT decision adapter (planned) |
 
 ### Bot AI Requirements
 
 - BT (Behavior Tree) based decision making
 - Must handle: item selection, Ready timing
-- **Bot does NOT play mini-games** — skips mini-game, applies brief delay then selects action directly
-- Difficulty affects: item choice quality, Ready timing optimization
-- Existing handover doc: `Docs/BOT_AI_HANDOVER.md`
+- **Bot does NOT play mini-games** — applies per-item use penalties such as delay, then follows normal 1v1 item processing; no simulated mini-game score or random success roll. Delay values remain tuning data. Pending use must not bypass Prep expiry or ordinary effect timing.
+- Difficulty tuning scope: starting temperature, baseline fan speed, starting items and AI response/temperament; exact values remain to be authored. No approved attack/block/heal multipliers or maximum-temperature changes.
+- Visual BT graph and configurable Solo scene implementation plan: [PLAN_036](Plans/PLAN_036_solo_duel_bt_graph.md). Baseline progression, grants and threshold rewards follow existing 1v1. Per-item penalty values and optional custom starting-profile semantics remain to be specified.
+- Historical handover: [BOT_HANDOVER](BOT_HANDOVER.md); its old integration snippets are superseded by PLAN_036's identity and perspective contracts.
 
 ---
 
@@ -693,7 +696,7 @@ LobbyScene (build 0)
 
 | # | Question | Answer |
 |---|----------|--------|
-| Q1 | **핫팩 미니게임 수치** | ✅ 7초/15번 연타 확정 |
+| Q1 | **핫팩 미니게임 수치** | ✅ 현재 구현(7초/15번 연타) 유지 — 2026-09-30 재확정 |
 | Q2 | **따뜻한 차 사용 횟수** | ✅ 1회 |
 | Q3 | **고양이 사용 횟수** | ✅ 1회 |
 | Q4 | **삼계탕 "+3, -7" 효과 방향** | ✅ 즉시 상대 +3° → 다음 턴 상대 -7°. 둘 다 상대에게 적용 |
@@ -701,7 +704,8 @@ LobbyScene (build 0)
 | Q6 | **마스크 "음식 아이템" 범위** | ✅ 종류 "음식" 아이템 7종: 따뜻한 차, 삼계탕, 아이스크림, 아.아, 뜨.아, 불닭볶음면, 탄산음료 |
 | Q7 | **드롭 확률 합계** | ✅ 가중치 풀 |
 | Q8 | **각 아이템 Main/Sub 구분** | ✅ 아이템표 속성: 기본/영구(부채,바람막이), 기본/소모(따뜻한 차,고양이), 랜덤(나머지 전부) |
-| Q9 | **타로카드 "추가 사용" 타이밍** | ✅ 현재 밴 처리 — 추후 개발 |
+| Q9 | **타로카드 "추가 사용" 타이밍** | ✅ 구현하지 않음 — 기존 지급/선택 노출 정리는 PLAN_037 R01에서 별도 진행 (2026-09-29) |
+| Q10 | **미니게임 중 상대방 화면** | ✅ 상대에게 미니게임 진행 중 표시를 제공하지 않음 — 2026-09-30 확정. 자기 미니게임과 기존 준비 완료 표시는 유지 |
 | Q11 | **미니게임 판정 권한** | ✅ 클라이언트 판정 + 서버 타임아웃 강제 실패 |
 | Q12 | **미니게임 실패 시 아이템 소모** | ✅ 아이템 소멸 |
 | Q13 | **공격턴 아이템 사용 연출** | ✅ 전용 애니메이션/이펙트 예정 |
@@ -722,11 +726,10 @@ PrepPhase 타이머 만료 → 서버가 턴 종료 판정 → 클라이언트�
       서버의 "턴 종료" 판정이 최종 → 클라는 무조건 실패로 전환.
 ```
 
-### Pending (5건)
+### Pending (4건)
 
 | # | Question | Context |
 |---|----------|---------|
-| Q10 | **미니게임 중 상대방 화면** — 상대에게 미니게임 진행 표시가 보이는지? | 각자 독립 PrepPhase 진행 |
 | Q16 | **아이템 슬롯 UI 레이아웃** — 기본 4 + 랜덤 8 배치 방식? 빈 슬롯 표시? | 현재: 4칸만 |
 | Q21 | **버프/디버프 중첩** — 같은 효과 다중 적용 가능? 삼계탕 2연속 = -14°? 상한선? | 코드: 무제한 중첩 |
 | Q22 | **이번 턴 선택 아이템 상대 공개** — 보유 목록은 공개(Q15)지만, 뭘 골랐는지는? | 코드: 비공개 |

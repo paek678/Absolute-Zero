@@ -26,7 +26,7 @@ namespace AbsoluteZero.Core.Solo
     /// Opt-in development player probe for a visible four-player smoke match.
     /// It drives only the owning player's public RPCs and never runs in release builds.
     /// </summary>
-    public sealed class VisualFourPlayerProbe : MonoBehaviour
+    public sealed partial class VisualFourPlayerProbe : MonoBehaviour
     {
         static readonly string[] Profiles = { "Aggressor", "Counter", "Support", "Opportunist" };
 
@@ -34,6 +34,7 @@ namespace AbsoluteZero.Core.Solo
         string _run;
         int _seed;
         int _turnLimit;
+        int _scenarioTimeout;
         ushort _port;
         bool _relayFlow;
         string _coordinationFile;
@@ -51,6 +52,11 @@ namespace AbsoluteZero.Core.Solo
         bool _hoverCaptureStarted;
         bool _hoverCaptureDone;
         bool _ghostShowcase;
+        bool _ghostLethalShowcase;
+        bool _fullMatch;
+        bool _fullNatural;
+        bool _ghostLethalArmed;
+        bool _terminalResultVisible;
         bool _ghostForced;
         bool _ghostCaptureStarted;
         bool _frostRequested;
@@ -77,6 +83,16 @@ namespace AbsoluteZero.Core.Solo
             probe._relayFlow = Arg("--az-relay-flow", "0") == "1";
             probe._coordinationFile = Arg("--az-coordination-file", "");
             probe._ghostShowcase = Arg("--az-ghost-showcase", "0") == "1";
+            probe._ghostLethalShowcase = Arg("--az-ghost-lethal-showcase", "0") == "1";
+            if (probe._ghostLethalShowcase) probe._ghostShowcase = true;
+            probe._possessionCase = Arg("--az-possession-case", "");
+            probe._ghostLedgerCase = Arg("--az-ghost-ledger-case", "");
+            probe._ghostLifecycleCase = Arg("--az-ghost-lifecycle-case", "");
+            probe._miniTicketCase = Arg("--az-mini-ticket-case", "");
+            probe._fullMatch = Arg("--az-full-match", "0") == "1";
+            probe._fullNatural = Arg("--az-full-natural", "0") == "1";
+            if (probe._fullNatural) probe._fullMatch = true;
+            probe._scenarioTimeout = Mathf.Clamp(ParseInt("--az-timeout", probe._fullNatural ? 600 : 300), 60, 1800);
         }
 
         static string Arg(string key, string fallback)
@@ -96,6 +112,12 @@ namespace AbsoluteZero.Core.Solo
         {
             Core.Combat.CombatVFXManager.OnPresentationSettled += OnPresentationSettled;
             TurnManager.OnGhostSkillUsed += OnGhostSkillUsedVisual;
+            TurnManager.OnMultiDeathPresentation += OnGhostDeathPresentation;
+            Core.Combat.CombatVFXManager.OnGhostImpactSignaled += OnGhostImpact;
+            TurnManager.OnMultiCombatResult += OnPossessionCombatResult;
+            Core.Combat.CombatVFXManager.OnSuppressedItemCue += OnPossessionCue;
+            Core.Combat.CombatVFXManager.OnAttackerChanged += OnPossessionAttackerChanged;
+            TurnManager.OnGhostSkillRequestResult += OnLedgerRequestResult;
             Application.logMessageReceived += OnUnityLog;
         }
 
@@ -103,6 +125,14 @@ namespace AbsoluteZero.Core.Solo
         {
             Core.Combat.CombatVFXManager.OnPresentationSettled -= OnPresentationSettled;
             TurnManager.OnGhostSkillUsed -= OnGhostSkillUsedVisual;
+            TurnManager.OnMultiDeathPresentation -= OnGhostDeathPresentation;
+            Core.Combat.CombatVFXManager.OnGhostImpactSignaled -= OnGhostImpact;
+            TurnManager.OnMultiCombatResult -= OnPossessionCombatResult;
+            Core.Combat.CombatVFXManager.OnSuppressedItemCue -= OnPossessionCue;
+            Core.Combat.CombatVFXManager.OnAttackerChanged -= OnPossessionAttackerChanged;
+            TurnManager.OnGhostSkillRequestResult -= OnLedgerRequestResult;
+            UnsubscribePossessionTicket();
+            UnsubscribeMiniTicket();
             Application.logMessageReceived -= OnUnityLog;
         }
 
@@ -140,6 +170,7 @@ namespace AbsoluteZero.Core.Solo
                     Fail("Host failed to start");
                     yield break;
                 }
+                NetworkSessionCoordinator.Instance?.DebugAdoptLocalNetworkSession();
                 Debug.Log($"[VISUAL] HOST_LISTENING seed={_seed} port={_port}");
                 while (_network.ConnectedClientsIds.Count < 4) yield return null;
                 Debug.Log("[VISUAL] FOUR_CONNECTED");
@@ -149,6 +180,7 @@ namespace AbsoluteZero.Core.Solo
             {
                 Fail("Client failed to start");
             }
+            else NetworkSessionCoordinator.Instance?.DebugAdoptLocalNetworkSession();
         }
 
         IEnumerator StartRelayLobbyFlow()
@@ -166,8 +198,10 @@ namespace AbsoluteZero.Core.Solo
                 yield break;
             }
 
+            coordinator.SetMatchParameters(GameMode.Multi, 4);
+            var initialization = coordinator.EnsureInitializedAsync();
             float initializeDeadline = Time.realtimeSinceStartup + 45f;
-            while (coordinator.State == SessionState.Offline || coordinator.State == SessionState.Initializing)
+            while (!initialization.IsCompleted)
             {
                 if (Time.realtimeSinceStartup >= initializeDeadline)
                 {
@@ -176,13 +210,12 @@ namespace AbsoluteZero.Core.Solo
                 }
                 yield return null;
             }
-            if (coordinator.State != SessionState.Ready)
+            if (!TaskSucceeded(initialization) || coordinator.State != SessionState.Ready)
             {
                 Fail($"Unity Services initialization failed: {coordinator.LastError}");
                 yield break;
             }
 
-            coordinator.SetMatchParameters(GameMode.Multi, 4);
             Debug.Log($"[VISUAL] RELAY_AUTH_READY role={_role}");
 
             if (_role == "host")
@@ -303,9 +336,9 @@ namespace AbsoluteZero.Core.Solo
         void Update()
         {
             if (_finishing) return;
-            if (Time.realtimeSinceStartup > 300f)
+            if (Time.realtimeSinceStartup > _scenarioTimeout)
             {
-                Fail("Scenario timeout after 300 seconds");
+                Fail($"Scenario timeout after {_scenarioTimeout} seconds");
                 return;
             }
             if (_network == null || !_network.IsConnectedClient) return;
@@ -339,7 +372,33 @@ namespace AbsoluteZero.Core.Solo
 
             if (state.TerminalResult.Value.Released)
             {
-                StartCoroutine(Finish("terminal-result"));
+                if ((!_ghostLethalShowcase && !_fullMatch) || _terminalResultVisible)
+                    StartCoroutine(Finish("terminal-result"));
+                return;
+            }
+            if (_fullMatch && _settledTurns >= 4)
+            {
+                UpdateFullMatchTail(local, players, turn, state);
+                return;
+            }
+            if (!string.IsNullOrEmpty(_miniTicketCase))
+            {
+                UpdateMiniTicketCase(local, players, turn, state);
+                return;
+            }
+            if (!string.IsNullOrEmpty(_ghostLedgerCase))
+            {
+                UpdateGhostLedgerCase(local, players, turn, state);
+                return;
+            }
+            if (!string.IsNullOrEmpty(_ghostLifecycleCase))
+            {
+                UpdateGhostLifecycleCase(local, players, turn, state);
+                return;
+            }
+            if (!string.IsNullOrEmpty(_possessionCase))
+            {
+                UpdatePossessionCase(local, players, turn, state);
                 return;
             }
             if (_ghostShowcase)
@@ -360,7 +419,7 @@ namespace AbsoluteZero.Core.Solo
                 _phaseStart = Time.unscaledTime;
                 _acted = false;
                 _ready = false;
-                Capture($"turn-{_observedTurn:00}-prep");
+                if (_observedTurn != 1 || _hoverCaptureStarted) Capture($"turn-{_observedTurn:00}-prep");
                 if (_observedTurn == 1 && !_hoverCaptureStarted)
                 {
                     _hoverCaptureStarted = true;
@@ -378,7 +437,7 @@ namespace AbsoluteZero.Core.Solo
             if (!_ready && elapsed > 3.5f + _localSeat * 0.2f)
             {
                 _ready = true;
-                local.PressReadyServerRpc();
+                ProbeInventoryCommands.Ready(local);
                 Debug.Log($"[VISUAL] READY turn={turn.TurnNumber.Value} local={_localSeat} selected={local.HasSelectedItem.Value}");
             }
         }
@@ -394,6 +453,18 @@ namespace AbsoluteZero.Core.Solo
 
             var ghost = players.FirstOrDefault(player => player.PlayerIndex == 1);
             if (ghost == null || ghost.CurrentLifeState.Value != LifeState.Ghost) return;
+            if (_ghostLethalShowcase && _role == "host" && !_ghostLethalArmed)
+            {
+                var state = MatchCompositionRoot.Instance?.NetworkState;
+                var target = players.FirstOrDefault(player => player.PlayerIndex == 0);
+                if (state != null && target != null)
+                {
+                    target.Temperature.Value = 2f;
+                    for (int i = 0; i < 4; i++) state.ServerAddKill(1);
+                    _ghostLethalArmed = true;
+                    Debug.Log("[VISUAL] GHOST_LETHAL_ARMED actor=1 target=0 kills=4 temp=2");
+                }
+            }
             if (!_ghostCaptureStarted)
             {
                 _ghostCaptureStarted = true;
@@ -402,22 +473,38 @@ namespace AbsoluteZero.Core.Solo
             }
 
             if (_localSeat != 1) return;
+            if (_ghostLethalShowcase)
+            {
+                var state = MatchCompositionRoot.Instance?.NetworkState;
+                var target = players.FirstOrDefault(player => player.PlayerIndex == 0);
+                if (state == null || state.KillScores.Count < 2 || state.KillScores[1] != 4
+                    || target == null || target.Temperature.Value > 3f) return;
+            }
             float elapsed = Time.unscaledTime - _ghostObservedAt;
             if (_ghostSkillsObserved == 0 && elapsed >= 4f && Time.unscaledTime >= _nextGhostRequestAt)
             {
                 bool firstRequest = !_frostRequested;
                 _frostRequested = true;
                 _nextGhostRequestAt = Time.unscaledTime + 0.75f;
-                turn.UseGhostSkillRpc(GhostSkillService.SKILL_FROST_STRIKE, 0);
-                Debug.Log($"[VISUAL] GHOST_REQUEST skill=FrostStrike actor=1 target=0 retry={!firstRequest}");
+                var ghostState = MatchCompositionRoot.Instance?.NetworkState;
+                if (ghostState != null)
+                    turn.UseGhostSkillRpc(GhostSkillService.SKILL_GRUDGE, 0,
+                        ghostState.GhostMatchEpoch.Value, ghostState.GhostRoundEpoch.Value,
+                        turn.TurnNumber.Value, firstRequest ? 0x80000101u : 0x80000102u);
+                Debug.Log($"[VISUAL] GHOST_REQUEST skill=Grudge actor=1 target=0 retry={!firstRequest}");
             }
-            if (_ghostSkillsObserved == 1 && elapsed >= 6.2f && Time.unscaledTime >= _nextGhostRequestAt)
+            if (!_ghostLethalShowcase && _ghostSkillsObserved == 1
+                && elapsed >= 6.2f && Time.unscaledTime >= _nextGhostRequestAt)
             {
                 bool firstRequest = !_chillRequested;
                 _chillRequested = true;
                 _nextGhostRequestAt = Time.unscaledTime + 0.75f;
-                turn.UseGhostSkillRpc(GhostSkillService.SKILL_CHILL_AURA, 2);
-                Debug.Log($"[VISUAL] GHOST_REQUEST skill=ChillAura actor=1 target=2 retry={!firstRequest}");
+                var ghostState = MatchCompositionRoot.Instance?.NetworkState;
+                if (ghostState != null)
+                    turn.UseGhostSkillRpc(GhostSkillService.SKILL_POSSESSION, 2,
+                        ghostState.GhostMatchEpoch.Value, ghostState.GhostRoundEpoch.Value,
+                        turn.TurnNumber.Value, firstRequest ? 0x80000103u : 0x80000104u);
+                Debug.Log($"[VISUAL] GHOST_REQUEST skill=Possession actor=1 target=2 retry={!firstRequest}");
             }
         }
 
@@ -436,15 +523,36 @@ namespace AbsoluteZero.Core.Solo
             StartCoroutine(CaptureGhostSkillFrames(ghostSeat, skillIndex, targetSeat));
         }
 
+        void OnGhostImpact(uint castId)
+        {
+            if (!_ghostLethalShowcase && !_fullMatch) return;
+            Debug.Log($"[VISUAL] GHOST_ACTUAL_IMPACT cast={castId}");
+            StartCoroutine(CaptureGhostDeathFrame());
+        }
+
+        void OnGhostDeathPresentation(byte deathMask, bool endsRound,
+            uint presentationId, uint ghostCastId)
+        {
+            if (!_ghostLethalShowcase && !_fullMatch) return;
+            Debug.Log($"[VISUAL] GHOST_DEATH_PRESENTATION mask={deathMask} cast={ghostCastId} seq={presentationId}");
+        }
+
+        IEnumerator CaptureGhostDeathFrame()
+        {
+            yield return new WaitForSecondsRealtime(0.7f);
+            Capture("ghost-lethal-death");
+        }
+
         IEnumerator CaptureGhostSkillFrames(byte ghostSeat, byte skillIndex, byte targetSeat)
         {
             yield return new WaitForSecondsRealtime(0.28f);
-            string skill = skillIndex == GhostSkillService.SKILL_FROST_STRIKE ? "frost" : "chill";
+            string skill = skillIndex == GhostSkillService.SKILL_GRUDGE ? "grudge" : "possession";
             Capture($"ghost-{skill}-motion");
             yield return new WaitForSecondsRealtime(0.52f);
             Debug.Log($"[VISUAL] GHOST_VFX_IMPACT actor={ghostSeat} skill={skillIndex} target={targetSeat}");
             Capture($"ghost-{skill}-impact");
-            if (_ghostShowcase && _ghostSkillsObserved >= 2 && !_showcaseFinishStarted)
+            if (_ghostShowcase && !_ghostLethalShowcase
+                && _ghostSkillsObserved >= 2 && !_showcaseFinishStarted)
             {
                 _showcaseFinishStarted = true;
                 StartCoroutine(FinishGhostShowcase());
@@ -493,14 +601,22 @@ namespace AbsoluteZero.Core.Solo
             Debug.Log($"[VISUAL] PLAN turn={turnNumber} local={_localSeat} profile={Profiles[_localSeat]} "
                 + $"roll={_random.Next(0, 100)} slot={choice.Slot} item={choice.Item.ItemName} category={choice.Item.Category} "
                 + $"target={(target == ActionIntent.NoTarget ? "self" : target.ToString())}");
-            local.SelectItemServerRpc(choice.Slot, target);
             if (choice.Item.RequiresMiniGame)
                 StartCoroutine(CompleteMiniGame(local, choice.Slot, turnNumber));
+            ProbeInventoryCommands.SelectItem(local, choice.Slot, target);
         }
 
         IEnumerator CaptureTargetHover(PlayerState local, PlayerState[] players)
         {
-            yield return new WaitForSecondsRealtime(0.75f);
+            float viewDeadline = Time.unscaledTime + 12f;
+            while (FindObjectsByType<Canvas>(FindObjectsSortMode.None)
+                .Any(canvas => canvas.name == "LoadingScreenCanvas" && canvas.isActiveAndEnabled))
+            {
+                if (Time.unscaledTime >= viewDeadline) { Fail("Loading overlay did not dismiss before target capture"); yield break; }
+                yield return null;
+            }
+            yield return null;
+            Capture("turn-01-prep");
 
             var uiType = AppDomain.CurrentDomain.GetAssemblies()
                 .Select(assembly => assembly.GetType("AbsoluteZero.UI.Game.GameUIManager", false))
@@ -542,8 +658,11 @@ namespace AbsoluteZero.Core.Solo
             {
                 byte target = (byte)targetPlayer.PlayerIndex;
                 int visualSlot = AZPlayerVisual.GetRemoteVisualSlot(targetPlayer.PlayerIndex, _localSeat);
-                bool began = (bool)beginMethod.Invoke(ui, new object[] { targetableSlot, target });
-                if (!began) continue;
+                float beginDeadline = Time.unscaledTime + 5f;
+                bool began;
+                while (!(began = (bool)beginMethod.Invoke(ui, new object[] { targetableSlot, target }))
+                    && Time.unscaledTime < beginDeadline) yield return null;
+                if (!began) { Fail("Target hover could not begin for seat " + target); yield break; }
 
                 float deadline = Time.unscaledTime + 2f;
                 while (!(bool)(visibleProperty?.GetValue(ui) ?? false) && Time.unscaledTime < deadline)
@@ -555,6 +674,7 @@ namespace AbsoluteZero.Core.Solo
                 Capture($"turn-01-target-{direction}-P{target}");
                 bool visible = (bool)(visibleProperty?.GetValue(ui) ?? false);
                 Debug.Log($"[VISUAL] TARGET_HOVER_CAPTURE local={_localSeat} slot={targetableSlot} target={target} direction={direction} visible={visible}");
+                if (!visible) { Fail("Target hover has no visible arrow for seat " + target); yield break; }
                 yield return null;
                 yield return new WaitForEndOfFrame();
                 cancelMethod?.Invoke(ui, null);
@@ -602,10 +722,18 @@ namespace AbsoluteZero.Core.Solo
 
         IEnumerator CompleteMiniGame(PlayerState local, byte slot, int turnNumber)
         {
-            yield return new WaitForSecondsRealtime(0.75f);
-            if (local != null && local.IsSpawned)
+            MiniGameTicket ticket = default;
+            Action<MiniGameTicket> capture = started =>
             {
-                local.SubmitMiniGameResultServerRpc(slot, true);
+                if (started.Slot == slot) ticket = started;
+            };
+            local.OnMiniGameStart += capture;
+            yield return new WaitForSecondsRealtime(0.75f);
+            local.OnMiniGameStart -= capture;
+            if (local != null && local.IsSpawned && ticket.AttemptId != 0)
+            {
+                local.SubmitMiniGameResultServerRpc(slot, true, ticket.MatchEpoch,
+                    ticket.RoundEpoch, ticket.Turn, ticket.AttemptId, ticket.CopyId);
                 Debug.Log($"[VISUAL] MINIGAME_SIMULATED turn={turnNumber} local={_localSeat} slot={slot} success=true");
             }
         }
@@ -619,6 +747,23 @@ namespace AbsoluteZero.Core.Solo
             if (root?.NetworkState != null && turn != null)
                 LogState("CHECKPOINT seq=" + sequence, turn, root.NetworkState, CurrentPlayers());
             Capture($"turn-{_settledTurns:00}-settled-seq-{sequence}");
+            if (!string.IsNullOrEmpty(_ghostLedgerCase))
+            {
+                OnLedgerPresentationSettled(sequence);
+                return;
+            }
+            if (!string.IsNullOrEmpty(_ghostLifecycleCase))
+            {
+                OnGhostLifecyclePresentationSettled(sequence);
+                return;
+            }
+            if (!string.IsNullOrEmpty(_possessionCase))
+            {
+                OnPossessionPresentationSettled(sequence);
+                return;
+            }
+            if (!string.IsNullOrEmpty(_miniTicketCase)) return;
+            if (_fullMatch) return;
             if (_ghostShowcase) return;
             if (_settledTurns >= _turnLimit)
                 StartCoroutine(Finish("turn-limit"));
@@ -626,6 +771,8 @@ namespace AbsoluteZero.Core.Solo
 
         void OnUnityLog(string message, string stackTrace, LogType type)
         {
+            if (message.StartsWith("[MatchResult] Visible seq="))
+                _terminalResultVisible = true;
             if (type != LogType.Exception && type != LogType.Error && type != LogType.Assert) return;
             if (message.StartsWith("[VISUAL]")) return;
             _lastIssue = message.Replace('\n', ' ').Replace('\r', ' ');
@@ -658,6 +805,15 @@ namespace AbsoluteZero.Core.Solo
             yield return null;
             yield return new WaitForEndOfFrame();
             Capture("final-" + reason);
+            if (reason == "terminal-result")
+            {
+                yield return new WaitForSecondsRealtime(0.5f);
+                yield return new WaitForEndOfFrame();
+                Capture("final-stable-" + reason);
+                yield return new WaitForSecondsRealtime(0.5f);
+                yield return new WaitForEndOfFrame();
+                Capture("final-confirmed-" + reason);
+            }
             Debug.Log($"[VISUAL] PASS local={_localSeat} reason={reason} settled={_settledTurns} lastChoice={_lastChoice}");
             yield return new WaitForSecondsRealtime(2f);
             Application.Quit(0);
@@ -673,14 +829,29 @@ namespace AbsoluteZero.Core.Solo
             Application.Quit(2);
         }
 
+        int _captureIndex;
+
         void Capture(string label)
         {
             string logPath = Application.consoleLogPath;
             string folder = Path.GetDirectoryName(logPath) ?? Application.persistentDataPath;
             string role = _role == "host" ? "host" : "seat" + Mathf.Max(0, _localSeat);
-            string path = Path.Combine(folder, $"{role}.{Sanitize(label)}.png");
-            ScreenCapture.CaptureScreenshot(path);
-            Debug.Log("[VISUAL] CAPTURE " + path);
+            // Turn numbers restart each round; never overwrite an earlier evidence frame.
+            string path = Path.Combine(folder, $"{role}.{++_captureIndex:D4}.{Sanitize(label)}.png");
+            StartCoroutine(CaptureRenderedFrame(path));
+        }
+
+        IEnumerator CaptureRenderedFrame(string path)
+        {
+            yield return new WaitForEndOfFrame();
+            var texture = ScreenCapture.CaptureScreenshotAsTexture();
+            if (texture == null) { Debug.LogError("[VISUAL] Capture returned no frame: " + path); yield break; }
+            try
+            {
+                File.WriteAllBytes(path, texture.EncodeToPNG());
+                Debug.Log("[VISUAL] CAPTURE " + path);
+            }
+            finally { Destroy(texture); }
         }
 
         static string Sanitize(string value)

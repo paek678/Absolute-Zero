@@ -11,8 +11,8 @@ namespace AbsoluteZero.Core.Session
         const string LogPrefix = "[ServicesGateway]";
 
         public bool IsInitialized => UnityServices.State == ServicesInitializationState.Initialized;
-        public bool IsSignedIn => AuthenticationService.Instance?.IsSignedIn ?? false;
-        public string PlayerId => AuthenticationService.Instance?.PlayerId;
+        public bool IsSignedIn => IsInitialized && AuthenticationService.Instance.IsSignedIn;
+        public string PlayerId => IsInitialized ? AuthenticationService.Instance.PlayerId : null;
 
         public async Task<Result<Unit>> InitializeAndSignInAsync(string profileOverride = null)
         {

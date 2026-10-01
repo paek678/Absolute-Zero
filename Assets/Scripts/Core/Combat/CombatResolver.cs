@@ -128,6 +128,7 @@ namespace AbsoluteZero.Core.Combat
             return inventory != null
                 && action.SlotIndex < inventory.SlotStates.Count
                 && inventory.SlotStates[action.SlotIndex].IsUsable
+                && (action.CopyId == 0 || inventory.SlotStates[action.SlotIndex].CopyId == action.CopyId)
                 && inventory.GetItemData(action.SlotIndex) == action.ItemData;
         }
 
@@ -271,6 +272,12 @@ namespace AbsoluteZero.Core.Combat
                     continue;
                 }
 
+                if ((snap.SuppressedItemMask & (1 << seat)) != 0)
+                {
+                    AddSuppressedUse(snap, resolution, (byte)seat, targetSeat, intent);
+                    continue;
+                }
+
                 ResolveAction((byte)seat, targetSeat, intent.SlotIndex, rule, snap, workingTemps, resolution);
                 AnnotateActionEvents(resolution, snap, workingTemps, seat);
                 resolution.AddInventoryChange(new InventoryDelta
@@ -326,6 +333,13 @@ namespace AbsoluteZero.Core.Combat
             if (targetSeat >= seatCount
                 || (intent.HasTarget && snap.LifeStates[targetSeat] != LifeState.Alive))
                 return resolution;
+
+            if ((snap.SuppressedItemMask & (1 << actorSeat)) != 0)
+            {
+                resolution.MainItemIds[actorSeat] = intent.ItemId;
+                AddSuppressedUse(snap, resolution, actorSeat, targetSeat, intent);
+                return resolution;
+            }
 
             var workingTemps = (float[])snap.CurrentTemperatures.Clone();
             resolution.MainItemIds[actorSeat] = intent.ItemId;
@@ -390,13 +404,14 @@ namespace AbsoluteZero.Core.Combat
                 if (!rule.IsDefense) continue;
                 if (!ValidateSlot(snap, (byte)i, intents[i].SlotIndex, intents[i].ItemId)) continue;
 
-                resolution.ModifierChanges[i].SeatIndex = (byte)i;
-                resolution.ModifierChanges[i].ActiveDefense = new DefenseInfo
+                if ((snap.SuppressedItemMask & (1 << i)) != 0)
                 {
-                    ItemId = rule.ItemId,
-                    Filter = rule.AttackFilter,
-                    BlockAmount = rule.DefenseReduction
-                };
+                    AddSuppressedUse(snap, resolution, (byte)i, (byte)i, intents[i]);
+                    continue;
+                }
+
+                resolution.ModifierChanges[i].SeatIndex = (byte)i;
+                resolution.ModifierChanges[i].ActiveDefense = ItemEffectCalculations.Defense(rule.DefenseReduction, rule.AttackFilter, rule.ItemId);
                 resolution.AddInventoryChange(new InventoryDelta
                 {
                     SeatIndex = (byte)i,
@@ -405,6 +420,28 @@ namespace AbsoluteZero.Core.Combat
                     ItemId = intents[i].ItemId
                 });
             }
+        }
+
+        static void AddSuppressedUse(MatchCombatSnapshot snap, MultiCombatResolution resolution,
+            byte actorSeat, byte targetSeat, ActionIntent intent)
+        {
+            resolution.AddInventoryChange(new InventoryDelta
+            {
+                SeatIndex = actorSeat,
+                SlotIndex = intent.SlotIndex,
+                Consumed = true,
+                ItemId = intent.ItemId
+            });
+            resolution.AddEvent(new CombatEvent
+            {
+                Type = CombatEventType.SuppressedItemUse,
+                SourcePlayer = actorSeat,
+                TargetPlayer = targetSeat,
+                ItemId = intent.ItemId,
+                UserResultTemp = snap.CurrentTemperatures[actorSeat],
+                TargetResultTemp = snap.CurrentTemperatures[targetSeat],
+                DefenseItemId = -1
+            });
         }
 
         void ResolveAction(byte actorSeat, byte targetSeat, byte slotIndex, ItemEffectRuleSnapshot rule,
@@ -417,7 +454,7 @@ namespace AbsoluteZero.Core.Combat
 
                 case ItemEffectKind.DirectDamage:
                     float blocked = GetBlockedAmount(targetSeat, rule.AttackFilter, resolution, snap);
-                    float damage = Mathf.Max(0f, rule.BaseDamage - blocked);
+                    float damage = ItemEffectCalculations.DamageAfterBlock(rule.BaseDamage, blocked);
                     workingTemps[targetSeat] -= damage;
                     ClampTemp(workingTemps, targetSeat);
                     if (damage > 0f)
@@ -435,11 +472,11 @@ namespace AbsoluteZero.Core.Combat
 
                 case ItemEffectKind.Equalize:
                     float userTemp = workingTemps[actorSeat];
-                    float diff = userTemp - workingTemps[targetSeat];
+                    float diff = ItemEffectCalculations.EqualizationDelta(userTemp, workingTemps[targetSeat]);
                     if (diff < 0f)
                     {
                         float eqBlocked = GetBlockedAmount(targetSeat, rule.AttackFilter, resolution, snap);
-                        float eqDamage = Mathf.Max(0f, -diff - eqBlocked);
+                        float eqDamage = ItemEffectCalculations.DamageAfterBlock(-diff, eqBlocked);
                         workingTemps[targetSeat] -= eqDamage;
                         if (eqDamage > 0f)
                             resolution.LastDamageSources[targetSeat] = DamageSource.Create(actorSeat, DamageOrigin.Item);
@@ -470,9 +507,9 @@ namespace AbsoluteZero.Core.Combat
                             && snap.Inventories[actorSeat].Slots != null
                             && slotIndex < snap.Inventories[actorSeat].Slots.Length)
                         {
-                            useIndex = rule.MaxUses - snap.Inventories[actorSeat].Slots[slotIndex].RemainingUses;
+                            useIndex = ItemEffectCalculations.RecoveryUseIndex(rule.MaxUses, snap.Inventories[actorSeat].Slots[slotIndex].RemainingUses);
                         }
-                        float heal = rule.HealPerUse[Mathf.Clamp(useIndex, 0, rule.HealPerUse.Length - 1)];
+                        float heal = ItemEffectCalculations.RecoveryAtIndex(rule.HealPerUse, useIndex);
                         workingTemps[actorSeat] += heal;
                         ClampTemp(workingTemps, actorSeat);
                     }
@@ -539,7 +576,7 @@ namespace AbsoluteZero.Core.Combat
                             workingTemps[targetSeat] += rule.ImmediateTempDelta;
                         else
                         {
-                            float debufDmg = Mathf.Max(0f, -rule.ImmediateTempDelta - debufBlocked);
+                            float debufDmg = ItemEffectCalculations.DamageAfterBlock(-rule.ImmediateTempDelta, debufBlocked);
                             workingTemps[targetSeat] -= debufDmg;
                             if (debufDmg > 0f)
                                 resolution.LastDamageSources[targetSeat] = DamageSource.Create(actorSeat, DamageOrigin.Item);

@@ -13,7 +13,8 @@ namespace AbsoluteZero.Core.Match
     {
         Connected,
         Disconnected,
-        TimedOut
+        TimedOut,
+        Local
     }
 
     public sealed class MatchRoster : IDisconnectHandler, ISeatStateAccessor, IDisposable
@@ -24,6 +25,8 @@ namespace AbsoluteZero.Core.Match
             public string ParticipantId;
             public ulong? ClientId;
             public SeatConnectionState State;
+            public PlayerControllerKind ControllerKind;
+            public long Generation;
         }
 
         readonly Dictionary<byte, SeatEntry> _seats = new();
@@ -48,78 +51,49 @@ namespace AbsoluteZero.Core.Match
         }
 
         public bool Hydrate(IEnumerable<SessionParticipantEntry> participants)
+            => Hydrate(participants, 0);
+
+        public bool Hydrate(IEnumerable<SessionParticipantEntry> participants, long generation)
         {
-            if (_disposed) return false;
-            if (participants == null)
-            {
-                Debug.LogError("[MatchRoster] Participants is null");
-                return false;
-            }
-
-            RosterReady = false;
-            _seats.Clear();
-            _clientToSeat.Clear();
-
-            var usedClientIds = new HashSet<ulong>();
-
+            if (_disposed || participants == null) return false;
+            var descriptors = new List<MatchParticipantDescriptor>();
             foreach (var p in participants)
             {
-                if (p == null)
+                if (p == null || p.SeatIndex >= 4 || generation < 0) return false;
+                try
                 {
-                    Debug.LogError("[MatchRoster] Null participant entry");
-                    _seats.Clear();
-                    _clientToSeat.Clear();
-                    return false;
+                    descriptors.Add(new MatchParticipantDescriptor(p.ParticipantId, p.SeatIndex,
+                        PlayerControllerKind.Human, p.IsConnected ? p.CurrentClientId : null, generation));
                 }
+                catch (ArgumentException) { return false; }
+            }
+            return Hydrate(descriptors);
+        }
 
-                if (p.SeatIndex >= _requiredPlayerCount)
-                {
-                    Debug.LogError($"[MatchRoster] Invalid seat {p.SeatIndex} >= RequiredPlayerCount {_requiredPlayerCount}");
-                    _seats.Clear();
-                    _clientToSeat.Clear();
-                    return false;
-                }
-
-                if (_seats.ContainsKey(p.SeatIndex))
-                {
-                    Debug.LogError($"[MatchRoster] Duplicate seat {p.SeatIndex}");
-                    _seats.Clear();
-                    _clientToSeat.Clear();
-                    return false;
-                }
-
-                bool isConnected = p.IsConnected && p.CurrentClientId.HasValue;
-
-                if (isConnected)
-                {
-                    if (!usedClientIds.Add(p.CurrentClientId.Value))
-                    {
-                        Debug.LogError($"[MatchRoster] Duplicate ClientId {p.CurrentClientId.Value}");
-                        _seats.Clear();
-                        _clientToSeat.Clear();
-                        return false;
-                    }
-                }
-
+        public bool Hydrate(IEnumerable<MatchParticipantDescriptor> participants)
+        {
+            if (_disposed || participants == null || RosterReady) return false;
+            var descriptors = new List<MatchParticipantDescriptor>(participants);
+            if (!MatchParticipantDescriptor.TryValidateSet(descriptors, _requiredPlayerCount, out var ordered, out _))
+                return false;
+            _seats.Clear();
+            _clientToSeat.Clear();
+            foreach (var p in ordered)
+            {
+                bool isConnected = p.ControllerKind == PlayerControllerKind.Human && p.ClientId.HasValue;
                 var entry = new SeatEntry
                 {
-                    SeatIndex = p.SeatIndex,
+                    SeatIndex = p.Seat,
                     ParticipantId = p.ParticipantId,
-                    ClientId = isConnected ? p.CurrentClientId : null,
-                    State = isConnected ? SeatConnectionState.Connected : SeatConnectionState.Disconnected
+                    ClientId = p.ClientId,
+                    ControllerKind = p.ControllerKind,
+                    Generation = p.Generation,
+                    State = p.ControllerKind == PlayerControllerKind.Bot ? SeatConnectionState.Local
+                        : isConnected ? SeatConnectionState.Connected : SeatConnectionState.Disconnected
                 };
-
-                _seats[p.SeatIndex] = entry;
+                _seats.Add(p.Seat, entry);
                 if (isConnected)
-                    _clientToSeat[p.CurrentClientId.Value] = p.SeatIndex;
-            }
-
-            if (_seats.Count != _requiredPlayerCount)
-            {
-                Debug.LogError($"[MatchRoster] Seat count {_seats.Count} != RequiredPlayerCount {_requiredPlayerCount}");
-                _seats.Clear();
-                _clientToSeat.Clear();
-                return false;
+                    _clientToSeat.Add(p.ClientId.Value, p.Seat);
             }
 
             RosterReady = true;
@@ -188,6 +162,7 @@ namespace AbsoluteZero.Core.Match
         {
             if (_disposed) return false;
             if (!_seats.TryGetValue(seat, out var entry)) return false;
+            if (entry.ControllerKind != PlayerControllerKind.Human) return false;
 
             if (entry.State == SeatConnectionState.TimedOut)
             {
@@ -220,6 +195,7 @@ namespace AbsoluteZero.Core.Match
         {
             if (_disposed) return;
             if (!_seats.TryGetValue(seat, out var entry)) return;
+            if (entry.ControllerKind != PlayerControllerKind.Human) return;
 
             if (entry.ClientId.HasValue)
             {
@@ -259,7 +235,7 @@ namespace AbsoluteZero.Core.Match
             {
                 int count = 0;
                 foreach (var kvp in _seats)
-                    if (kvp.Value.State != SeatConnectionState.TimedOut) count++;
+                    if (IsActive(kvp.Key)) count++;
                 return count;
             }
         }
@@ -273,6 +249,8 @@ namespace AbsoluteZero.Core.Match
 
         public void CaptureOfflineState(byte seat, SeatRuntimeState state)
         {
+            if (_seats.TryGetValue(seat, out var entry) && entry.ControllerKind == PlayerControllerKind.Bot)
+                throw new InvalidOperationException("A local bot cannot use disconnected-human snapshot storage.");
             _offlineStates[seat] = state;
         }
 
@@ -292,6 +270,11 @@ namespace AbsoluteZero.Core.Match
         {
             if (_registry == null) return null;
             if (!_registry.TryGetByPlayerIndex(seat, out var binding)) return null;
+            if (!_seats.TryGetValue(seat, out var entry) || !binding.HasIdentity
+                || binding.Identity.ParticipantId != entry.ParticipantId
+                || binding.Identity.Generation != entry.Generation
+                || binding.Identity.ControllerKind != entry.ControllerKind
+                || binding.Identity.ClientId != entry.ClientId) return null;
             return binding.State;
         }
 
@@ -304,6 +287,8 @@ namespace AbsoluteZero.Core.Match
 
         SeatRuntimeState GetOrCreateOffline(byte seat)
         {
+            if (_seats.TryGetValue(seat, out var entry) && entry.ControllerKind == PlayerControllerKind.Bot)
+                throw new InvalidOperationException("A missing local bot binding cannot become an offline snapshot.");
             if (!_offlineStates.TryGetValue(seat, out var s))
             {
                 s = SeatRuntimeState.CreateDefault(seat);
@@ -399,14 +384,14 @@ namespace AbsoluteZero.Core.Match
 
         public PlayerModifiers GetModifiers(byte seat)
         {
-            if (IsConnected(seat) && _getModifiers != null) return _getModifiers(seat);
+            if (IsParticipantAvailable(seat) && _getModifiers != null) return _getModifiers(seat);
             return _offlineStates.TryGetValue(seat, out var s) ? s.Modifiers : default;
         }
 
         public void SetModifiers(byte seat, PlayerModifiers value)
         {
             if (!IsServerContext) return;
-            if (IsConnected(seat) && _setModifiers != null) { _setModifiers(seat, value); return; }
+            if (IsParticipantAvailable(seat) && _setModifiers != null) { _setModifiers(seat, value); return; }
             var s = GetOrCreateOffline(seat); s.Modifiers = value; SetOffline(seat, s);
         }
 
@@ -461,15 +446,27 @@ namespace AbsoluteZero.Core.Match
             return _seats.TryGetValue(seat, out var entry) && entry.State == SeatConnectionState.Connected;
         }
 
+        public bool IsParticipantAvailable(byte seat)
+        {
+            if (_disposed || !_seats.TryGetValue(seat, out var entry)) return false;
+            if (entry.ControllerKind == PlayerControllerKind.Human) return entry.State == SeatConnectionState.Connected;
+            return entry.State == SeatConnectionState.Local && _registry != null
+                && _registry.TryGetByPlayerIndex(seat, out var binding) && binding.IsValid
+                && binding.Identity.ControllerKind == PlayerControllerKind.Bot
+                && binding.Identity.ParticipantId == entry.ParticipantId
+                && binding.Identity.Generation == entry.Generation;
+        }
+
         public bool IsActive(byte seat)
         {
-            return _seats.TryGetValue(seat, out var entry) && entry.State != SeatConnectionState.TimedOut;
+            return _seats.TryGetValue(seat, out var entry) && entry.State != SeatConnectionState.TimedOut
+                && (entry.ControllerKind == PlayerControllerKind.Human || IsParticipantAvailable(seat));
         }
 
         // ─── B0-1c State Combination Queries ────────────────────
-        // Connected && Alive
+        // A real connected human or live local bot, and Alive.
         public bool IsTurnEligible(byte seat)
-            => IsConnected(seat) && GetLifeState(seat) == LifeState.Alive;
+            => IsParticipantAvailable(seat) && GetLifeState(seat) == LifeState.Alive;
 
         // Connected && Ghost
         public bool IsGhostEligible(byte seat)
@@ -482,6 +479,7 @@ namespace AbsoluteZero.Core.Match
         // Disconnected && Alive — auto-ready with no action
         public bool IsAutoReady(byte seat)
             => _seats.TryGetValue(seat, out var e)
+               && e.ControllerKind == PlayerControllerKind.Human
                && e.State == SeatConnectionState.Disconnected
                && GetLifeState(seat) == LifeState.Alive;
 

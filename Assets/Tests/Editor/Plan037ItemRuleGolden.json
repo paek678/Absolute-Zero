@@ -1,0 +1,4324 @@
+{
+    "entries": [
+        {
+            "asset": "Assets/Data/Items/Basic/Cat.asset",
+            "temperature": 0,
+            "defense": 0,
+            "use": 0,
+            "duel": "sEA7Dqum8NMAx32440Xt28Nd0GdwHHriSIVRymkqM2U=",
+            "multi3": "xuQAWTwU76crxXkP+1OV61TWWnZhx1coxhclikhwe/Y=",
+            "multi4": "iD0FvU51qD0xi48+7ExKSW3n2mFx8xMGlNSM0PcZ+hI="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Cat.asset",
+            "temperature": 0,
+            "defense": 0,
+            "use": 1,
+            "duel": "sEA7Dqum8NMAx32440Xt28Nd0GdwHHriSIVRymkqM2U=",
+            "multi3": "xuQAWTwU76crxXkP+1OV61TWWnZhx1coxhclikhwe/Y=",
+            "multi4": "iD0FvU51qD0xi48+7ExKSW3n2mFx8xMGlNSM0PcZ+hI="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Cat.asset",
+            "temperature": 0,
+            "defense": 1,
+            "use": 0,
+            "duel": "sEA7Dqum8NMAx32440Xt28Nd0GdwHHriSIVRymkqM2U=",
+            "multi3": "xuQAWTwU76crxXkP+1OV61TWWnZhx1coxhclikhwe/Y=",
+            "multi4": "iD0FvU51qD0xi48+7ExKSW3n2mFx8xMGlNSM0PcZ+hI="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Cat.asset",
+            "temperature": 0,
+            "defense": 1,
+            "use": 1,
+            "duel": "sEA7Dqum8NMAx32440Xt28Nd0GdwHHriSIVRymkqM2U=",
+            "multi3": "xuQAWTwU76crxXkP+1OV61TWWnZhx1coxhclikhwe/Y=",
+            "multi4": "iD0FvU51qD0xi48+7ExKSW3n2mFx8xMGlNSM0PcZ+hI="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Cat.asset",
+            "temperature": 0,
+            "defense": 2,
+            "use": 0,
+            "duel": "sEA7Dqum8NMAx32440Xt28Nd0GdwHHriSIVRymkqM2U=",
+            "multi3": "xuQAWTwU76crxXkP+1OV61TWWnZhx1coxhclikhwe/Y=",
+            "multi4": "iD0FvU51qD0xi48+7ExKSW3n2mFx8xMGlNSM0PcZ+hI="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Cat.asset",
+            "temperature": 0,
+            "defense": 2,
+            "use": 1,
+            "duel": "sEA7Dqum8NMAx32440Xt28Nd0GdwHHriSIVRymkqM2U=",
+            "multi3": "xuQAWTwU76crxXkP+1OV61TWWnZhx1coxhclikhwe/Y=",
+            "multi4": "iD0FvU51qD0xi48+7ExKSW3n2mFx8xMGlNSM0PcZ+hI="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Cat.asset",
+            "temperature": 0,
+            "defense": 3,
+            "use": 0,
+            "duel": "sEA7Dqum8NMAx32440Xt28Nd0GdwHHriSIVRymkqM2U=",
+            "multi3": "xuQAWTwU76crxXkP+1OV61TWWnZhx1coxhclikhwe/Y=",
+            "multi4": "iD0FvU51qD0xi48+7ExKSW3n2mFx8xMGlNSM0PcZ+hI="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Cat.asset",
+            "temperature": 0,
+            "defense": 3,
+            "use": 1,
+            "duel": "sEA7Dqum8NMAx32440Xt28Nd0GdwHHriSIVRymkqM2U=",
+            "multi3": "xuQAWTwU76crxXkP+1OV61TWWnZhx1coxhclikhwe/Y=",
+            "multi4": "iD0FvU51qD0xi48+7ExKSW3n2mFx8xMGlNSM0PcZ+hI="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Cat.asset",
+            "temperature": 1,
+            "defense": 0,
+            "use": 0,
+            "duel": "sEA7Dqum8NMAx32440Xt28Nd0GdwHHriSIVRymkqM2U=",
+            "multi3": "nrQnF7jujSJZzFGTnh5pzww+D9rNevjHU6oeo17+ink=",
+            "multi4": "FN/y1K84k61p3L7A75IdZoi5ed10R3B69z4+gBx1nj4="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Cat.asset",
+            "temperature": 1,
+            "defense": 0,
+            "use": 1,
+            "duel": "sEA7Dqum8NMAx32440Xt28Nd0GdwHHriSIVRymkqM2U=",
+            "multi3": "nrQnF7jujSJZzFGTnh5pzww+D9rNevjHU6oeo17+ink=",
+            "multi4": "FN/y1K84k61p3L7A75IdZoi5ed10R3B69z4+gBx1nj4="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Cat.asset",
+            "temperature": 1,
+            "defense": 1,
+            "use": 0,
+            "duel": "sEA7Dqum8NMAx32440Xt28Nd0GdwHHriSIVRymkqM2U=",
+            "multi3": "nrQnF7jujSJZzFGTnh5pzww+D9rNevjHU6oeo17+ink=",
+            "multi4": "FN/y1K84k61p3L7A75IdZoi5ed10R3B69z4+gBx1nj4="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Cat.asset",
+            "temperature": 1,
+            "defense": 1,
+            "use": 1,
+            "duel": "sEA7Dqum8NMAx32440Xt28Nd0GdwHHriSIVRymkqM2U=",
+            "multi3": "nrQnF7jujSJZzFGTnh5pzww+D9rNevjHU6oeo17+ink=",
+            "multi4": "FN/y1K84k61p3L7A75IdZoi5ed10R3B69z4+gBx1nj4="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Cat.asset",
+            "temperature": 1,
+            "defense": 2,
+            "use": 0,
+            "duel": "sEA7Dqum8NMAx32440Xt28Nd0GdwHHriSIVRymkqM2U=",
+            "multi3": "nrQnF7jujSJZzFGTnh5pzww+D9rNevjHU6oeo17+ink=",
+            "multi4": "FN/y1K84k61p3L7A75IdZoi5ed10R3B69z4+gBx1nj4="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Cat.asset",
+            "temperature": 1,
+            "defense": 2,
+            "use": 1,
+            "duel": "sEA7Dqum8NMAx32440Xt28Nd0GdwHHriSIVRymkqM2U=",
+            "multi3": "nrQnF7jujSJZzFGTnh5pzww+D9rNevjHU6oeo17+ink=",
+            "multi4": "FN/y1K84k61p3L7A75IdZoi5ed10R3B69z4+gBx1nj4="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Cat.asset",
+            "temperature": 1,
+            "defense": 3,
+            "use": 0,
+            "duel": "sEA7Dqum8NMAx32440Xt28Nd0GdwHHriSIVRymkqM2U=",
+            "multi3": "nrQnF7jujSJZzFGTnh5pzww+D9rNevjHU6oeo17+ink=",
+            "multi4": "FN/y1K84k61p3L7A75IdZoi5ed10R3B69z4+gBx1nj4="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Cat.asset",
+            "temperature": 1,
+            "defense": 3,
+            "use": 1,
+            "duel": "sEA7Dqum8NMAx32440Xt28Nd0GdwHHriSIVRymkqM2U=",
+            "multi3": "nrQnF7jujSJZzFGTnh5pzww+D9rNevjHU6oeo17+ink=",
+            "multi4": "FN/y1K84k61p3L7A75IdZoi5ed10R3B69z4+gBx1nj4="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Cat.asset",
+            "temperature": 2,
+            "defense": 0,
+            "use": 0,
+            "duel": "sEA7Dqum8NMAx32440Xt28Nd0GdwHHriSIVRymkqM2U=",
+            "multi3": "aRshjh0I86gvJK0eptMzV7gV4Dv+CgK+rvStMa/qGCk=",
+            "multi4": "JbmW5d0FOaAA+stjNb+1uSm9Zj+gGLaF7Ujufg+dsLM="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Cat.asset",
+            "temperature": 2,
+            "defense": 0,
+            "use": 1,
+            "duel": "sEA7Dqum8NMAx32440Xt28Nd0GdwHHriSIVRymkqM2U=",
+            "multi3": "aRshjh0I86gvJK0eptMzV7gV4Dv+CgK+rvStMa/qGCk=",
+            "multi4": "JbmW5d0FOaAA+stjNb+1uSm9Zj+gGLaF7Ujufg+dsLM="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Cat.asset",
+            "temperature": 2,
+            "defense": 1,
+            "use": 0,
+            "duel": "sEA7Dqum8NMAx32440Xt28Nd0GdwHHriSIVRymkqM2U=",
+            "multi3": "aRshjh0I86gvJK0eptMzV7gV4Dv+CgK+rvStMa/qGCk=",
+            "multi4": "JbmW5d0FOaAA+stjNb+1uSm9Zj+gGLaF7Ujufg+dsLM="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Cat.asset",
+            "temperature": 2,
+            "defense": 1,
+            "use": 1,
+            "duel": "sEA7Dqum8NMAx32440Xt28Nd0GdwHHriSIVRymkqM2U=",
+            "multi3": "aRshjh0I86gvJK0eptMzV7gV4Dv+CgK+rvStMa/qGCk=",
+            "multi4": "JbmW5d0FOaAA+stjNb+1uSm9Zj+gGLaF7Ujufg+dsLM="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Cat.asset",
+            "temperature": 2,
+            "defense": 2,
+            "use": 0,
+            "duel": "sEA7Dqum8NMAx32440Xt28Nd0GdwHHriSIVRymkqM2U=",
+            "multi3": "aRshjh0I86gvJK0eptMzV7gV4Dv+CgK+rvStMa/qGCk=",
+            "multi4": "JbmW5d0FOaAA+stjNb+1uSm9Zj+gGLaF7Ujufg+dsLM="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Cat.asset",
+            "temperature": 2,
+            "defense": 2,
+            "use": 1,
+            "duel": "sEA7Dqum8NMAx32440Xt28Nd0GdwHHriSIVRymkqM2U=",
+            "multi3": "aRshjh0I86gvJK0eptMzV7gV4Dv+CgK+rvStMa/qGCk=",
+            "multi4": "JbmW5d0FOaAA+stjNb+1uSm9Zj+gGLaF7Ujufg+dsLM="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Cat.asset",
+            "temperature": 2,
+            "defense": 3,
+            "use": 0,
+            "duel": "sEA7Dqum8NMAx32440Xt28Nd0GdwHHriSIVRymkqM2U=",
+            "multi3": "aRshjh0I86gvJK0eptMzV7gV4Dv+CgK+rvStMa/qGCk=",
+            "multi4": "JbmW5d0FOaAA+stjNb+1uSm9Zj+gGLaF7Ujufg+dsLM="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Cat.asset",
+            "temperature": 2,
+            "defense": 3,
+            "use": 1,
+            "duel": "sEA7Dqum8NMAx32440Xt28Nd0GdwHHriSIVRymkqM2U=",
+            "multi3": "aRshjh0I86gvJK0eptMzV7gV4Dv+CgK+rvStMa/qGCk=",
+            "multi4": "JbmW5d0FOaAA+stjNb+1uSm9Zj+gGLaF7Ujufg+dsLM="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Fan.asset",
+            "temperature": 0,
+            "defense": 0,
+            "use": 0,
+            "duel": "YsR2fGjn4UBxblntO2es39aaYqiLrHGXCEXToI0Y1YU=",
+            "multi3": "TOM1DjiW9ZqkvQzD3RyBeGveuYjz4uWXp6YXyZivuQY=",
+            "multi4": "UnX1y6K5Jp2ZJFv/Dx65XjVK0qK5Mu9iVjQeTpk4UO8="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Fan.asset",
+            "temperature": 0,
+            "defense": 0,
+            "use": 1,
+            "duel": "YsR2fGjn4UBxblntO2es39aaYqiLrHGXCEXToI0Y1YU=",
+            "multi3": "TOM1DjiW9ZqkvQzD3RyBeGveuYjz4uWXp6YXyZivuQY=",
+            "multi4": "UnX1y6K5Jp2ZJFv/Dx65XjVK0qK5Mu9iVjQeTpk4UO8="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Fan.asset",
+            "temperature": 0,
+            "defense": 1,
+            "use": 0,
+            "duel": "tGUkv1f0ORvYXRHzGsrCds31+B6wHZvjh0tYe7NuY7E=",
+            "multi3": "BKJQ+ZnBUICgVRu5Q7VnB+yt8sTRnsvWPwAJg4tbHk0=",
+            "multi4": "U/TILkFTHf131p+t+zmygSVaueJ3WK2jJY2TcxoJqNc="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Fan.asset",
+            "temperature": 0,
+            "defense": 1,
+            "use": 1,
+            "duel": "tGUkv1f0ORvYXRHzGsrCds31+B6wHZvjh0tYe7NuY7E=",
+            "multi3": "BKJQ+ZnBUICgVRu5Q7VnB+yt8sTRnsvWPwAJg4tbHk0=",
+            "multi4": "U/TILkFTHf131p+t+zmygSVaueJ3WK2jJY2TcxoJqNc="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Fan.asset",
+            "temperature": 0,
+            "defense": 2,
+            "use": 0,
+            "duel": "zKicnDw2JUcTL2rtbWGYg5qa5++0mrvnVaSFmxLDh24=",
+            "multi3": "TOM1DjiW9ZqkvQzD3RyBeGveuYjz4uWXp6YXyZivuQY=",
+            "multi4": "UnX1y6K5Jp2ZJFv/Dx65XjVK0qK5Mu9iVjQeTpk4UO8="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Fan.asset",
+            "temperature": 0,
+            "defense": 2,
+            "use": 1,
+            "duel": "zKicnDw2JUcTL2rtbWGYg5qa5++0mrvnVaSFmxLDh24=",
+            "multi3": "TOM1DjiW9ZqkvQzD3RyBeGveuYjz4uWXp6YXyZivuQY=",
+            "multi4": "UnX1y6K5Jp2ZJFv/Dx65XjVK0qK5Mu9iVjQeTpk4UO8="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Fan.asset",
+            "temperature": 0,
+            "defense": 3,
+            "use": 0,
+            "duel": "VflGail9TH6FS+x3ajMSt1arGCMNYzwpK7gynMj9Gcw=",
+            "multi3": "BKJQ+ZnBUICgVRu5Q7VnB+yt8sTRnsvWPwAJg4tbHk0=",
+            "multi4": "U/TILkFTHf131p+t+zmygSVaueJ3WK2jJY2TcxoJqNc="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Fan.asset",
+            "temperature": 0,
+            "defense": 3,
+            "use": 1,
+            "duel": "VflGail9TH6FS+x3ajMSt1arGCMNYzwpK7gynMj9Gcw=",
+            "multi3": "BKJQ+ZnBUICgVRu5Q7VnB+yt8sTRnsvWPwAJg4tbHk0=",
+            "multi4": "U/TILkFTHf131p+t+zmygSVaueJ3WK2jJY2TcxoJqNc="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Fan.asset",
+            "temperature": 1,
+            "defense": 0,
+            "use": 0,
+            "duel": "YsR2fGjn4UBxblntO2es39aaYqiLrHGXCEXToI0Y1YU=",
+            "multi3": "vP+3TNFq+at7P8rB19hpmEtVcaLJX/pxVO+7PbD2/ho=",
+            "multi4": "uHwBwMN+bqApFAXrETqYYbUPQNdwKP8vIVTjX4IKa18="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Fan.asset",
+            "temperature": 1,
+            "defense": 0,
+            "use": 1,
+            "duel": "YsR2fGjn4UBxblntO2es39aaYqiLrHGXCEXToI0Y1YU=",
+            "multi3": "vP+3TNFq+at7P8rB19hpmEtVcaLJX/pxVO+7PbD2/ho=",
+            "multi4": "uHwBwMN+bqApFAXrETqYYbUPQNdwKP8vIVTjX4IKa18="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Fan.asset",
+            "temperature": 1,
+            "defense": 1,
+            "use": 0,
+            "duel": "tGUkv1f0ORvYXRHzGsrCds31+B6wHZvjh0tYe7NuY7E=",
+            "multi3": "umPoeZOyqROqrMkXTaxTZPlGiCmv5luHs/tfwJneg30=",
+            "multi4": "STvi0r5JIduNF3o2PFUP7zzoauNXepz6hVxf1rAqKeA="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Fan.asset",
+            "temperature": 1,
+            "defense": 1,
+            "use": 1,
+            "duel": "tGUkv1f0ORvYXRHzGsrCds31+B6wHZvjh0tYe7NuY7E=",
+            "multi3": "umPoeZOyqROqrMkXTaxTZPlGiCmv5luHs/tfwJneg30=",
+            "multi4": "STvi0r5JIduNF3o2PFUP7zzoauNXepz6hVxf1rAqKeA="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Fan.asset",
+            "temperature": 1,
+            "defense": 2,
+            "use": 0,
+            "duel": "zKicnDw2JUcTL2rtbWGYg5qa5++0mrvnVaSFmxLDh24=",
+            "multi3": "vP+3TNFq+at7P8rB19hpmEtVcaLJX/pxVO+7PbD2/ho=",
+            "multi4": "uHwBwMN+bqApFAXrETqYYbUPQNdwKP8vIVTjX4IKa18="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Fan.asset",
+            "temperature": 1,
+            "defense": 2,
+            "use": 1,
+            "duel": "zKicnDw2JUcTL2rtbWGYg5qa5++0mrvnVaSFmxLDh24=",
+            "multi3": "vP+3TNFq+at7P8rB19hpmEtVcaLJX/pxVO+7PbD2/ho=",
+            "multi4": "uHwBwMN+bqApFAXrETqYYbUPQNdwKP8vIVTjX4IKa18="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Fan.asset",
+            "temperature": 1,
+            "defense": 3,
+            "use": 0,
+            "duel": "VflGail9TH6FS+x3ajMSt1arGCMNYzwpK7gynMj9Gcw=",
+            "multi3": "umPoeZOyqROqrMkXTaxTZPlGiCmv5luHs/tfwJneg30=",
+            "multi4": "STvi0r5JIduNF3o2PFUP7zzoauNXepz6hVxf1rAqKeA="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Fan.asset",
+            "temperature": 1,
+            "defense": 3,
+            "use": 1,
+            "duel": "VflGail9TH6FS+x3ajMSt1arGCMNYzwpK7gynMj9Gcw=",
+            "multi3": "umPoeZOyqROqrMkXTaxTZPlGiCmv5luHs/tfwJneg30=",
+            "multi4": "STvi0r5JIduNF3o2PFUP7zzoauNXepz6hVxf1rAqKeA="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Fan.asset",
+            "temperature": 2,
+            "defense": 0,
+            "use": 0,
+            "duel": "YsR2fGjn4UBxblntO2es39aaYqiLrHGXCEXToI0Y1YU=",
+            "multi3": "e3x/2cArV7/PYIKahESDz24fquqlIv4qrApqRgFMWb4=",
+            "multi4": "v8/MiJIadY04VaICNEEa8R5TrYuqeiEb3ZchZG0pX3s="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Fan.asset",
+            "temperature": 2,
+            "defense": 0,
+            "use": 1,
+            "duel": "YsR2fGjn4UBxblntO2es39aaYqiLrHGXCEXToI0Y1YU=",
+            "multi3": "e3x/2cArV7/PYIKahESDz24fquqlIv4qrApqRgFMWb4=",
+            "multi4": "v8/MiJIadY04VaICNEEa8R5TrYuqeiEb3ZchZG0pX3s="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Fan.asset",
+            "temperature": 2,
+            "defense": 1,
+            "use": 0,
+            "duel": "tGUkv1f0ORvYXRHzGsrCds31+B6wHZvjh0tYe7NuY7E=",
+            "multi3": "JxWN5kxuDMkWUA1h05+9A//QC/E67r7Z/Oo+/j9qD5U=",
+            "multi4": "2O1vL/U5I+DWSktO4YD6XC0NrbhhIJhvv9YHjdxrTkA="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Fan.asset",
+            "temperature": 2,
+            "defense": 1,
+            "use": 1,
+            "duel": "tGUkv1f0ORvYXRHzGsrCds31+B6wHZvjh0tYe7NuY7E=",
+            "multi3": "JxWN5kxuDMkWUA1h05+9A//QC/E67r7Z/Oo+/j9qD5U=",
+            "multi4": "2O1vL/U5I+DWSktO4YD6XC0NrbhhIJhvv9YHjdxrTkA="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Fan.asset",
+            "temperature": 2,
+            "defense": 2,
+            "use": 0,
+            "duel": "zKicnDw2JUcTL2rtbWGYg5qa5++0mrvnVaSFmxLDh24=",
+            "multi3": "e3x/2cArV7/PYIKahESDz24fquqlIv4qrApqRgFMWb4=",
+            "multi4": "v8/MiJIadY04VaICNEEa8R5TrYuqeiEb3ZchZG0pX3s="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Fan.asset",
+            "temperature": 2,
+            "defense": 2,
+            "use": 1,
+            "duel": "zKicnDw2JUcTL2rtbWGYg5qa5++0mrvnVaSFmxLDh24=",
+            "multi3": "e3x/2cArV7/PYIKahESDz24fquqlIv4qrApqRgFMWb4=",
+            "multi4": "v8/MiJIadY04VaICNEEa8R5TrYuqeiEb3ZchZG0pX3s="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Fan.asset",
+            "temperature": 2,
+            "defense": 3,
+            "use": 0,
+            "duel": "VflGail9TH6FS+x3ajMSt1arGCMNYzwpK7gynMj9Gcw=",
+            "multi3": "JxWN5kxuDMkWUA1h05+9A//QC/E67r7Z/Oo+/j9qD5U=",
+            "multi4": "2O1vL/U5I+DWSktO4YD6XC0NrbhhIJhvv9YHjdxrTkA="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Fan.asset",
+            "temperature": 2,
+            "defense": 3,
+            "use": 1,
+            "duel": "VflGail9TH6FS+x3ajMSt1arGCMNYzwpK7gynMj9Gcw=",
+            "multi3": "JxWN5kxuDMkWUA1h05+9A//QC/E67r7Z/Oo+/j9qD5U=",
+            "multi4": "2O1vL/U5I+DWSktO4YD6XC0NrbhhIJhvv9YHjdxrTkA="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/WarmTea.asset",
+            "temperature": 0,
+            "defense": 0,
+            "use": 0,
+            "duel": "zYh4OVmJJ2Qq/m5bHysFdk1/wYb/Aj8RYaBlCKiVxaQ=",
+            "multi3": "NLJiI3oDLf234lm4lnR4d/1ncgYjOd+xVo42LR8m5lA=",
+            "multi4": "XzqiQUCQJN/HS+oqjoF45WxnB40Muc2enyfJsMQEYAQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/WarmTea.asset",
+            "temperature": 0,
+            "defense": 0,
+            "use": 1,
+            "duel": "zYh4OVmJJ2Qq/m5bHysFdk1/wYb/Aj8RYaBlCKiVxaQ=",
+            "multi3": "NLJiI3oDLf234lm4lnR4d/1ncgYjOd+xVo42LR8m5lA=",
+            "multi4": "XzqiQUCQJN/HS+oqjoF45WxnB40Muc2enyfJsMQEYAQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/WarmTea.asset",
+            "temperature": 0,
+            "defense": 1,
+            "use": 0,
+            "duel": "zYh4OVmJJ2Qq/m5bHysFdk1/wYb/Aj8RYaBlCKiVxaQ=",
+            "multi3": "NLJiI3oDLf234lm4lnR4d/1ncgYjOd+xVo42LR8m5lA=",
+            "multi4": "XzqiQUCQJN/HS+oqjoF45WxnB40Muc2enyfJsMQEYAQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/WarmTea.asset",
+            "temperature": 0,
+            "defense": 1,
+            "use": 1,
+            "duel": "zYh4OVmJJ2Qq/m5bHysFdk1/wYb/Aj8RYaBlCKiVxaQ=",
+            "multi3": "NLJiI3oDLf234lm4lnR4d/1ncgYjOd+xVo42LR8m5lA=",
+            "multi4": "XzqiQUCQJN/HS+oqjoF45WxnB40Muc2enyfJsMQEYAQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/WarmTea.asset",
+            "temperature": 0,
+            "defense": 2,
+            "use": 0,
+            "duel": "zYh4OVmJJ2Qq/m5bHysFdk1/wYb/Aj8RYaBlCKiVxaQ=",
+            "multi3": "NLJiI3oDLf234lm4lnR4d/1ncgYjOd+xVo42LR8m5lA=",
+            "multi4": "XzqiQUCQJN/HS+oqjoF45WxnB40Muc2enyfJsMQEYAQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/WarmTea.asset",
+            "temperature": 0,
+            "defense": 2,
+            "use": 1,
+            "duel": "zYh4OVmJJ2Qq/m5bHysFdk1/wYb/Aj8RYaBlCKiVxaQ=",
+            "multi3": "NLJiI3oDLf234lm4lnR4d/1ncgYjOd+xVo42LR8m5lA=",
+            "multi4": "XzqiQUCQJN/HS+oqjoF45WxnB40Muc2enyfJsMQEYAQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/WarmTea.asset",
+            "temperature": 0,
+            "defense": 3,
+            "use": 0,
+            "duel": "zYh4OVmJJ2Qq/m5bHysFdk1/wYb/Aj8RYaBlCKiVxaQ=",
+            "multi3": "NLJiI3oDLf234lm4lnR4d/1ncgYjOd+xVo42LR8m5lA=",
+            "multi4": "XzqiQUCQJN/HS+oqjoF45WxnB40Muc2enyfJsMQEYAQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/WarmTea.asset",
+            "temperature": 0,
+            "defense": 3,
+            "use": 1,
+            "duel": "zYh4OVmJJ2Qq/m5bHysFdk1/wYb/Aj8RYaBlCKiVxaQ=",
+            "multi3": "NLJiI3oDLf234lm4lnR4d/1ncgYjOd+xVo42LR8m5lA=",
+            "multi4": "XzqiQUCQJN/HS+oqjoF45WxnB40Muc2enyfJsMQEYAQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/WarmTea.asset",
+            "temperature": 1,
+            "defense": 0,
+            "use": 0,
+            "duel": "zYh4OVmJJ2Qq/m5bHysFdk1/wYb/Aj8RYaBlCKiVxaQ=",
+            "multi3": "f/VMF6mNyjib5HQoclt3Avn7yXJCRR49DFXOhi7fQ0g=",
+            "multi4": "OWjxVbpgte8QzlMT/rJSsJ8Ih4UZTSaAKCHJ1tpnS+s="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/WarmTea.asset",
+            "temperature": 1,
+            "defense": 0,
+            "use": 1,
+            "duel": "zYh4OVmJJ2Qq/m5bHysFdk1/wYb/Aj8RYaBlCKiVxaQ=",
+            "multi3": "f/VMF6mNyjib5HQoclt3Avn7yXJCRR49DFXOhi7fQ0g=",
+            "multi4": "OWjxVbpgte8QzlMT/rJSsJ8Ih4UZTSaAKCHJ1tpnS+s="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/WarmTea.asset",
+            "temperature": 1,
+            "defense": 1,
+            "use": 0,
+            "duel": "zYh4OVmJJ2Qq/m5bHysFdk1/wYb/Aj8RYaBlCKiVxaQ=",
+            "multi3": "f/VMF6mNyjib5HQoclt3Avn7yXJCRR49DFXOhi7fQ0g=",
+            "multi4": "OWjxVbpgte8QzlMT/rJSsJ8Ih4UZTSaAKCHJ1tpnS+s="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/WarmTea.asset",
+            "temperature": 1,
+            "defense": 1,
+            "use": 1,
+            "duel": "zYh4OVmJJ2Qq/m5bHysFdk1/wYb/Aj8RYaBlCKiVxaQ=",
+            "multi3": "f/VMF6mNyjib5HQoclt3Avn7yXJCRR49DFXOhi7fQ0g=",
+            "multi4": "OWjxVbpgte8QzlMT/rJSsJ8Ih4UZTSaAKCHJ1tpnS+s="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/WarmTea.asset",
+            "temperature": 1,
+            "defense": 2,
+            "use": 0,
+            "duel": "zYh4OVmJJ2Qq/m5bHysFdk1/wYb/Aj8RYaBlCKiVxaQ=",
+            "multi3": "f/VMF6mNyjib5HQoclt3Avn7yXJCRR49DFXOhi7fQ0g=",
+            "multi4": "OWjxVbpgte8QzlMT/rJSsJ8Ih4UZTSaAKCHJ1tpnS+s="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/WarmTea.asset",
+            "temperature": 1,
+            "defense": 2,
+            "use": 1,
+            "duel": "zYh4OVmJJ2Qq/m5bHysFdk1/wYb/Aj8RYaBlCKiVxaQ=",
+            "multi3": "f/VMF6mNyjib5HQoclt3Avn7yXJCRR49DFXOhi7fQ0g=",
+            "multi4": "OWjxVbpgte8QzlMT/rJSsJ8Ih4UZTSaAKCHJ1tpnS+s="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/WarmTea.asset",
+            "temperature": 1,
+            "defense": 3,
+            "use": 0,
+            "duel": "zYh4OVmJJ2Qq/m5bHysFdk1/wYb/Aj8RYaBlCKiVxaQ=",
+            "multi3": "f/VMF6mNyjib5HQoclt3Avn7yXJCRR49DFXOhi7fQ0g=",
+            "multi4": "OWjxVbpgte8QzlMT/rJSsJ8Ih4UZTSaAKCHJ1tpnS+s="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/WarmTea.asset",
+            "temperature": 1,
+            "defense": 3,
+            "use": 1,
+            "duel": "zYh4OVmJJ2Qq/m5bHysFdk1/wYb/Aj8RYaBlCKiVxaQ=",
+            "multi3": "f/VMF6mNyjib5HQoclt3Avn7yXJCRR49DFXOhi7fQ0g=",
+            "multi4": "OWjxVbpgte8QzlMT/rJSsJ8Ih4UZTSaAKCHJ1tpnS+s="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/WarmTea.asset",
+            "temperature": 2,
+            "defense": 0,
+            "use": 0,
+            "duel": "zYh4OVmJJ2Qq/m5bHysFdk1/wYb/Aj8RYaBlCKiVxaQ=",
+            "multi3": "s5tOVWjiKPsE10pRqV0Y+AAuYwu0jF7bGtISnEAVDI0=",
+            "multi4": "r51UCBLhkUCc3yJXFTU9jvi3lEjuOia2Hov+hXxxVak="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/WarmTea.asset",
+            "temperature": 2,
+            "defense": 0,
+            "use": 1,
+            "duel": "zYh4OVmJJ2Qq/m5bHysFdk1/wYb/Aj8RYaBlCKiVxaQ=",
+            "multi3": "s5tOVWjiKPsE10pRqV0Y+AAuYwu0jF7bGtISnEAVDI0=",
+            "multi4": "r51UCBLhkUCc3yJXFTU9jvi3lEjuOia2Hov+hXxxVak="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/WarmTea.asset",
+            "temperature": 2,
+            "defense": 1,
+            "use": 0,
+            "duel": "zYh4OVmJJ2Qq/m5bHysFdk1/wYb/Aj8RYaBlCKiVxaQ=",
+            "multi3": "s5tOVWjiKPsE10pRqV0Y+AAuYwu0jF7bGtISnEAVDI0=",
+            "multi4": "r51UCBLhkUCc3yJXFTU9jvi3lEjuOia2Hov+hXxxVak="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/WarmTea.asset",
+            "temperature": 2,
+            "defense": 1,
+            "use": 1,
+            "duel": "zYh4OVmJJ2Qq/m5bHysFdk1/wYb/Aj8RYaBlCKiVxaQ=",
+            "multi3": "s5tOVWjiKPsE10pRqV0Y+AAuYwu0jF7bGtISnEAVDI0=",
+            "multi4": "r51UCBLhkUCc3yJXFTU9jvi3lEjuOia2Hov+hXxxVak="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/WarmTea.asset",
+            "temperature": 2,
+            "defense": 2,
+            "use": 0,
+            "duel": "zYh4OVmJJ2Qq/m5bHysFdk1/wYb/Aj8RYaBlCKiVxaQ=",
+            "multi3": "s5tOVWjiKPsE10pRqV0Y+AAuYwu0jF7bGtISnEAVDI0=",
+            "multi4": "r51UCBLhkUCc3yJXFTU9jvi3lEjuOia2Hov+hXxxVak="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/WarmTea.asset",
+            "temperature": 2,
+            "defense": 2,
+            "use": 1,
+            "duel": "zYh4OVmJJ2Qq/m5bHysFdk1/wYb/Aj8RYaBlCKiVxaQ=",
+            "multi3": "s5tOVWjiKPsE10pRqV0Y+AAuYwu0jF7bGtISnEAVDI0=",
+            "multi4": "r51UCBLhkUCc3yJXFTU9jvi3lEjuOia2Hov+hXxxVak="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/WarmTea.asset",
+            "temperature": 2,
+            "defense": 3,
+            "use": 0,
+            "duel": "zYh4OVmJJ2Qq/m5bHysFdk1/wYb/Aj8RYaBlCKiVxaQ=",
+            "multi3": "s5tOVWjiKPsE10pRqV0Y+AAuYwu0jF7bGtISnEAVDI0=",
+            "multi4": "r51UCBLhkUCc3yJXFTU9jvi3lEjuOia2Hov+hXxxVak="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/WarmTea.asset",
+            "temperature": 2,
+            "defense": 3,
+            "use": 1,
+            "duel": "zYh4OVmJJ2Qq/m5bHysFdk1/wYb/Aj8RYaBlCKiVxaQ=",
+            "multi3": "s5tOVWjiKPsE10pRqV0Y+AAuYwu0jF7bGtISnEAVDI0=",
+            "multi4": "r51UCBLhkUCc3yJXFTU9jvi3lEjuOia2Hov+hXxxVak="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Windbreaker.asset",
+            "temperature": 0,
+            "defense": 0,
+            "use": 0,
+            "duel": "BKvKNav41dFQqlNWJZkmYiaJbzb0U3eL7Arqte8W6q0=",
+            "multi3": "1lczXv2+ooeHAoRkmIDwYfKhGK0nm1JODnAG0BPA8s4=",
+            "multi4": "972K3+qIfITNiC7gQfQ4VsDOls6GitHzvTB1HW8Fc0s="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Windbreaker.asset",
+            "temperature": 0,
+            "defense": 0,
+            "use": 1,
+            "duel": "BKvKNav41dFQqlNWJZkmYiaJbzb0U3eL7Arqte8W6q0=",
+            "multi3": "1lczXv2+ooeHAoRkmIDwYfKhGK0nm1JODnAG0BPA8s4=",
+            "multi4": "972K3+qIfITNiC7gQfQ4VsDOls6GitHzvTB1HW8Fc0s="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Windbreaker.asset",
+            "temperature": 0,
+            "defense": 1,
+            "use": 0,
+            "duel": "BKvKNav41dFQqlNWJZkmYiaJbzb0U3eL7Arqte8W6q0=",
+            "multi3": "1lczXv2+ooeHAoRkmIDwYfKhGK0nm1JODnAG0BPA8s4=",
+            "multi4": "972K3+qIfITNiC7gQfQ4VsDOls6GitHzvTB1HW8Fc0s="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Windbreaker.asset",
+            "temperature": 0,
+            "defense": 1,
+            "use": 1,
+            "duel": "BKvKNav41dFQqlNWJZkmYiaJbzb0U3eL7Arqte8W6q0=",
+            "multi3": "1lczXv2+ooeHAoRkmIDwYfKhGK0nm1JODnAG0BPA8s4=",
+            "multi4": "972K3+qIfITNiC7gQfQ4VsDOls6GitHzvTB1HW8Fc0s="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Windbreaker.asset",
+            "temperature": 0,
+            "defense": 2,
+            "use": 0,
+            "duel": "BKvKNav41dFQqlNWJZkmYiaJbzb0U3eL7Arqte8W6q0=",
+            "multi3": "1lczXv2+ooeHAoRkmIDwYfKhGK0nm1JODnAG0BPA8s4=",
+            "multi4": "972K3+qIfITNiC7gQfQ4VsDOls6GitHzvTB1HW8Fc0s="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Windbreaker.asset",
+            "temperature": 0,
+            "defense": 2,
+            "use": 1,
+            "duel": "BKvKNav41dFQqlNWJZkmYiaJbzb0U3eL7Arqte8W6q0=",
+            "multi3": "1lczXv2+ooeHAoRkmIDwYfKhGK0nm1JODnAG0BPA8s4=",
+            "multi4": "972K3+qIfITNiC7gQfQ4VsDOls6GitHzvTB1HW8Fc0s="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Windbreaker.asset",
+            "temperature": 0,
+            "defense": 3,
+            "use": 0,
+            "duel": "BKvKNav41dFQqlNWJZkmYiaJbzb0U3eL7Arqte8W6q0=",
+            "multi3": "1lczXv2+ooeHAoRkmIDwYfKhGK0nm1JODnAG0BPA8s4=",
+            "multi4": "972K3+qIfITNiC7gQfQ4VsDOls6GitHzvTB1HW8Fc0s="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Windbreaker.asset",
+            "temperature": 0,
+            "defense": 3,
+            "use": 1,
+            "duel": "BKvKNav41dFQqlNWJZkmYiaJbzb0U3eL7Arqte8W6q0=",
+            "multi3": "1lczXv2+ooeHAoRkmIDwYfKhGK0nm1JODnAG0BPA8s4=",
+            "multi4": "972K3+qIfITNiC7gQfQ4VsDOls6GitHzvTB1HW8Fc0s="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Windbreaker.asset",
+            "temperature": 1,
+            "defense": 0,
+            "use": 0,
+            "duel": "BKvKNav41dFQqlNWJZkmYiaJbzb0U3eL7Arqte8W6q0=",
+            "multi3": "1lczXv2+ooeHAoRkmIDwYfKhGK0nm1JODnAG0BPA8s4=",
+            "multi4": "972K3+qIfITNiC7gQfQ4VsDOls6GitHzvTB1HW8Fc0s="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Windbreaker.asset",
+            "temperature": 1,
+            "defense": 0,
+            "use": 1,
+            "duel": "BKvKNav41dFQqlNWJZkmYiaJbzb0U3eL7Arqte8W6q0=",
+            "multi3": "1lczXv2+ooeHAoRkmIDwYfKhGK0nm1JODnAG0BPA8s4=",
+            "multi4": "972K3+qIfITNiC7gQfQ4VsDOls6GitHzvTB1HW8Fc0s="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Windbreaker.asset",
+            "temperature": 1,
+            "defense": 1,
+            "use": 0,
+            "duel": "BKvKNav41dFQqlNWJZkmYiaJbzb0U3eL7Arqte8W6q0=",
+            "multi3": "1lczXv2+ooeHAoRkmIDwYfKhGK0nm1JODnAG0BPA8s4=",
+            "multi4": "972K3+qIfITNiC7gQfQ4VsDOls6GitHzvTB1HW8Fc0s="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Windbreaker.asset",
+            "temperature": 1,
+            "defense": 1,
+            "use": 1,
+            "duel": "BKvKNav41dFQqlNWJZkmYiaJbzb0U3eL7Arqte8W6q0=",
+            "multi3": "1lczXv2+ooeHAoRkmIDwYfKhGK0nm1JODnAG0BPA8s4=",
+            "multi4": "972K3+qIfITNiC7gQfQ4VsDOls6GitHzvTB1HW8Fc0s="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Windbreaker.asset",
+            "temperature": 1,
+            "defense": 2,
+            "use": 0,
+            "duel": "BKvKNav41dFQqlNWJZkmYiaJbzb0U3eL7Arqte8W6q0=",
+            "multi3": "1lczXv2+ooeHAoRkmIDwYfKhGK0nm1JODnAG0BPA8s4=",
+            "multi4": "972K3+qIfITNiC7gQfQ4VsDOls6GitHzvTB1HW8Fc0s="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Windbreaker.asset",
+            "temperature": 1,
+            "defense": 2,
+            "use": 1,
+            "duel": "BKvKNav41dFQqlNWJZkmYiaJbzb0U3eL7Arqte8W6q0=",
+            "multi3": "1lczXv2+ooeHAoRkmIDwYfKhGK0nm1JODnAG0BPA8s4=",
+            "multi4": "972K3+qIfITNiC7gQfQ4VsDOls6GitHzvTB1HW8Fc0s="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Windbreaker.asset",
+            "temperature": 1,
+            "defense": 3,
+            "use": 0,
+            "duel": "BKvKNav41dFQqlNWJZkmYiaJbzb0U3eL7Arqte8W6q0=",
+            "multi3": "1lczXv2+ooeHAoRkmIDwYfKhGK0nm1JODnAG0BPA8s4=",
+            "multi4": "972K3+qIfITNiC7gQfQ4VsDOls6GitHzvTB1HW8Fc0s="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Windbreaker.asset",
+            "temperature": 1,
+            "defense": 3,
+            "use": 1,
+            "duel": "BKvKNav41dFQqlNWJZkmYiaJbzb0U3eL7Arqte8W6q0=",
+            "multi3": "1lczXv2+ooeHAoRkmIDwYfKhGK0nm1JODnAG0BPA8s4=",
+            "multi4": "972K3+qIfITNiC7gQfQ4VsDOls6GitHzvTB1HW8Fc0s="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Windbreaker.asset",
+            "temperature": 2,
+            "defense": 0,
+            "use": 0,
+            "duel": "BKvKNav41dFQqlNWJZkmYiaJbzb0U3eL7Arqte8W6q0=",
+            "multi3": "1lczXv2+ooeHAoRkmIDwYfKhGK0nm1JODnAG0BPA8s4=",
+            "multi4": "972K3+qIfITNiC7gQfQ4VsDOls6GitHzvTB1HW8Fc0s="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Windbreaker.asset",
+            "temperature": 2,
+            "defense": 0,
+            "use": 1,
+            "duel": "BKvKNav41dFQqlNWJZkmYiaJbzb0U3eL7Arqte8W6q0=",
+            "multi3": "1lczXv2+ooeHAoRkmIDwYfKhGK0nm1JODnAG0BPA8s4=",
+            "multi4": "972K3+qIfITNiC7gQfQ4VsDOls6GitHzvTB1HW8Fc0s="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Windbreaker.asset",
+            "temperature": 2,
+            "defense": 1,
+            "use": 0,
+            "duel": "BKvKNav41dFQqlNWJZkmYiaJbzb0U3eL7Arqte8W6q0=",
+            "multi3": "1lczXv2+ooeHAoRkmIDwYfKhGK0nm1JODnAG0BPA8s4=",
+            "multi4": "972K3+qIfITNiC7gQfQ4VsDOls6GitHzvTB1HW8Fc0s="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Windbreaker.asset",
+            "temperature": 2,
+            "defense": 1,
+            "use": 1,
+            "duel": "BKvKNav41dFQqlNWJZkmYiaJbzb0U3eL7Arqte8W6q0=",
+            "multi3": "1lczXv2+ooeHAoRkmIDwYfKhGK0nm1JODnAG0BPA8s4=",
+            "multi4": "972K3+qIfITNiC7gQfQ4VsDOls6GitHzvTB1HW8Fc0s="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Windbreaker.asset",
+            "temperature": 2,
+            "defense": 2,
+            "use": 0,
+            "duel": "BKvKNav41dFQqlNWJZkmYiaJbzb0U3eL7Arqte8W6q0=",
+            "multi3": "1lczXv2+ooeHAoRkmIDwYfKhGK0nm1JODnAG0BPA8s4=",
+            "multi4": "972K3+qIfITNiC7gQfQ4VsDOls6GitHzvTB1HW8Fc0s="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Windbreaker.asset",
+            "temperature": 2,
+            "defense": 2,
+            "use": 1,
+            "duel": "BKvKNav41dFQqlNWJZkmYiaJbzb0U3eL7Arqte8W6q0=",
+            "multi3": "1lczXv2+ooeHAoRkmIDwYfKhGK0nm1JODnAG0BPA8s4=",
+            "multi4": "972K3+qIfITNiC7gQfQ4VsDOls6GitHzvTB1HW8Fc0s="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Windbreaker.asset",
+            "temperature": 2,
+            "defense": 3,
+            "use": 0,
+            "duel": "BKvKNav41dFQqlNWJZkmYiaJbzb0U3eL7Arqte8W6q0=",
+            "multi3": "1lczXv2+ooeHAoRkmIDwYfKhGK0nm1JODnAG0BPA8s4=",
+            "multi4": "972K3+qIfITNiC7gQfQ4VsDOls6GitHzvTB1HW8Fc0s="
+        },
+        {
+            "asset": "Assets/Data/Items/Basic/Windbreaker.asset",
+            "temperature": 2,
+            "defense": 3,
+            "use": 1,
+            "duel": "BKvKNav41dFQqlNWJZkmYiaJbzb0U3eL7Arqte8W6q0=",
+            "multi3": "1lczXv2+ooeHAoRkmIDwYfKhGK0nm1JODnAG0BPA8s4=",
+            "multi4": "972K3+qIfITNiC7gQfQ4VsDOls6GitHzvTB1HW8Fc0s="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
+            "temperature": 0,
+            "defense": 0,
+            "use": 0,
+            "duel": "+8oGpio1aEXw/o4MJl1rK1WuxbuuUJrgGfcw++OjC3w=",
+            "multi3": "SRGBtdLb0wPwO37XLGgGZ8LJoLS9+SjtKQdIOlqqjkY=",
+            "multi4": "X0aBdiOEhjP9Xaex1Q/xk8f9orp6VfFUtJBPTaH8Z9M="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
+            "temperature": 0,
+            "defense": 0,
+            "use": 1,
+            "duel": "+8oGpio1aEXw/o4MJl1rK1WuxbuuUJrgGfcw++OjC3w=",
+            "multi3": "SRGBtdLb0wPwO37XLGgGZ8LJoLS9+SjtKQdIOlqqjkY=",
+            "multi4": "X0aBdiOEhjP9Xaex1Q/xk8f9orp6VfFUtJBPTaH8Z9M="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
+            "temperature": 0,
+            "defense": 1,
+            "use": 0,
+            "duel": "qF9jWdqjimirNqpbau0+2YWw6WQnakjhOeEYqsmpux4=",
+            "multi3": "BKJQ+ZnBUICgVRu5Q7VnB+yt8sTRnsvWPwAJg4tbHk0=",
+            "multi4": "U/TILkFTHf131p+t+zmygSVaueJ3WK2jJY2TcxoJqNc="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
+            "temperature": 0,
+            "defense": 1,
+            "use": 1,
+            "duel": "qF9jWdqjimirNqpbau0+2YWw6WQnakjhOeEYqsmpux4=",
+            "multi3": "BKJQ+ZnBUICgVRu5Q7VnB+yt8sTRnsvWPwAJg4tbHk0=",
+            "multi4": "U/TILkFTHf131p+t+zmygSVaueJ3WK2jJY2TcxoJqNc="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
+            "temperature": 0,
+            "defense": 2,
+            "use": 0,
+            "duel": "6f8sEUGAinLYuzNZY5r8+KW6DVrN1BkwjCGzgosCpok=",
+            "multi3": "SRGBtdLb0wPwO37XLGgGZ8LJoLS9+SjtKQdIOlqqjkY=",
+            "multi4": "X0aBdiOEhjP9Xaex1Q/xk8f9orp6VfFUtJBPTaH8Z9M="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
+            "temperature": 0,
+            "defense": 2,
+            "use": 1,
+            "duel": "6f8sEUGAinLYuzNZY5r8+KW6DVrN1BkwjCGzgosCpok=",
+            "multi3": "SRGBtdLb0wPwO37XLGgGZ8LJoLS9+SjtKQdIOlqqjkY=",
+            "multi4": "X0aBdiOEhjP9Xaex1Q/xk8f9orp6VfFUtJBPTaH8Z9M="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
+            "temperature": 0,
+            "defense": 3,
+            "use": 0,
+            "duel": "/VTZ6Xf0Fm8QgTXYor3NyMmht6mJ0tWJ6KmMS6qcaAg=",
+            "multi3": "BKJQ+ZnBUICgVRu5Q7VnB+yt8sTRnsvWPwAJg4tbHk0=",
+            "multi4": "U/TILkFTHf131p+t+zmygSVaueJ3WK2jJY2TcxoJqNc="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
+            "temperature": 0,
+            "defense": 3,
+            "use": 1,
+            "duel": "/VTZ6Xf0Fm8QgTXYor3NyMmht6mJ0tWJ6KmMS6qcaAg=",
+            "multi3": "BKJQ+ZnBUICgVRu5Q7VnB+yt8sTRnsvWPwAJg4tbHk0=",
+            "multi4": "U/TILkFTHf131p+t+zmygSVaueJ3WK2jJY2TcxoJqNc="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
+            "temperature": 1,
+            "defense": 0,
+            "use": 0,
+            "duel": "+8oGpio1aEXw/o4MJl1rK1WuxbuuUJrgGfcw++OjC3w=",
+            "multi3": "EdIjEiKDagdxb3unu+qbWx5jxKkNC+lKMT39hG03W/c=",
+            "multi4": "hZb8pCbIjXZYBJAVaoiSMTWsI+EJpSo/DZKePfq/LqE="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
+            "temperature": 1,
+            "defense": 0,
+            "use": 1,
+            "duel": "+8oGpio1aEXw/o4MJl1rK1WuxbuuUJrgGfcw++OjC3w=",
+            "multi3": "EdIjEiKDagdxb3unu+qbWx5jxKkNC+lKMT39hG03W/c=",
+            "multi4": "hZb8pCbIjXZYBJAVaoiSMTWsI+EJpSo/DZKePfq/LqE="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
+            "temperature": 1,
+            "defense": 1,
+            "use": 0,
+            "duel": "qF9jWdqjimirNqpbau0+2YWw6WQnakjhOeEYqsmpux4=",
+            "multi3": "umPoeZOyqROqrMkXTaxTZPlGiCmv5luHs/tfwJneg30=",
+            "multi4": "STvi0r5JIduNF3o2PFUP7zzoauNXepz6hVxf1rAqKeA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
+            "temperature": 1,
+            "defense": 1,
+            "use": 1,
+            "duel": "qF9jWdqjimirNqpbau0+2YWw6WQnakjhOeEYqsmpux4=",
+            "multi3": "umPoeZOyqROqrMkXTaxTZPlGiCmv5luHs/tfwJneg30=",
+            "multi4": "STvi0r5JIduNF3o2PFUP7zzoauNXepz6hVxf1rAqKeA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
+            "temperature": 1,
+            "defense": 2,
+            "use": 0,
+            "duel": "6f8sEUGAinLYuzNZY5r8+KW6DVrN1BkwjCGzgosCpok=",
+            "multi3": "EdIjEiKDagdxb3unu+qbWx5jxKkNC+lKMT39hG03W/c=",
+            "multi4": "hZb8pCbIjXZYBJAVaoiSMTWsI+EJpSo/DZKePfq/LqE="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
+            "temperature": 1,
+            "defense": 2,
+            "use": 1,
+            "duel": "6f8sEUGAinLYuzNZY5r8+KW6DVrN1BkwjCGzgosCpok=",
+            "multi3": "EdIjEiKDagdxb3unu+qbWx5jxKkNC+lKMT39hG03W/c=",
+            "multi4": "hZb8pCbIjXZYBJAVaoiSMTWsI+EJpSo/DZKePfq/LqE="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
+            "temperature": 1,
+            "defense": 3,
+            "use": 0,
+            "duel": "/VTZ6Xf0Fm8QgTXYor3NyMmht6mJ0tWJ6KmMS6qcaAg=",
+            "multi3": "umPoeZOyqROqrMkXTaxTZPlGiCmv5luHs/tfwJneg30=",
+            "multi4": "STvi0r5JIduNF3o2PFUP7zzoauNXepz6hVxf1rAqKeA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
+            "temperature": 1,
+            "defense": 3,
+            "use": 1,
+            "duel": "/VTZ6Xf0Fm8QgTXYor3NyMmht6mJ0tWJ6KmMS6qcaAg=",
+            "multi3": "umPoeZOyqROqrMkXTaxTZPlGiCmv5luHs/tfwJneg30=",
+            "multi4": "STvi0r5JIduNF3o2PFUP7zzoauNXepz6hVxf1rAqKeA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
+            "temperature": 2,
+            "defense": 0,
+            "use": 0,
+            "duel": "+8oGpio1aEXw/o4MJl1rK1WuxbuuUJrgGfcw++OjC3w=",
+            "multi3": "bespcDU7aZbz9dcRq3WpA2+Ev4Adv0/K+Dz/En0pHIg=",
+            "multi4": "eFfDFM1CHXQ1YToH/VOmtF/kUbAx5p9kOnZrAnfetjM="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
+            "temperature": 2,
+            "defense": 0,
+            "use": 1,
+            "duel": "+8oGpio1aEXw/o4MJl1rK1WuxbuuUJrgGfcw++OjC3w=",
+            "multi3": "bespcDU7aZbz9dcRq3WpA2+Ev4Adv0/K+Dz/En0pHIg=",
+            "multi4": "eFfDFM1CHXQ1YToH/VOmtF/kUbAx5p9kOnZrAnfetjM="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
+            "temperature": 2,
+            "defense": 1,
+            "use": 0,
+            "duel": "qF9jWdqjimirNqpbau0+2YWw6WQnakjhOeEYqsmpux4=",
+            "multi3": "JxWN5kxuDMkWUA1h05+9A//QC/E67r7Z/Oo+/j9qD5U=",
+            "multi4": "2O1vL/U5I+DWSktO4YD6XC0NrbhhIJhvv9YHjdxrTkA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
+            "temperature": 2,
+            "defense": 1,
+            "use": 1,
+            "duel": "qF9jWdqjimirNqpbau0+2YWw6WQnakjhOeEYqsmpux4=",
+            "multi3": "JxWN5kxuDMkWUA1h05+9A//QC/E67r7Z/Oo+/j9qD5U=",
+            "multi4": "2O1vL/U5I+DWSktO4YD6XC0NrbhhIJhvv9YHjdxrTkA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
+            "temperature": 2,
+            "defense": 2,
+            "use": 0,
+            "duel": "6f8sEUGAinLYuzNZY5r8+KW6DVrN1BkwjCGzgosCpok=",
+            "multi3": "bespcDU7aZbz9dcRq3WpA2+Ev4Adv0/K+Dz/En0pHIg=",
+            "multi4": "eFfDFM1CHXQ1YToH/VOmtF/kUbAx5p9kOnZrAnfetjM="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
+            "temperature": 2,
+            "defense": 2,
+            "use": 1,
+            "duel": "6f8sEUGAinLYuzNZY5r8+KW6DVrN1BkwjCGzgosCpok=",
+            "multi3": "bespcDU7aZbz9dcRq3WpA2+Ev4Adv0/K+Dz/En0pHIg=",
+            "multi4": "eFfDFM1CHXQ1YToH/VOmtF/kUbAx5p9kOnZrAnfetjM="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
+            "temperature": 2,
+            "defense": 3,
+            "use": 0,
+            "duel": "/VTZ6Xf0Fm8QgTXYor3NyMmht6mJ0tWJ6KmMS6qcaAg=",
+            "multi3": "JxWN5kxuDMkWUA1h05+9A//QC/E67r7Z/Oo+/j9qD5U=",
+            "multi4": "2O1vL/U5I+DWSktO4YD6XC0NrbhhIJhvv9YHjdxrTkA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
+            "temperature": 2,
+            "defense": 3,
+            "use": 1,
+            "duel": "/VTZ6Xf0Fm8QgTXYor3NyMmht6mJ0tWJ6KmMS6qcaAg=",
+            "multi3": "JxWN5kxuDMkWUA1h05+9A//QC/E67r7Z/Oo+/j9qD5U=",
+            "multi4": "2O1vL/U5I+DWSktO4YD6XC0NrbhhIJhvv9YHjdxrTkA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HugTshirt.asset",
+            "temperature": 0,
+            "defense": 0,
+            "use": 0,
+            "duel": "y6uEs0PUJ6e/0FJ6hkLkLFL9cuWwTh0gwO8lo+3Smzg=",
+            "multi3": "DQjTbtuxJ5AQn4dCHpANnInJSlpX+SPlgawtKuK0KtI=",
+            "multi4": "s1hbdhYO4msfASdIM6RWNzofWi+oUK71+1jTr9I+pfE="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HugTshirt.asset",
+            "temperature": 0,
+            "defense": 0,
+            "use": 1,
+            "duel": "y6uEs0PUJ6e/0FJ6hkLkLFL9cuWwTh0gwO8lo+3Smzg=",
+            "multi3": "DQjTbtuxJ5AQn4dCHpANnInJSlpX+SPlgawtKuK0KtI=",
+            "multi4": "s1hbdhYO4msfASdIM6RWNzofWi+oUK71+1jTr9I+pfE="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HugTshirt.asset",
+            "temperature": 0,
+            "defense": 1,
+            "use": 0,
+            "duel": "y6uEs0PUJ6e/0FJ6hkLkLFL9cuWwTh0gwO8lo+3Smzg=",
+            "multi3": "DQjTbtuxJ5AQn4dCHpANnInJSlpX+SPlgawtKuK0KtI=",
+            "multi4": "s1hbdhYO4msfASdIM6RWNzofWi+oUK71+1jTr9I+pfE="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HugTshirt.asset",
+            "temperature": 0,
+            "defense": 1,
+            "use": 1,
+            "duel": "y6uEs0PUJ6e/0FJ6hkLkLFL9cuWwTh0gwO8lo+3Smzg=",
+            "multi3": "DQjTbtuxJ5AQn4dCHpANnInJSlpX+SPlgawtKuK0KtI=",
+            "multi4": "s1hbdhYO4msfASdIM6RWNzofWi+oUK71+1jTr9I+pfE="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HugTshirt.asset",
+            "temperature": 0,
+            "defense": 2,
+            "use": 0,
+            "duel": "y6uEs0PUJ6e/0FJ6hkLkLFL9cuWwTh0gwO8lo+3Smzg=",
+            "multi3": "DQjTbtuxJ5AQn4dCHpANnInJSlpX+SPlgawtKuK0KtI=",
+            "multi4": "s1hbdhYO4msfASdIM6RWNzofWi+oUK71+1jTr9I+pfE="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HugTshirt.asset",
+            "temperature": 0,
+            "defense": 2,
+            "use": 1,
+            "duel": "y6uEs0PUJ6e/0FJ6hkLkLFL9cuWwTh0gwO8lo+3Smzg=",
+            "multi3": "DQjTbtuxJ5AQn4dCHpANnInJSlpX+SPlgawtKuK0KtI=",
+            "multi4": "s1hbdhYO4msfASdIM6RWNzofWi+oUK71+1jTr9I+pfE="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HugTshirt.asset",
+            "temperature": 0,
+            "defense": 3,
+            "use": 0,
+            "duel": "y6uEs0PUJ6e/0FJ6hkLkLFL9cuWwTh0gwO8lo+3Smzg=",
+            "multi3": "DQjTbtuxJ5AQn4dCHpANnInJSlpX+SPlgawtKuK0KtI=",
+            "multi4": "s1hbdhYO4msfASdIM6RWNzofWi+oUK71+1jTr9I+pfE="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HugTshirt.asset",
+            "temperature": 0,
+            "defense": 3,
+            "use": 1,
+            "duel": "y6uEs0PUJ6e/0FJ6hkLkLFL9cuWwTh0gwO8lo+3Smzg=",
+            "multi3": "DQjTbtuxJ5AQn4dCHpANnInJSlpX+SPlgawtKuK0KtI=",
+            "multi4": "s1hbdhYO4msfASdIM6RWNzofWi+oUK71+1jTr9I+pfE="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HugTshirt.asset",
+            "temperature": 1,
+            "defense": 0,
+            "use": 0,
+            "duel": "BQZpaz6dn6SAdxF3l6RLDpSPMFmaMV2pmA2KmxOsMgo=",
+            "multi3": "grGjC1iIu1lSzKHEkBQpyvoFctwLArgvV+3Oerjj12Y=",
+            "multi4": "tcNFFO12dH8sEolA8hPYdxGx1JQE1jLF4s1EeF8+5Tk="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HugTshirt.asset",
+            "temperature": 1,
+            "defense": 0,
+            "use": 1,
+            "duel": "BQZpaz6dn6SAdxF3l6RLDpSPMFmaMV2pmA2KmxOsMgo=",
+            "multi3": "grGjC1iIu1lSzKHEkBQpyvoFctwLArgvV+3Oerjj12Y=",
+            "multi4": "tcNFFO12dH8sEolA8hPYdxGx1JQE1jLF4s1EeF8+5Tk="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HugTshirt.asset",
+            "temperature": 1,
+            "defense": 1,
+            "use": 0,
+            "duel": "th+jVNnfYi6eYoB+z5pNdIjSGGwv5ttxK2Duw9ymNqw=",
+            "multi3": "eLJzvuz4Qq5+0FbzUBLjTnenfCc4oY4WdY8AoZxUtzo=",
+            "multi4": "JPXdU0zl65Ps8lEg+hcMFMQAzY8o32u9N+QlYmXSUDs="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HugTshirt.asset",
+            "temperature": 1,
+            "defense": 1,
+            "use": 1,
+            "duel": "th+jVNnfYi6eYoB+z5pNdIjSGGwv5ttxK2Duw9ymNqw=",
+            "multi3": "eLJzvuz4Qq5+0FbzUBLjTnenfCc4oY4WdY8AoZxUtzo=",
+            "multi4": "JPXdU0zl65Ps8lEg+hcMFMQAzY8o32u9N+QlYmXSUDs="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HugTshirt.asset",
+            "temperature": 1,
+            "defense": 2,
+            "use": 0,
+            "duel": "SxRI54qUIrMJs5CMVRoGelC6J52ULmuPbxQj0+AKYeQ=",
+            "multi3": "grGjC1iIu1lSzKHEkBQpyvoFctwLArgvV+3Oerjj12Y=",
+            "multi4": "tcNFFO12dH8sEolA8hPYdxGx1JQE1jLF4s1EeF8+5Tk="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HugTshirt.asset",
+            "temperature": 1,
+            "defense": 2,
+            "use": 1,
+            "duel": "SxRI54qUIrMJs5CMVRoGelC6J52ULmuPbxQj0+AKYeQ=",
+            "multi3": "grGjC1iIu1lSzKHEkBQpyvoFctwLArgvV+3Oerjj12Y=",
+            "multi4": "tcNFFO12dH8sEolA8hPYdxGx1JQE1jLF4s1EeF8+5Tk="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HugTshirt.asset",
+            "temperature": 1,
+            "defense": 3,
+            "use": 0,
+            "duel": "CBLkzxsT/VTgLz5B3hDNwkXoPqpoCfbhOykHGkFSMHk=",
+            "multi3": "umPoeZOyqROqrMkXTaxTZPlGiCmv5luHs/tfwJneg30=",
+            "multi4": "STvi0r5JIduNF3o2PFUP7zzoauNXepz6hVxf1rAqKeA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HugTshirt.asset",
+            "temperature": 1,
+            "defense": 3,
+            "use": 1,
+            "duel": "CBLkzxsT/VTgLz5B3hDNwkXoPqpoCfbhOykHGkFSMHk=",
+            "multi3": "umPoeZOyqROqrMkXTaxTZPlGiCmv5luHs/tfwJneg30=",
+            "multi4": "STvi0r5JIduNF3o2PFUP7zzoauNXepz6hVxf1rAqKeA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HugTshirt.asset",
+            "temperature": 2,
+            "defense": 0,
+            "use": 0,
+            "duel": "D1mpnTs6XaH1Up/h5O2Pvvoiu7NPrFWbNGJTdXe31fQ=",
+            "multi3": "mYYGJuDtTPpc5el4+jsrr4deqYxcLb+U+bKVsND3rdE=",
+            "multi4": "OItiyFrtYLwl2CDpQIEeL8Zk5vL9PsozR5XsNOKpj8k="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HugTshirt.asset",
+            "temperature": 2,
+            "defense": 0,
+            "use": 1,
+            "duel": "D1mpnTs6XaH1Up/h5O2Pvvoiu7NPrFWbNGJTdXe31fQ=",
+            "multi3": "mYYGJuDtTPpc5el4+jsrr4deqYxcLb+U+bKVsND3rdE=",
+            "multi4": "OItiyFrtYLwl2CDpQIEeL8Zk5vL9PsozR5XsNOKpj8k="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HugTshirt.asset",
+            "temperature": 2,
+            "defense": 1,
+            "use": 0,
+            "duel": "D1mpnTs6XaH1Up/h5O2Pvvoiu7NPrFWbNGJTdXe31fQ=",
+            "multi3": "mYYGJuDtTPpc5el4+jsrr4deqYxcLb+U+bKVsND3rdE=",
+            "multi4": "OItiyFrtYLwl2CDpQIEeL8Zk5vL9PsozR5XsNOKpj8k="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HugTshirt.asset",
+            "temperature": 2,
+            "defense": 1,
+            "use": 1,
+            "duel": "D1mpnTs6XaH1Up/h5O2Pvvoiu7NPrFWbNGJTdXe31fQ=",
+            "multi3": "mYYGJuDtTPpc5el4+jsrr4deqYxcLb+U+bKVsND3rdE=",
+            "multi4": "OItiyFrtYLwl2CDpQIEeL8Zk5vL9PsozR5XsNOKpj8k="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HugTshirt.asset",
+            "temperature": 2,
+            "defense": 2,
+            "use": 0,
+            "duel": "D1mpnTs6XaH1Up/h5O2Pvvoiu7NPrFWbNGJTdXe31fQ=",
+            "multi3": "mYYGJuDtTPpc5el4+jsrr4deqYxcLb+U+bKVsND3rdE=",
+            "multi4": "OItiyFrtYLwl2CDpQIEeL8Zk5vL9PsozR5XsNOKpj8k="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HugTshirt.asset",
+            "temperature": 2,
+            "defense": 2,
+            "use": 1,
+            "duel": "D1mpnTs6XaH1Up/h5O2Pvvoiu7NPrFWbNGJTdXe31fQ=",
+            "multi3": "mYYGJuDtTPpc5el4+jsrr4deqYxcLb+U+bKVsND3rdE=",
+            "multi4": "OItiyFrtYLwl2CDpQIEeL8Zk5vL9PsozR5XsNOKpj8k="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HugTshirt.asset",
+            "temperature": 2,
+            "defense": 3,
+            "use": 0,
+            "duel": "D1mpnTs6XaH1Up/h5O2Pvvoiu7NPrFWbNGJTdXe31fQ=",
+            "multi3": "mYYGJuDtTPpc5el4+jsrr4deqYxcLb+U+bKVsND3rdE=",
+            "multi4": "OItiyFrtYLwl2CDpQIEeL8Zk5vL9PsozR5XsNOKpj8k="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HugTshirt.asset",
+            "temperature": 2,
+            "defense": 3,
+            "use": 1,
+            "duel": "D1mpnTs6XaH1Up/h5O2Pvvoiu7NPrFWbNGJTdXe31fQ=",
+            "multi3": "mYYGJuDtTPpc5el4+jsrr4deqYxcLb+U+bKVsND3rdE=",
+            "multi4": "OItiyFrtYLwl2CDpQIEeL8Zk5vL9PsozR5XsNOKpj8k="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IceCream.asset",
+            "temperature": 0,
+            "defense": 0,
+            "use": 0,
+            "duel": "ND5BKPoln9r84mJco3CLuBErhUGWb1N9aECHgu56z/g=",
+            "multi3": "H0DpKaoRbyWvf/IAqWTef+AuTwzMMPydkmxL840VNcg=",
+            "multi4": "YjMzSzUhgkiJ+JvOtPzGUDCojQyANVddO9wcccaBgW0="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IceCream.asset",
+            "temperature": 0,
+            "defense": 0,
+            "use": 1,
+            "duel": "ND5BKPoln9r84mJco3CLuBErhUGWb1N9aECHgu56z/g=",
+            "multi3": "H0DpKaoRbyWvf/IAqWTef+AuTwzMMPydkmxL840VNcg=",
+            "multi4": "YjMzSzUhgkiJ+JvOtPzGUDCojQyANVddO9wcccaBgW0="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IceCream.asset",
+            "temperature": 0,
+            "defense": 1,
+            "use": 0,
+            "duel": "x4rbx01CFbQHcSmHo124TROYRAdT6m5yDUSGPqVR1gE=",
+            "multi3": "H0DpKaoRbyWvf/IAqWTef+AuTwzMMPydkmxL840VNcg=",
+            "multi4": "YjMzSzUhgkiJ+JvOtPzGUDCojQyANVddO9wcccaBgW0="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IceCream.asset",
+            "temperature": 0,
+            "defense": 1,
+            "use": 1,
+            "duel": "x4rbx01CFbQHcSmHo124TROYRAdT6m5yDUSGPqVR1gE=",
+            "multi3": "H0DpKaoRbyWvf/IAqWTef+AuTwzMMPydkmxL840VNcg=",
+            "multi4": "YjMzSzUhgkiJ+JvOtPzGUDCojQyANVddO9wcccaBgW0="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IceCream.asset",
+            "temperature": 0,
+            "defense": 2,
+            "use": 0,
+            "duel": "mUbfeQ6tIe+lxagYgW+pX7+yYYO5qi91yz5ys8VJieg=",
+            "multi3": "BKJQ+ZnBUICgVRu5Q7VnB+yt8sTRnsvWPwAJg4tbHk0=",
+            "multi4": "U/TILkFTHf131p+t+zmygSVaueJ3WK2jJY2TcxoJqNc="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IceCream.asset",
+            "temperature": 0,
+            "defense": 2,
+            "use": 1,
+            "duel": "mUbfeQ6tIe+lxagYgW+pX7+yYYO5qi91yz5ys8VJieg=",
+            "multi3": "BKJQ+ZnBUICgVRu5Q7VnB+yt8sTRnsvWPwAJg4tbHk0=",
+            "multi4": "U/TILkFTHf131p+t+zmygSVaueJ3WK2jJY2TcxoJqNc="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IceCream.asset",
+            "temperature": 0,
+            "defense": 3,
+            "use": 0,
+            "duel": "VbEpg36QV/wtQXSdQgUCJ0ilWbVOzqkKdsIt9uhcdaM=",
+            "multi3": "BKJQ+ZnBUICgVRu5Q7VnB+yt8sTRnsvWPwAJg4tbHk0=",
+            "multi4": "U/TILkFTHf131p+t+zmygSVaueJ3WK2jJY2TcxoJqNc="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IceCream.asset",
+            "temperature": 0,
+            "defense": 3,
+            "use": 1,
+            "duel": "VbEpg36QV/wtQXSdQgUCJ0ilWbVOzqkKdsIt9uhcdaM=",
+            "multi3": "BKJQ+ZnBUICgVRu5Q7VnB+yt8sTRnsvWPwAJg4tbHk0=",
+            "multi4": "U/TILkFTHf131p+t+zmygSVaueJ3WK2jJY2TcxoJqNc="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IceCream.asset",
+            "temperature": 1,
+            "defense": 0,
+            "use": 0,
+            "duel": "ND5BKPoln9r84mJco3CLuBErhUGWb1N9aECHgu56z/g=",
+            "multi3": "nfUHlCMt/V/8rgZQQovgNfgDN0ppidoGb6g5lYfcgRE=",
+            "multi4": "AYGnpZwCq65/A7GQqwrWN/YDGZ51HaHytO6vQQh1GQo="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IceCream.asset",
+            "temperature": 1,
+            "defense": 0,
+            "use": 1,
+            "duel": "ND5BKPoln9r84mJco3CLuBErhUGWb1N9aECHgu56z/g=",
+            "multi3": "nfUHlCMt/V/8rgZQQovgNfgDN0ppidoGb6g5lYfcgRE=",
+            "multi4": "AYGnpZwCq65/A7GQqwrWN/YDGZ51HaHytO6vQQh1GQo="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IceCream.asset",
+            "temperature": 1,
+            "defense": 1,
+            "use": 0,
+            "duel": "x4rbx01CFbQHcSmHo124TROYRAdT6m5yDUSGPqVR1gE=",
+            "multi3": "nfUHlCMt/V/8rgZQQovgNfgDN0ppidoGb6g5lYfcgRE=",
+            "multi4": "AYGnpZwCq65/A7GQqwrWN/YDGZ51HaHytO6vQQh1GQo="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IceCream.asset",
+            "temperature": 1,
+            "defense": 1,
+            "use": 1,
+            "duel": "x4rbx01CFbQHcSmHo124TROYRAdT6m5yDUSGPqVR1gE=",
+            "multi3": "nfUHlCMt/V/8rgZQQovgNfgDN0ppidoGb6g5lYfcgRE=",
+            "multi4": "AYGnpZwCq65/A7GQqwrWN/YDGZ51HaHytO6vQQh1GQo="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IceCream.asset",
+            "temperature": 1,
+            "defense": 2,
+            "use": 0,
+            "duel": "mUbfeQ6tIe+lxagYgW+pX7+yYYO5qi91yz5ys8VJieg=",
+            "multi3": "umPoeZOyqROqrMkXTaxTZPlGiCmv5luHs/tfwJneg30=",
+            "multi4": "STvi0r5JIduNF3o2PFUP7zzoauNXepz6hVxf1rAqKeA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IceCream.asset",
+            "temperature": 1,
+            "defense": 2,
+            "use": 1,
+            "duel": "mUbfeQ6tIe+lxagYgW+pX7+yYYO5qi91yz5ys8VJieg=",
+            "multi3": "umPoeZOyqROqrMkXTaxTZPlGiCmv5luHs/tfwJneg30=",
+            "multi4": "STvi0r5JIduNF3o2PFUP7zzoauNXepz6hVxf1rAqKeA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IceCream.asset",
+            "temperature": 1,
+            "defense": 3,
+            "use": 0,
+            "duel": "VbEpg36QV/wtQXSdQgUCJ0ilWbVOzqkKdsIt9uhcdaM=",
+            "multi3": "umPoeZOyqROqrMkXTaxTZPlGiCmv5luHs/tfwJneg30=",
+            "multi4": "STvi0r5JIduNF3o2PFUP7zzoauNXepz6hVxf1rAqKeA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IceCream.asset",
+            "temperature": 1,
+            "defense": 3,
+            "use": 1,
+            "duel": "VbEpg36QV/wtQXSdQgUCJ0ilWbVOzqkKdsIt9uhcdaM=",
+            "multi3": "umPoeZOyqROqrMkXTaxTZPlGiCmv5luHs/tfwJneg30=",
+            "multi4": "STvi0r5JIduNF3o2PFUP7zzoauNXepz6hVxf1rAqKeA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IceCream.asset",
+            "temperature": 2,
+            "defense": 0,
+            "use": 0,
+            "duel": "ND5BKPoln9r84mJco3CLuBErhUGWb1N9aECHgu56z/g=",
+            "multi3": "JBylHftTcT7rjzEkphZifPMsqTj0k6aOZfIq+q3mZmE=",
+            "multi4": "CuI7uCMJV4oIjYRFDKNWcjl8dB1jt2SZ82YFRDNzktk="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IceCream.asset",
+            "temperature": 2,
+            "defense": 0,
+            "use": 1,
+            "duel": "ND5BKPoln9r84mJco3CLuBErhUGWb1N9aECHgu56z/g=",
+            "multi3": "JBylHftTcT7rjzEkphZifPMsqTj0k6aOZfIq+q3mZmE=",
+            "multi4": "CuI7uCMJV4oIjYRFDKNWcjl8dB1jt2SZ82YFRDNzktk="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IceCream.asset",
+            "temperature": 2,
+            "defense": 1,
+            "use": 0,
+            "duel": "x4rbx01CFbQHcSmHo124TROYRAdT6m5yDUSGPqVR1gE=",
+            "multi3": "JBylHftTcT7rjzEkphZifPMsqTj0k6aOZfIq+q3mZmE=",
+            "multi4": "CuI7uCMJV4oIjYRFDKNWcjl8dB1jt2SZ82YFRDNzktk="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IceCream.asset",
+            "temperature": 2,
+            "defense": 1,
+            "use": 1,
+            "duel": "x4rbx01CFbQHcSmHo124TROYRAdT6m5yDUSGPqVR1gE=",
+            "multi3": "JBylHftTcT7rjzEkphZifPMsqTj0k6aOZfIq+q3mZmE=",
+            "multi4": "CuI7uCMJV4oIjYRFDKNWcjl8dB1jt2SZ82YFRDNzktk="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IceCream.asset",
+            "temperature": 2,
+            "defense": 2,
+            "use": 0,
+            "duel": "mUbfeQ6tIe+lxagYgW+pX7+yYYO5qi91yz5ys8VJieg=",
+            "multi3": "JxWN5kxuDMkWUA1h05+9A//QC/E67r7Z/Oo+/j9qD5U=",
+            "multi4": "2O1vL/U5I+DWSktO4YD6XC0NrbhhIJhvv9YHjdxrTkA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IceCream.asset",
+            "temperature": 2,
+            "defense": 2,
+            "use": 1,
+            "duel": "mUbfeQ6tIe+lxagYgW+pX7+yYYO5qi91yz5ys8VJieg=",
+            "multi3": "JxWN5kxuDMkWUA1h05+9A//QC/E67r7Z/Oo+/j9qD5U=",
+            "multi4": "2O1vL/U5I+DWSktO4YD6XC0NrbhhIJhvv9YHjdxrTkA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IceCream.asset",
+            "temperature": 2,
+            "defense": 3,
+            "use": 0,
+            "duel": "VbEpg36QV/wtQXSdQgUCJ0ilWbVOzqkKdsIt9uhcdaM=",
+            "multi3": "JxWN5kxuDMkWUA1h05+9A//QC/E67r7Z/Oo+/j9qD5U=",
+            "multi4": "2O1vL/U5I+DWSktO4YD6XC0NrbhhIJhvv9YHjdxrTkA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IceCream.asset",
+            "temperature": 2,
+            "defense": 3,
+            "use": 1,
+            "duel": "VbEpg36QV/wtQXSdQgUCJ0ilWbVOzqkKdsIt9uhcdaM=",
+            "multi3": "JxWN5kxuDMkWUA1h05+9A//QC/E67r7Z/Oo+/j9qD5U=",
+            "multi4": "2O1vL/U5I+DWSktO4YD6XC0NrbhhIJhvv9YHjdxrTkA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IcedAmericano.asset",
+            "temperature": 0,
+            "defense": 0,
+            "use": 0,
+            "duel": "ND5BKPoln9r84mJco3CLuBErhUGWb1N9aECHgu56z/g=",
+            "multi3": "H0DpKaoRbyWvf/IAqWTef+AuTwzMMPydkmxL840VNcg=",
+            "multi4": "YjMzSzUhgkiJ+JvOtPzGUDCojQyANVddO9wcccaBgW0="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IcedAmericano.asset",
+            "temperature": 0,
+            "defense": 0,
+            "use": 1,
+            "duel": "ND5BKPoln9r84mJco3CLuBErhUGWb1N9aECHgu56z/g=",
+            "multi3": "H0DpKaoRbyWvf/IAqWTef+AuTwzMMPydkmxL840VNcg=",
+            "multi4": "YjMzSzUhgkiJ+JvOtPzGUDCojQyANVddO9wcccaBgW0="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IcedAmericano.asset",
+            "temperature": 0,
+            "defense": 1,
+            "use": 0,
+            "duel": "x4rbx01CFbQHcSmHo124TROYRAdT6m5yDUSGPqVR1gE=",
+            "multi3": "H0DpKaoRbyWvf/IAqWTef+AuTwzMMPydkmxL840VNcg=",
+            "multi4": "YjMzSzUhgkiJ+JvOtPzGUDCojQyANVddO9wcccaBgW0="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IcedAmericano.asset",
+            "temperature": 0,
+            "defense": 1,
+            "use": 1,
+            "duel": "x4rbx01CFbQHcSmHo124TROYRAdT6m5yDUSGPqVR1gE=",
+            "multi3": "H0DpKaoRbyWvf/IAqWTef+AuTwzMMPydkmxL840VNcg=",
+            "multi4": "YjMzSzUhgkiJ+JvOtPzGUDCojQyANVddO9wcccaBgW0="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IcedAmericano.asset",
+            "temperature": 0,
+            "defense": 2,
+            "use": 0,
+            "duel": "mUbfeQ6tIe+lxagYgW+pX7+yYYO5qi91yz5ys8VJieg=",
+            "multi3": "BKJQ+ZnBUICgVRu5Q7VnB+yt8sTRnsvWPwAJg4tbHk0=",
+            "multi4": "U/TILkFTHf131p+t+zmygSVaueJ3WK2jJY2TcxoJqNc="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IcedAmericano.asset",
+            "temperature": 0,
+            "defense": 2,
+            "use": 1,
+            "duel": "mUbfeQ6tIe+lxagYgW+pX7+yYYO5qi91yz5ys8VJieg=",
+            "multi3": "BKJQ+ZnBUICgVRu5Q7VnB+yt8sTRnsvWPwAJg4tbHk0=",
+            "multi4": "U/TILkFTHf131p+t+zmygSVaueJ3WK2jJY2TcxoJqNc="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IcedAmericano.asset",
+            "temperature": 0,
+            "defense": 3,
+            "use": 0,
+            "duel": "VbEpg36QV/wtQXSdQgUCJ0ilWbVOzqkKdsIt9uhcdaM=",
+            "multi3": "BKJQ+ZnBUICgVRu5Q7VnB+yt8sTRnsvWPwAJg4tbHk0=",
+            "multi4": "U/TILkFTHf131p+t+zmygSVaueJ3WK2jJY2TcxoJqNc="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IcedAmericano.asset",
+            "temperature": 0,
+            "defense": 3,
+            "use": 1,
+            "duel": "VbEpg36QV/wtQXSdQgUCJ0ilWbVOzqkKdsIt9uhcdaM=",
+            "multi3": "BKJQ+ZnBUICgVRu5Q7VnB+yt8sTRnsvWPwAJg4tbHk0=",
+            "multi4": "U/TILkFTHf131p+t+zmygSVaueJ3WK2jJY2TcxoJqNc="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IcedAmericano.asset",
+            "temperature": 1,
+            "defense": 0,
+            "use": 0,
+            "duel": "ND5BKPoln9r84mJco3CLuBErhUGWb1N9aECHgu56z/g=",
+            "multi3": "nfUHlCMt/V/8rgZQQovgNfgDN0ppidoGb6g5lYfcgRE=",
+            "multi4": "AYGnpZwCq65/A7GQqwrWN/YDGZ51HaHytO6vQQh1GQo="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IcedAmericano.asset",
+            "temperature": 1,
+            "defense": 0,
+            "use": 1,
+            "duel": "ND5BKPoln9r84mJco3CLuBErhUGWb1N9aECHgu56z/g=",
+            "multi3": "nfUHlCMt/V/8rgZQQovgNfgDN0ppidoGb6g5lYfcgRE=",
+            "multi4": "AYGnpZwCq65/A7GQqwrWN/YDGZ51HaHytO6vQQh1GQo="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IcedAmericano.asset",
+            "temperature": 1,
+            "defense": 1,
+            "use": 0,
+            "duel": "x4rbx01CFbQHcSmHo124TROYRAdT6m5yDUSGPqVR1gE=",
+            "multi3": "nfUHlCMt/V/8rgZQQovgNfgDN0ppidoGb6g5lYfcgRE=",
+            "multi4": "AYGnpZwCq65/A7GQqwrWN/YDGZ51HaHytO6vQQh1GQo="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IcedAmericano.asset",
+            "temperature": 1,
+            "defense": 1,
+            "use": 1,
+            "duel": "x4rbx01CFbQHcSmHo124TROYRAdT6m5yDUSGPqVR1gE=",
+            "multi3": "nfUHlCMt/V/8rgZQQovgNfgDN0ppidoGb6g5lYfcgRE=",
+            "multi4": "AYGnpZwCq65/A7GQqwrWN/YDGZ51HaHytO6vQQh1GQo="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IcedAmericano.asset",
+            "temperature": 1,
+            "defense": 2,
+            "use": 0,
+            "duel": "mUbfeQ6tIe+lxagYgW+pX7+yYYO5qi91yz5ys8VJieg=",
+            "multi3": "umPoeZOyqROqrMkXTaxTZPlGiCmv5luHs/tfwJneg30=",
+            "multi4": "STvi0r5JIduNF3o2PFUP7zzoauNXepz6hVxf1rAqKeA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IcedAmericano.asset",
+            "temperature": 1,
+            "defense": 2,
+            "use": 1,
+            "duel": "mUbfeQ6tIe+lxagYgW+pX7+yYYO5qi91yz5ys8VJieg=",
+            "multi3": "umPoeZOyqROqrMkXTaxTZPlGiCmv5luHs/tfwJneg30=",
+            "multi4": "STvi0r5JIduNF3o2PFUP7zzoauNXepz6hVxf1rAqKeA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IcedAmericano.asset",
+            "temperature": 1,
+            "defense": 3,
+            "use": 0,
+            "duel": "VbEpg36QV/wtQXSdQgUCJ0ilWbVOzqkKdsIt9uhcdaM=",
+            "multi3": "umPoeZOyqROqrMkXTaxTZPlGiCmv5luHs/tfwJneg30=",
+            "multi4": "STvi0r5JIduNF3o2PFUP7zzoauNXepz6hVxf1rAqKeA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IcedAmericano.asset",
+            "temperature": 1,
+            "defense": 3,
+            "use": 1,
+            "duel": "VbEpg36QV/wtQXSdQgUCJ0ilWbVOzqkKdsIt9uhcdaM=",
+            "multi3": "umPoeZOyqROqrMkXTaxTZPlGiCmv5luHs/tfwJneg30=",
+            "multi4": "STvi0r5JIduNF3o2PFUP7zzoauNXepz6hVxf1rAqKeA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IcedAmericano.asset",
+            "temperature": 2,
+            "defense": 0,
+            "use": 0,
+            "duel": "ND5BKPoln9r84mJco3CLuBErhUGWb1N9aECHgu56z/g=",
+            "multi3": "JBylHftTcT7rjzEkphZifPMsqTj0k6aOZfIq+q3mZmE=",
+            "multi4": "CuI7uCMJV4oIjYRFDKNWcjl8dB1jt2SZ82YFRDNzktk="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IcedAmericano.asset",
+            "temperature": 2,
+            "defense": 0,
+            "use": 1,
+            "duel": "ND5BKPoln9r84mJco3CLuBErhUGWb1N9aECHgu56z/g=",
+            "multi3": "JBylHftTcT7rjzEkphZifPMsqTj0k6aOZfIq+q3mZmE=",
+            "multi4": "CuI7uCMJV4oIjYRFDKNWcjl8dB1jt2SZ82YFRDNzktk="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IcedAmericano.asset",
+            "temperature": 2,
+            "defense": 1,
+            "use": 0,
+            "duel": "x4rbx01CFbQHcSmHo124TROYRAdT6m5yDUSGPqVR1gE=",
+            "multi3": "JBylHftTcT7rjzEkphZifPMsqTj0k6aOZfIq+q3mZmE=",
+            "multi4": "CuI7uCMJV4oIjYRFDKNWcjl8dB1jt2SZ82YFRDNzktk="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IcedAmericano.asset",
+            "temperature": 2,
+            "defense": 1,
+            "use": 1,
+            "duel": "x4rbx01CFbQHcSmHo124TROYRAdT6m5yDUSGPqVR1gE=",
+            "multi3": "JBylHftTcT7rjzEkphZifPMsqTj0k6aOZfIq+q3mZmE=",
+            "multi4": "CuI7uCMJV4oIjYRFDKNWcjl8dB1jt2SZ82YFRDNzktk="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IcedAmericano.asset",
+            "temperature": 2,
+            "defense": 2,
+            "use": 0,
+            "duel": "mUbfeQ6tIe+lxagYgW+pX7+yYYO5qi91yz5ys8VJieg=",
+            "multi3": "JxWN5kxuDMkWUA1h05+9A//QC/E67r7Z/Oo+/j9qD5U=",
+            "multi4": "2O1vL/U5I+DWSktO4YD6XC0NrbhhIJhvv9YHjdxrTkA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IcedAmericano.asset",
+            "temperature": 2,
+            "defense": 2,
+            "use": 1,
+            "duel": "mUbfeQ6tIe+lxagYgW+pX7+yYYO5qi91yz5ys8VJieg=",
+            "multi3": "JxWN5kxuDMkWUA1h05+9A//QC/E67r7Z/Oo+/j9qD5U=",
+            "multi4": "2O1vL/U5I+DWSktO4YD6XC0NrbhhIJhvv9YHjdxrTkA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IcedAmericano.asset",
+            "temperature": 2,
+            "defense": 3,
+            "use": 0,
+            "duel": "VbEpg36QV/wtQXSdQgUCJ0ilWbVOzqkKdsIt9uhcdaM=",
+            "multi3": "JxWN5kxuDMkWUA1h05+9A//QC/E67r7Z/Oo+/j9qD5U=",
+            "multi4": "2O1vL/U5I+DWSktO4YD6XC0NrbhhIJhvv9YHjdxrTkA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/IcedAmericano.asset",
+            "temperature": 2,
+            "defense": 3,
+            "use": 1,
+            "duel": "VbEpg36QV/wtQXSdQgUCJ0ilWbVOzqkKdsIt9uhcdaM=",
+            "multi3": "JxWN5kxuDMkWUA1h05+9A//QC/E67r7Z/Oo+/j9qD5U=",
+            "multi4": "2O1vL/U5I+DWSktO4YD6XC0NrbhhIJhvv9YHjdxrTkA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/WaterGun.asset",
+            "temperature": 0,
+            "defense": 0,
+            "use": 0,
+            "duel": "CqTGIHjny6NjIacH41g6FYkHx05EGxPQdf1hPlDRbR4=",
+            "multi3": "x8rT8Htct3wK+E1qosVFKJps21O1CLnhxZogDFvRMAo=",
+            "multi4": "ZvCvKT1s9dWS7x88u7IqgQBjBJjxtcU9Ax3bjPEeOcI="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/WaterGun.asset",
+            "temperature": 0,
+            "defense": 0,
+            "use": 1,
+            "duel": "CqTGIHjny6NjIacH41g6FYkHx05EGxPQdf1hPlDRbR4=",
+            "multi3": "x8rT8Htct3wK+E1qosVFKJps21O1CLnhxZogDFvRMAo=",
+            "multi4": "ZvCvKT1s9dWS7x88u7IqgQBjBJjxtcU9Ax3bjPEeOcI="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/WaterGun.asset",
+            "temperature": 0,
+            "defense": 1,
+            "use": 0,
+            "duel": "FoErr7i4dUhQDDkIPd9TZLkSMw3cJc8WvYKzLvnHSvg=",
+            "multi3": "4MMZxxvkhASFaErBHwaWmBVvJfupXH1TgxWFW6ED2fc=",
+            "multi4": "IlGl05ZqAXAg45GjVE0rKuUuWv7zd7TxJ8xBsfnP8oM="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/WaterGun.asset",
+            "temperature": 0,
+            "defense": 1,
+            "use": 1,
+            "duel": "FoErr7i4dUhQDDkIPd9TZLkSMw3cJc8WvYKzLvnHSvg=",
+            "multi3": "4MMZxxvkhASFaErBHwaWmBVvJfupXH1TgxWFW6ED2fc=",
+            "multi4": "IlGl05ZqAXAg45GjVE0rKuUuWv7zd7TxJ8xBsfnP8oM="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/WaterGun.asset",
+            "temperature": 0,
+            "defense": 2,
+            "use": 0,
+            "duel": "MjPRhtx+dzS5V/RxuPEgvRtwCJhR/lviCZfPRfcJMTo=",
+            "multi3": "x8rT8Htct3wK+E1qosVFKJps21O1CLnhxZogDFvRMAo=",
+            "multi4": "ZvCvKT1s9dWS7x88u7IqgQBjBJjxtcU9Ax3bjPEeOcI="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/WaterGun.asset",
+            "temperature": 0,
+            "defense": 2,
+            "use": 1,
+            "duel": "MjPRhtx+dzS5V/RxuPEgvRtwCJhR/lviCZfPRfcJMTo=",
+            "multi3": "x8rT8Htct3wK+E1qosVFKJps21O1CLnhxZogDFvRMAo=",
+            "multi4": "ZvCvKT1s9dWS7x88u7IqgQBjBJjxtcU9Ax3bjPEeOcI="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/WaterGun.asset",
+            "temperature": 0,
+            "defense": 3,
+            "use": 0,
+            "duel": "Vxfjl6dLseO7DMWS+7XTg8Ml0z7HDRKU+e7H8OaF6so=",
+            "multi3": "BKJQ+ZnBUICgVRu5Q7VnB+yt8sTRnsvWPwAJg4tbHk0=",
+            "multi4": "U/TILkFTHf131p+t+zmygSVaueJ3WK2jJY2TcxoJqNc="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/WaterGun.asset",
+            "temperature": 0,
+            "defense": 3,
+            "use": 1,
+            "duel": "Vxfjl6dLseO7DMWS+7XTg8Ml0z7HDRKU+e7H8OaF6so=",
+            "multi3": "BKJQ+ZnBUICgVRu5Q7VnB+yt8sTRnsvWPwAJg4tbHk0=",
+            "multi4": "U/TILkFTHf131p+t+zmygSVaueJ3WK2jJY2TcxoJqNc="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/WaterGun.asset",
+            "temperature": 1,
+            "defense": 0,
+            "use": 0,
+            "duel": "CqTGIHjny6NjIacH41g6FYkHx05EGxPQdf1hPlDRbR4=",
+            "multi3": "Kq8aPs5wkYuqdOA6OtvREWtDab2+UAXZm1Y7G4/hX2Y=",
+            "multi4": "0IB1BmnhafUF5avfv7fwfPiOQvx0UrONqk2wli8uqkI="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/WaterGun.asset",
+            "temperature": 1,
+            "defense": 0,
+            "use": 1,
+            "duel": "CqTGIHjny6NjIacH41g6FYkHx05EGxPQdf1hPlDRbR4=",
+            "multi3": "Kq8aPs5wkYuqdOA6OtvREWtDab2+UAXZm1Y7G4/hX2Y=",
+            "multi4": "0IB1BmnhafUF5avfv7fwfPiOQvx0UrONqk2wli8uqkI="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/WaterGun.asset",
+            "temperature": 1,
+            "defense": 1,
+            "use": 0,
+            "duel": "FoErr7i4dUhQDDkIPd9TZLkSMw3cJc8WvYKzLvnHSvg=",
+            "multi3": "lCaRKvlV519hVvAqmRZTiVTS8iyQCThxsAJvQAZg9i0=",
+            "multi4": "bigbuL+aPEbGYs3KvSb5KP+ss4qQdKmnmp20oipEZ80="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/WaterGun.asset",
+            "temperature": 1,
+            "defense": 1,
+            "use": 1,
+            "duel": "FoErr7i4dUhQDDkIPd9TZLkSMw3cJc8WvYKzLvnHSvg=",
+            "multi3": "lCaRKvlV519hVvAqmRZTiVTS8iyQCThxsAJvQAZg9i0=",
+            "multi4": "bigbuL+aPEbGYs3KvSb5KP+ss4qQdKmnmp20oipEZ80="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/WaterGun.asset",
+            "temperature": 1,
+            "defense": 2,
+            "use": 0,
+            "duel": "MjPRhtx+dzS5V/RxuPEgvRtwCJhR/lviCZfPRfcJMTo=",
+            "multi3": "Kq8aPs5wkYuqdOA6OtvREWtDab2+UAXZm1Y7G4/hX2Y=",
+            "multi4": "0IB1BmnhafUF5avfv7fwfPiOQvx0UrONqk2wli8uqkI="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/WaterGun.asset",
+            "temperature": 1,
+            "defense": 2,
+            "use": 1,
+            "duel": "MjPRhtx+dzS5V/RxuPEgvRtwCJhR/lviCZfPRfcJMTo=",
+            "multi3": "Kq8aPs5wkYuqdOA6OtvREWtDab2+UAXZm1Y7G4/hX2Y=",
+            "multi4": "0IB1BmnhafUF5avfv7fwfPiOQvx0UrONqk2wli8uqkI="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/WaterGun.asset",
+            "temperature": 1,
+            "defense": 3,
+            "use": 0,
+            "duel": "Vxfjl6dLseO7DMWS+7XTg8Ml0z7HDRKU+e7H8OaF6so=",
+            "multi3": "umPoeZOyqROqrMkXTaxTZPlGiCmv5luHs/tfwJneg30=",
+            "multi4": "STvi0r5JIduNF3o2PFUP7zzoauNXepz6hVxf1rAqKeA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/WaterGun.asset",
+            "temperature": 1,
+            "defense": 3,
+            "use": 1,
+            "duel": "Vxfjl6dLseO7DMWS+7XTg8Ml0z7HDRKU+e7H8OaF6so=",
+            "multi3": "umPoeZOyqROqrMkXTaxTZPlGiCmv5luHs/tfwJneg30=",
+            "multi4": "STvi0r5JIduNF3o2PFUP7zzoauNXepz6hVxf1rAqKeA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/WaterGun.asset",
+            "temperature": 2,
+            "defense": 0,
+            "use": 0,
+            "duel": "CqTGIHjny6NjIacH41g6FYkHx05EGxPQdf1hPlDRbR4=",
+            "multi3": "iHQMsKJcTewEIIdvynGECnLHJDCHt+k6nfRW3s1kYXI=",
+            "multi4": "Z1ngyHKee9AsF3689nD3SitcN4GPuDss8kD32+GsxH0="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/WaterGun.asset",
+            "temperature": 2,
+            "defense": 0,
+            "use": 1,
+            "duel": "CqTGIHjny6NjIacH41g6FYkHx05EGxPQdf1hPlDRbR4=",
+            "multi3": "iHQMsKJcTewEIIdvynGECnLHJDCHt+k6nfRW3s1kYXI=",
+            "multi4": "Z1ngyHKee9AsF3689nD3SitcN4GPuDss8kD32+GsxH0="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/WaterGun.asset",
+            "temperature": 2,
+            "defense": 1,
+            "use": 0,
+            "duel": "FoErr7i4dUhQDDkIPd9TZLkSMw3cJc8WvYKzLvnHSvg=",
+            "multi3": "b3G1alM3puwlTpBb1LK315WWSoLWpOxv7MNAt0VJjhY=",
+            "multi4": "nyQ8ntWcy0k20ZnCUYEmhfwfoGncj6HySawe+cVxBHY="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/WaterGun.asset",
+            "temperature": 2,
+            "defense": 1,
+            "use": 1,
+            "duel": "FoErr7i4dUhQDDkIPd9TZLkSMw3cJc8WvYKzLvnHSvg=",
+            "multi3": "b3G1alM3puwlTpBb1LK315WWSoLWpOxv7MNAt0VJjhY=",
+            "multi4": "nyQ8ntWcy0k20ZnCUYEmhfwfoGncj6HySawe+cVxBHY="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/WaterGun.asset",
+            "temperature": 2,
+            "defense": 2,
+            "use": 0,
+            "duel": "MjPRhtx+dzS5V/RxuPEgvRtwCJhR/lviCZfPRfcJMTo=",
+            "multi3": "iHQMsKJcTewEIIdvynGECnLHJDCHt+k6nfRW3s1kYXI=",
+            "multi4": "Z1ngyHKee9AsF3689nD3SitcN4GPuDss8kD32+GsxH0="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/WaterGun.asset",
+            "temperature": 2,
+            "defense": 2,
+            "use": 1,
+            "duel": "MjPRhtx+dzS5V/RxuPEgvRtwCJhR/lviCZfPRfcJMTo=",
+            "multi3": "iHQMsKJcTewEIIdvynGECnLHJDCHt+k6nfRW3s1kYXI=",
+            "multi4": "Z1ngyHKee9AsF3689nD3SitcN4GPuDss8kD32+GsxH0="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/WaterGun.asset",
+            "temperature": 2,
+            "defense": 3,
+            "use": 0,
+            "duel": "Vxfjl6dLseO7DMWS+7XTg8Ml0z7HDRKU+e7H8OaF6so=",
+            "multi3": "JxWN5kxuDMkWUA1h05+9A//QC/E67r7Z/Oo+/j9qD5U=",
+            "multi4": "2O1vL/U5I+DWSktO4YD6XC0NrbhhIJhvv9YHjdxrTkA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/WaterGun.asset",
+            "temperature": 2,
+            "defense": 3,
+            "use": 1,
+            "duel": "Vxfjl6dLseO7DMWS+7XTg8Ml0z7HDRKU+e7H8OaF6so=",
+            "multi3": "JxWN5kxuDMkWUA1h05+9A//QC/E67r7Z/Oo+/j9qD5U=",
+            "multi4": "2O1vL/U5I+DWSktO4YD6XC0NrbhhIJhvv9YHjdxrTkA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/BuldakNoodles.asset",
+            "temperature": 0,
+            "defense": 0,
+            "use": 0,
+            "duel": "jkMr3XTFlrwe7peh5DAHPCjDv/4aJ9yTYwXT/2HLEM8=",
+            "multi3": "xE2yDA9SihWC/wDGm1FhsgSMvZwclm1tw6y1J9T8Ds8=",
+            "multi4": "kNnVDx/1PxGM9DzsQUZicpNVYGJO9imHiOmmyBkmDPo="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/BuldakNoodles.asset",
+            "temperature": 0,
+            "defense": 0,
+            "use": 1,
+            "duel": "jkMr3XTFlrwe7peh5DAHPCjDv/4aJ9yTYwXT/2HLEM8=",
+            "multi3": "xE2yDA9SihWC/wDGm1FhsgSMvZwclm1tw6y1J9T8Ds8=",
+            "multi4": "kNnVDx/1PxGM9DzsQUZicpNVYGJO9imHiOmmyBkmDPo="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/BuldakNoodles.asset",
+            "temperature": 0,
+            "defense": 1,
+            "use": 0,
+            "duel": "jkMr3XTFlrwe7peh5DAHPCjDv/4aJ9yTYwXT/2HLEM8=",
+            "multi3": "xE2yDA9SihWC/wDGm1FhsgSMvZwclm1tw6y1J9T8Ds8=",
+            "multi4": "kNnVDx/1PxGM9DzsQUZicpNVYGJO9imHiOmmyBkmDPo="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/BuldakNoodles.asset",
+            "temperature": 0,
+            "defense": 1,
+            "use": 1,
+            "duel": "jkMr3XTFlrwe7peh5DAHPCjDv/4aJ9yTYwXT/2HLEM8=",
+            "multi3": "xE2yDA9SihWC/wDGm1FhsgSMvZwclm1tw6y1J9T8Ds8=",
+            "multi4": "kNnVDx/1PxGM9DzsQUZicpNVYGJO9imHiOmmyBkmDPo="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/BuldakNoodles.asset",
+            "temperature": 0,
+            "defense": 2,
+            "use": 0,
+            "duel": "jkMr3XTFlrwe7peh5DAHPCjDv/4aJ9yTYwXT/2HLEM8=",
+            "multi3": "xE2yDA9SihWC/wDGm1FhsgSMvZwclm1tw6y1J9T8Ds8=",
+            "multi4": "kNnVDx/1PxGM9DzsQUZicpNVYGJO9imHiOmmyBkmDPo="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/BuldakNoodles.asset",
+            "temperature": 0,
+            "defense": 2,
+            "use": 1,
+            "duel": "jkMr3XTFlrwe7peh5DAHPCjDv/4aJ9yTYwXT/2HLEM8=",
+            "multi3": "xE2yDA9SihWC/wDGm1FhsgSMvZwclm1tw6y1J9T8Ds8=",
+            "multi4": "kNnVDx/1PxGM9DzsQUZicpNVYGJO9imHiOmmyBkmDPo="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/BuldakNoodles.asset",
+            "temperature": 0,
+            "defense": 3,
+            "use": 0,
+            "duel": "jkMr3XTFlrwe7peh5DAHPCjDv/4aJ9yTYwXT/2HLEM8=",
+            "multi3": "xE2yDA9SihWC/wDGm1FhsgSMvZwclm1tw6y1J9T8Ds8=",
+            "multi4": "kNnVDx/1PxGM9DzsQUZicpNVYGJO9imHiOmmyBkmDPo="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/BuldakNoodles.asset",
+            "temperature": 0,
+            "defense": 3,
+            "use": 1,
+            "duel": "jkMr3XTFlrwe7peh5DAHPCjDv/4aJ9yTYwXT/2HLEM8=",
+            "multi3": "xE2yDA9SihWC/wDGm1FhsgSMvZwclm1tw6y1J9T8Ds8=",
+            "multi4": "kNnVDx/1PxGM9DzsQUZicpNVYGJO9imHiOmmyBkmDPo="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/BuldakNoodles.asset",
+            "temperature": 1,
+            "defense": 0,
+            "use": 0,
+            "duel": "jkMr3XTFlrwe7peh5DAHPCjDv/4aJ9yTYwXT/2HLEM8=",
+            "multi3": "9L1oIhwr8jzQt+99wCTMvRop7sRqfcKLK3ELYHIn8Co=",
+            "multi4": "uNGyN+CFVUXeoz/3TtvtRDr5sHlxJtMai1Ztd9eFCOA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/BuldakNoodles.asset",
+            "temperature": 1,
+            "defense": 0,
+            "use": 1,
+            "duel": "jkMr3XTFlrwe7peh5DAHPCjDv/4aJ9yTYwXT/2HLEM8=",
+            "multi3": "9L1oIhwr8jzQt+99wCTMvRop7sRqfcKLK3ELYHIn8Co=",
+            "multi4": "uNGyN+CFVUXeoz/3TtvtRDr5sHlxJtMai1Ztd9eFCOA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/BuldakNoodles.asset",
+            "temperature": 1,
+            "defense": 1,
+            "use": 0,
+            "duel": "jkMr3XTFlrwe7peh5DAHPCjDv/4aJ9yTYwXT/2HLEM8=",
+            "multi3": "9L1oIhwr8jzQt+99wCTMvRop7sRqfcKLK3ELYHIn8Co=",
+            "multi4": "uNGyN+CFVUXeoz/3TtvtRDr5sHlxJtMai1Ztd9eFCOA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/BuldakNoodles.asset",
+            "temperature": 1,
+            "defense": 1,
+            "use": 1,
+            "duel": "jkMr3XTFlrwe7peh5DAHPCjDv/4aJ9yTYwXT/2HLEM8=",
+            "multi3": "9L1oIhwr8jzQt+99wCTMvRop7sRqfcKLK3ELYHIn8Co=",
+            "multi4": "uNGyN+CFVUXeoz/3TtvtRDr5sHlxJtMai1Ztd9eFCOA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/BuldakNoodles.asset",
+            "temperature": 1,
+            "defense": 2,
+            "use": 0,
+            "duel": "jkMr3XTFlrwe7peh5DAHPCjDv/4aJ9yTYwXT/2HLEM8=",
+            "multi3": "9L1oIhwr8jzQt+99wCTMvRop7sRqfcKLK3ELYHIn8Co=",
+            "multi4": "uNGyN+CFVUXeoz/3TtvtRDr5sHlxJtMai1Ztd9eFCOA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/BuldakNoodles.asset",
+            "temperature": 1,
+            "defense": 2,
+            "use": 1,
+            "duel": "jkMr3XTFlrwe7peh5DAHPCjDv/4aJ9yTYwXT/2HLEM8=",
+            "multi3": "9L1oIhwr8jzQt+99wCTMvRop7sRqfcKLK3ELYHIn8Co=",
+            "multi4": "uNGyN+CFVUXeoz/3TtvtRDr5sHlxJtMai1Ztd9eFCOA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/BuldakNoodles.asset",
+            "temperature": 1,
+            "defense": 3,
+            "use": 0,
+            "duel": "jkMr3XTFlrwe7peh5DAHPCjDv/4aJ9yTYwXT/2HLEM8=",
+            "multi3": "9L1oIhwr8jzQt+99wCTMvRop7sRqfcKLK3ELYHIn8Co=",
+            "multi4": "uNGyN+CFVUXeoz/3TtvtRDr5sHlxJtMai1Ztd9eFCOA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/BuldakNoodles.asset",
+            "temperature": 1,
+            "defense": 3,
+            "use": 1,
+            "duel": "jkMr3XTFlrwe7peh5DAHPCjDv/4aJ9yTYwXT/2HLEM8=",
+            "multi3": "9L1oIhwr8jzQt+99wCTMvRop7sRqfcKLK3ELYHIn8Co=",
+            "multi4": "uNGyN+CFVUXeoz/3TtvtRDr5sHlxJtMai1Ztd9eFCOA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/BuldakNoodles.asset",
+            "temperature": 2,
+            "defense": 0,
+            "use": 0,
+            "duel": "jkMr3XTFlrwe7peh5DAHPCjDv/4aJ9yTYwXT/2HLEM8=",
+            "multi3": "umzqhAuT0Qhasgjp7g9n2d2Vq0apGy3ZjT9dlv0HBlU=",
+            "multi4": "8O/PB1Z5R2kkikgneaPJ1xRTvfLESmoSC3XRbPuXLmQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/BuldakNoodles.asset",
+            "temperature": 2,
+            "defense": 0,
+            "use": 1,
+            "duel": "jkMr3XTFlrwe7peh5DAHPCjDv/4aJ9yTYwXT/2HLEM8=",
+            "multi3": "umzqhAuT0Qhasgjp7g9n2d2Vq0apGy3ZjT9dlv0HBlU=",
+            "multi4": "8O/PB1Z5R2kkikgneaPJ1xRTvfLESmoSC3XRbPuXLmQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/BuldakNoodles.asset",
+            "temperature": 2,
+            "defense": 1,
+            "use": 0,
+            "duel": "jkMr3XTFlrwe7peh5DAHPCjDv/4aJ9yTYwXT/2HLEM8=",
+            "multi3": "umzqhAuT0Qhasgjp7g9n2d2Vq0apGy3ZjT9dlv0HBlU=",
+            "multi4": "8O/PB1Z5R2kkikgneaPJ1xRTvfLESmoSC3XRbPuXLmQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/BuldakNoodles.asset",
+            "temperature": 2,
+            "defense": 1,
+            "use": 1,
+            "duel": "jkMr3XTFlrwe7peh5DAHPCjDv/4aJ9yTYwXT/2HLEM8=",
+            "multi3": "umzqhAuT0Qhasgjp7g9n2d2Vq0apGy3ZjT9dlv0HBlU=",
+            "multi4": "8O/PB1Z5R2kkikgneaPJ1xRTvfLESmoSC3XRbPuXLmQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/BuldakNoodles.asset",
+            "temperature": 2,
+            "defense": 2,
+            "use": 0,
+            "duel": "jkMr3XTFlrwe7peh5DAHPCjDv/4aJ9yTYwXT/2HLEM8=",
+            "multi3": "umzqhAuT0Qhasgjp7g9n2d2Vq0apGy3ZjT9dlv0HBlU=",
+            "multi4": "8O/PB1Z5R2kkikgneaPJ1xRTvfLESmoSC3XRbPuXLmQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/BuldakNoodles.asset",
+            "temperature": 2,
+            "defense": 2,
+            "use": 1,
+            "duel": "jkMr3XTFlrwe7peh5DAHPCjDv/4aJ9yTYwXT/2HLEM8=",
+            "multi3": "umzqhAuT0Qhasgjp7g9n2d2Vq0apGy3ZjT9dlv0HBlU=",
+            "multi4": "8O/PB1Z5R2kkikgneaPJ1xRTvfLESmoSC3XRbPuXLmQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/BuldakNoodles.asset",
+            "temperature": 2,
+            "defense": 3,
+            "use": 0,
+            "duel": "jkMr3XTFlrwe7peh5DAHPCjDv/4aJ9yTYwXT/2HLEM8=",
+            "multi3": "umzqhAuT0Qhasgjp7g9n2d2Vq0apGy3ZjT9dlv0HBlU=",
+            "multi4": "8O/PB1Z5R2kkikgneaPJ1xRTvfLESmoSC3XRbPuXLmQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/BuldakNoodles.asset",
+            "temperature": 2,
+            "defense": 3,
+            "use": 1,
+            "duel": "jkMr3XTFlrwe7peh5DAHPCjDv/4aJ9yTYwXT/2HLEM8=",
+            "multi3": "umzqhAuT0Qhasgjp7g9n2d2Vq0apGy3ZjT9dlv0HBlU=",
+            "multi4": "8O/PB1Z5R2kkikgneaPJ1xRTvfLESmoSC3XRbPuXLmQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/Soda.asset",
+            "temperature": 0,
+            "defense": 0,
+            "use": 0,
+            "duel": "Iqy9S3HzvgisqCTOanb9Otlqau+QkRip39DPz2KXjsU=",
+            "multi3": "USCqOcsWT7ORK42JDz5N9P42X2syTNibm5ma21NK6Q4=",
+            "multi4": "UFy1qX0UkxvXB8js1twUM9ej27AmvtdYfqB4WgICt/k="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/Soda.asset",
+            "temperature": 0,
+            "defense": 0,
+            "use": 1,
+            "duel": "Iqy9S3HzvgisqCTOanb9Otlqau+QkRip39DPz2KXjsU=",
+            "multi3": "USCqOcsWT7ORK42JDz5N9P42X2syTNibm5ma21NK6Q4=",
+            "multi4": "UFy1qX0UkxvXB8js1twUM9ej27AmvtdYfqB4WgICt/k="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/Soda.asset",
+            "temperature": 0,
+            "defense": 1,
+            "use": 0,
+            "duel": "Iqy9S3HzvgisqCTOanb9Otlqau+QkRip39DPz2KXjsU=",
+            "multi3": "USCqOcsWT7ORK42JDz5N9P42X2syTNibm5ma21NK6Q4=",
+            "multi4": "UFy1qX0UkxvXB8js1twUM9ej27AmvtdYfqB4WgICt/k="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/Soda.asset",
+            "temperature": 0,
+            "defense": 1,
+            "use": 1,
+            "duel": "Iqy9S3HzvgisqCTOanb9Otlqau+QkRip39DPz2KXjsU=",
+            "multi3": "USCqOcsWT7ORK42JDz5N9P42X2syTNibm5ma21NK6Q4=",
+            "multi4": "UFy1qX0UkxvXB8js1twUM9ej27AmvtdYfqB4WgICt/k="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/Soda.asset",
+            "temperature": 0,
+            "defense": 2,
+            "use": 0,
+            "duel": "Iqy9S3HzvgisqCTOanb9Otlqau+QkRip39DPz2KXjsU=",
+            "multi3": "USCqOcsWT7ORK42JDz5N9P42X2syTNibm5ma21NK6Q4=",
+            "multi4": "UFy1qX0UkxvXB8js1twUM9ej27AmvtdYfqB4WgICt/k="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/Soda.asset",
+            "temperature": 0,
+            "defense": 2,
+            "use": 1,
+            "duel": "Iqy9S3HzvgisqCTOanb9Otlqau+QkRip39DPz2KXjsU=",
+            "multi3": "USCqOcsWT7ORK42JDz5N9P42X2syTNibm5ma21NK6Q4=",
+            "multi4": "UFy1qX0UkxvXB8js1twUM9ej27AmvtdYfqB4WgICt/k="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/Soda.asset",
+            "temperature": 0,
+            "defense": 3,
+            "use": 0,
+            "duel": "Iqy9S3HzvgisqCTOanb9Otlqau+QkRip39DPz2KXjsU=",
+            "multi3": "USCqOcsWT7ORK42JDz5N9P42X2syTNibm5ma21NK6Q4=",
+            "multi4": "UFy1qX0UkxvXB8js1twUM9ej27AmvtdYfqB4WgICt/k="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/Soda.asset",
+            "temperature": 0,
+            "defense": 3,
+            "use": 1,
+            "duel": "Iqy9S3HzvgisqCTOanb9Otlqau+QkRip39DPz2KXjsU=",
+            "multi3": "USCqOcsWT7ORK42JDz5N9P42X2syTNibm5ma21NK6Q4=",
+            "multi4": "UFy1qX0UkxvXB8js1twUM9ej27AmvtdYfqB4WgICt/k="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/Soda.asset",
+            "temperature": 1,
+            "defense": 0,
+            "use": 0,
+            "duel": "Iqy9S3HzvgisqCTOanb9Otlqau+QkRip39DPz2KXjsU=",
+            "multi3": "C6HqTsaijUGgQyjcC5C+cMgTohd76F/3WJ4BTyesWpE=",
+            "multi4": "jpRiy7KsS+RKuJGIwiDGmamG+r3eyBUBDnWIgSVHbM4="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/Soda.asset",
+            "temperature": 1,
+            "defense": 0,
+            "use": 1,
+            "duel": "Iqy9S3HzvgisqCTOanb9Otlqau+QkRip39DPz2KXjsU=",
+            "multi3": "C6HqTsaijUGgQyjcC5C+cMgTohd76F/3WJ4BTyesWpE=",
+            "multi4": "jpRiy7KsS+RKuJGIwiDGmamG+r3eyBUBDnWIgSVHbM4="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/Soda.asset",
+            "temperature": 1,
+            "defense": 1,
+            "use": 0,
+            "duel": "Iqy9S3HzvgisqCTOanb9Otlqau+QkRip39DPz2KXjsU=",
+            "multi3": "C6HqTsaijUGgQyjcC5C+cMgTohd76F/3WJ4BTyesWpE=",
+            "multi4": "jpRiy7KsS+RKuJGIwiDGmamG+r3eyBUBDnWIgSVHbM4="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/Soda.asset",
+            "temperature": 1,
+            "defense": 1,
+            "use": 1,
+            "duel": "Iqy9S3HzvgisqCTOanb9Otlqau+QkRip39DPz2KXjsU=",
+            "multi3": "C6HqTsaijUGgQyjcC5C+cMgTohd76F/3WJ4BTyesWpE=",
+            "multi4": "jpRiy7KsS+RKuJGIwiDGmamG+r3eyBUBDnWIgSVHbM4="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/Soda.asset",
+            "temperature": 1,
+            "defense": 2,
+            "use": 0,
+            "duel": "Iqy9S3HzvgisqCTOanb9Otlqau+QkRip39DPz2KXjsU=",
+            "multi3": "C6HqTsaijUGgQyjcC5C+cMgTohd76F/3WJ4BTyesWpE=",
+            "multi4": "jpRiy7KsS+RKuJGIwiDGmamG+r3eyBUBDnWIgSVHbM4="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/Soda.asset",
+            "temperature": 1,
+            "defense": 2,
+            "use": 1,
+            "duel": "Iqy9S3HzvgisqCTOanb9Otlqau+QkRip39DPz2KXjsU=",
+            "multi3": "C6HqTsaijUGgQyjcC5C+cMgTohd76F/3WJ4BTyesWpE=",
+            "multi4": "jpRiy7KsS+RKuJGIwiDGmamG+r3eyBUBDnWIgSVHbM4="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/Soda.asset",
+            "temperature": 1,
+            "defense": 3,
+            "use": 0,
+            "duel": "Iqy9S3HzvgisqCTOanb9Otlqau+QkRip39DPz2KXjsU=",
+            "multi3": "C6HqTsaijUGgQyjcC5C+cMgTohd76F/3WJ4BTyesWpE=",
+            "multi4": "jpRiy7KsS+RKuJGIwiDGmamG+r3eyBUBDnWIgSVHbM4="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/Soda.asset",
+            "temperature": 1,
+            "defense": 3,
+            "use": 1,
+            "duel": "Iqy9S3HzvgisqCTOanb9Otlqau+QkRip39DPz2KXjsU=",
+            "multi3": "C6HqTsaijUGgQyjcC5C+cMgTohd76F/3WJ4BTyesWpE=",
+            "multi4": "jpRiy7KsS+RKuJGIwiDGmamG+r3eyBUBDnWIgSVHbM4="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/Soda.asset",
+            "temperature": 2,
+            "defense": 0,
+            "use": 0,
+            "duel": "Iqy9S3HzvgisqCTOanb9Otlqau+QkRip39DPz2KXjsU=",
+            "multi3": "scoUqUc/0Bw+ancslu421aAlJ911Vle0lpE2sZMUAhc=",
+            "multi4": "FCWCPZv7dG+Pne+Wy1kSEwEY428wNN6NBpUAWy6WkRU="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/Soda.asset",
+            "temperature": 2,
+            "defense": 0,
+            "use": 1,
+            "duel": "Iqy9S3HzvgisqCTOanb9Otlqau+QkRip39DPz2KXjsU=",
+            "multi3": "scoUqUc/0Bw+ancslu421aAlJ911Vle0lpE2sZMUAhc=",
+            "multi4": "FCWCPZv7dG+Pne+Wy1kSEwEY428wNN6NBpUAWy6WkRU="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/Soda.asset",
+            "temperature": 2,
+            "defense": 1,
+            "use": 0,
+            "duel": "Iqy9S3HzvgisqCTOanb9Otlqau+QkRip39DPz2KXjsU=",
+            "multi3": "scoUqUc/0Bw+ancslu421aAlJ911Vle0lpE2sZMUAhc=",
+            "multi4": "FCWCPZv7dG+Pne+Wy1kSEwEY428wNN6NBpUAWy6WkRU="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/Soda.asset",
+            "temperature": 2,
+            "defense": 1,
+            "use": 1,
+            "duel": "Iqy9S3HzvgisqCTOanb9Otlqau+QkRip39DPz2KXjsU=",
+            "multi3": "scoUqUc/0Bw+ancslu421aAlJ911Vle0lpE2sZMUAhc=",
+            "multi4": "FCWCPZv7dG+Pne+Wy1kSEwEY428wNN6NBpUAWy6WkRU="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/Soda.asset",
+            "temperature": 2,
+            "defense": 2,
+            "use": 0,
+            "duel": "Iqy9S3HzvgisqCTOanb9Otlqau+QkRip39DPz2KXjsU=",
+            "multi3": "scoUqUc/0Bw+ancslu421aAlJ911Vle0lpE2sZMUAhc=",
+            "multi4": "FCWCPZv7dG+Pne+Wy1kSEwEY428wNN6NBpUAWy6WkRU="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/Soda.asset",
+            "temperature": 2,
+            "defense": 2,
+            "use": 1,
+            "duel": "Iqy9S3HzvgisqCTOanb9Otlqau+QkRip39DPz2KXjsU=",
+            "multi3": "scoUqUc/0Bw+ancslu421aAlJ911Vle0lpE2sZMUAhc=",
+            "multi4": "FCWCPZv7dG+Pne+Wy1kSEwEY428wNN6NBpUAWy6WkRU="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/Soda.asset",
+            "temperature": 2,
+            "defense": 3,
+            "use": 0,
+            "duel": "Iqy9S3HzvgisqCTOanb9Otlqau+QkRip39DPz2KXjsU=",
+            "multi3": "scoUqUc/0Bw+ancslu421aAlJ911Vle0lpE2sZMUAhc=",
+            "multi4": "FCWCPZv7dG+Pne+Wy1kSEwEY428wNN6NBpUAWy6WkRU="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Buff/Soda.asset",
+            "temperature": 2,
+            "defense": 3,
+            "use": 1,
+            "duel": "Iqy9S3HzvgisqCTOanb9Otlqau+QkRip39DPz2KXjsU=",
+            "multi3": "scoUqUc/0Bw+ancslu421aAlJ911Vle0lpE2sZMUAhc=",
+            "multi4": "FCWCPZv7dG+Pne+Wy1kSEwEY428wNN6NBpUAWy6WkRU="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Debuff/Samgyetang.asset",
+            "temperature": 0,
+            "defense": 0,
+            "use": 0,
+            "duel": "1M3v3CZaxchpDP3IuBuPLBbKwbT3tPsfmpHE9JR4t4I=",
+            "multi3": "dh03rApyniejiIe6BCqnXRDLH/R55356LwX1DtO17fk=",
+            "multi4": "Z8oOjj4CtJRXIrqrv2vj7iOQPXWI5HNS2rOIn8XNqHA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Debuff/Samgyetang.asset",
+            "temperature": 0,
+            "defense": 0,
+            "use": 1,
+            "duel": "1M3v3CZaxchpDP3IuBuPLBbKwbT3tPsfmpHE9JR4t4I=",
+            "multi3": "dh03rApyniejiIe6BCqnXRDLH/R55356LwX1DtO17fk=",
+            "multi4": "Z8oOjj4CtJRXIrqrv2vj7iOQPXWI5HNS2rOIn8XNqHA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Debuff/Samgyetang.asset",
+            "temperature": 0,
+            "defense": 1,
+            "use": 0,
+            "duel": "1M3v3CZaxchpDP3IuBuPLBbKwbT3tPsfmpHE9JR4t4I=",
+            "multi3": "dh03rApyniejiIe6BCqnXRDLH/R55356LwX1DtO17fk=",
+            "multi4": "Z8oOjj4CtJRXIrqrv2vj7iOQPXWI5HNS2rOIn8XNqHA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Debuff/Samgyetang.asset",
+            "temperature": 0,
+            "defense": 1,
+            "use": 1,
+            "duel": "1M3v3CZaxchpDP3IuBuPLBbKwbT3tPsfmpHE9JR4t4I=",
+            "multi3": "dh03rApyniejiIe6BCqnXRDLH/R55356LwX1DtO17fk=",
+            "multi4": "Z8oOjj4CtJRXIrqrv2vj7iOQPXWI5HNS2rOIn8XNqHA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Debuff/Samgyetang.asset",
+            "temperature": 0,
+            "defense": 2,
+            "use": 0,
+            "duel": "2aFZ5XY/drRvlkVUa8A0tCdfdDFiUua+gB0bGTGBVAE=",
+            "multi3": "Vv/InfiKldUo6E2oS5Arl9tPNEkbbZAClgqyZeN26Og=",
+            "multi4": "OYXeJBamubeXGnTQ2HOnf2AYT1hmOV8UT0u1Ag9fwD0="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Debuff/Samgyetang.asset",
+            "temperature": 0,
+            "defense": 2,
+            "use": 1,
+            "duel": "2aFZ5XY/drRvlkVUa8A0tCdfdDFiUua+gB0bGTGBVAE=",
+            "multi3": "Vv/InfiKldUo6E2oS5Arl9tPNEkbbZAClgqyZeN26Og=",
+            "multi4": "OYXeJBamubeXGnTQ2HOnf2AYT1hmOV8UT0u1Ag9fwD0="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Debuff/Samgyetang.asset",
+            "temperature": 0,
+            "defense": 3,
+            "use": 0,
+            "duel": "+k1dxo3In2UFNOQMr2+qzEUCBxqMziA9VNOazC9C5to=",
+            "multi3": "Vv/InfiKldUo6E2oS5Arl9tPNEkbbZAClgqyZeN26Og=",
+            "multi4": "OYXeJBamubeXGnTQ2HOnf2AYT1hmOV8UT0u1Ag9fwD0="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Debuff/Samgyetang.asset",
+            "temperature": 0,
+            "defense": 3,
+            "use": 1,
+            "duel": "+k1dxo3In2UFNOQMr2+qzEUCBxqMziA9VNOazC9C5to=",
+            "multi3": "Vv/InfiKldUo6E2oS5Arl9tPNEkbbZAClgqyZeN26Og=",
+            "multi4": "OYXeJBamubeXGnTQ2HOnf2AYT1hmOV8UT0u1Ag9fwD0="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Debuff/Samgyetang.asset",
+            "temperature": 1,
+            "defense": 0,
+            "use": 0,
+            "duel": "1M3v3CZaxchpDP3IuBuPLBbKwbT3tPsfmpHE9JR4t4I=",
+            "multi3": "5ww4dy7gUhcjBfJmetMg2WMPhZUrw+RtFfj8sHKIAUg=",
+            "multi4": "MGrSYNWR4BljcKgY0MiJI8yLwokCK0MB+1xhFu7qJ4E="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Debuff/Samgyetang.asset",
+            "temperature": 1,
+            "defense": 0,
+            "use": 1,
+            "duel": "1M3v3CZaxchpDP3IuBuPLBbKwbT3tPsfmpHE9JR4t4I=",
+            "multi3": "5ww4dy7gUhcjBfJmetMg2WMPhZUrw+RtFfj8sHKIAUg=",
+            "multi4": "MGrSYNWR4BljcKgY0MiJI8yLwokCK0MB+1xhFu7qJ4E="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Debuff/Samgyetang.asset",
+            "temperature": 1,
+            "defense": 1,
+            "use": 0,
+            "duel": "1M3v3CZaxchpDP3IuBuPLBbKwbT3tPsfmpHE9JR4t4I=",
+            "multi3": "5ww4dy7gUhcjBfJmetMg2WMPhZUrw+RtFfj8sHKIAUg=",
+            "multi4": "MGrSYNWR4BljcKgY0MiJI8yLwokCK0MB+1xhFu7qJ4E="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Debuff/Samgyetang.asset",
+            "temperature": 1,
+            "defense": 1,
+            "use": 1,
+            "duel": "1M3v3CZaxchpDP3IuBuPLBbKwbT3tPsfmpHE9JR4t4I=",
+            "multi3": "5ww4dy7gUhcjBfJmetMg2WMPhZUrw+RtFfj8sHKIAUg=",
+            "multi4": "MGrSYNWR4BljcKgY0MiJI8yLwokCK0MB+1xhFu7qJ4E="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Debuff/Samgyetang.asset",
+            "temperature": 1,
+            "defense": 2,
+            "use": 0,
+            "duel": "2aFZ5XY/drRvlkVUa8A0tCdfdDFiUua+gB0bGTGBVAE=",
+            "multi3": "vbNJPw2bu/UrIu2G+0MEPuTelSaIaQfrxyjbLgPhna4=",
+            "multi4": "p9hLTyWzILkGQ7RoinDR3zqC46K1Ldm/JD19Dudp9Wk="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Debuff/Samgyetang.asset",
+            "temperature": 1,
+            "defense": 2,
+            "use": 1,
+            "duel": "2aFZ5XY/drRvlkVUa8A0tCdfdDFiUua+gB0bGTGBVAE=",
+            "multi3": "vbNJPw2bu/UrIu2G+0MEPuTelSaIaQfrxyjbLgPhna4=",
+            "multi4": "p9hLTyWzILkGQ7RoinDR3zqC46K1Ldm/JD19Dudp9Wk="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Debuff/Samgyetang.asset",
+            "temperature": 1,
+            "defense": 3,
+            "use": 0,
+            "duel": "+k1dxo3In2UFNOQMr2+qzEUCBxqMziA9VNOazC9C5to=",
+            "multi3": "vbNJPw2bu/UrIu2G+0MEPuTelSaIaQfrxyjbLgPhna4=",
+            "multi4": "p9hLTyWzILkGQ7RoinDR3zqC46K1Ldm/JD19Dudp9Wk="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Debuff/Samgyetang.asset",
+            "temperature": 1,
+            "defense": 3,
+            "use": 1,
+            "duel": "+k1dxo3In2UFNOQMr2+qzEUCBxqMziA9VNOazC9C5to=",
+            "multi3": "vbNJPw2bu/UrIu2G+0MEPuTelSaIaQfrxyjbLgPhna4=",
+            "multi4": "p9hLTyWzILkGQ7RoinDR3zqC46K1Ldm/JD19Dudp9Wk="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Debuff/Samgyetang.asset",
+            "temperature": 2,
+            "defense": 0,
+            "use": 0,
+            "duel": "1M3v3CZaxchpDP3IuBuPLBbKwbT3tPsfmpHE9JR4t4I=",
+            "multi3": "+DE5xidMag5jQ4diWN3lSVVjkfYta6GdW4pHKMXpb8s=",
+            "multi4": "+d9HGv5WIHPfVQSz+kuYsmqIpljsBa7rs7gBQZTL2iE="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Debuff/Samgyetang.asset",
+            "temperature": 2,
+            "defense": 0,
+            "use": 1,
+            "duel": "1M3v3CZaxchpDP3IuBuPLBbKwbT3tPsfmpHE9JR4t4I=",
+            "multi3": "+DE5xidMag5jQ4diWN3lSVVjkfYta6GdW4pHKMXpb8s=",
+            "multi4": "+d9HGv5WIHPfVQSz+kuYsmqIpljsBa7rs7gBQZTL2iE="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Debuff/Samgyetang.asset",
+            "temperature": 2,
+            "defense": 1,
+            "use": 0,
+            "duel": "1M3v3CZaxchpDP3IuBuPLBbKwbT3tPsfmpHE9JR4t4I=",
+            "multi3": "+DE5xidMag5jQ4diWN3lSVVjkfYta6GdW4pHKMXpb8s=",
+            "multi4": "+d9HGv5WIHPfVQSz+kuYsmqIpljsBa7rs7gBQZTL2iE="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Debuff/Samgyetang.asset",
+            "temperature": 2,
+            "defense": 1,
+            "use": 1,
+            "duel": "1M3v3CZaxchpDP3IuBuPLBbKwbT3tPsfmpHE9JR4t4I=",
+            "multi3": "+DE5xidMag5jQ4diWN3lSVVjkfYta6GdW4pHKMXpb8s=",
+            "multi4": "+d9HGv5WIHPfVQSz+kuYsmqIpljsBa7rs7gBQZTL2iE="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Debuff/Samgyetang.asset",
+            "temperature": 2,
+            "defense": 2,
+            "use": 0,
+            "duel": "2aFZ5XY/drRvlkVUa8A0tCdfdDFiUua+gB0bGTGBVAE=",
+            "multi3": "g6Y/WkDvEazPVaRwydhDmy0p4HLnfx+kMrr0Yp9be20=",
+            "multi4": "e/wQUu58NOPZ366d1w2hfwbDoC7s5US6r0ftx2ZlA+o="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Debuff/Samgyetang.asset",
+            "temperature": 2,
+            "defense": 2,
+            "use": 1,
+            "duel": "2aFZ5XY/drRvlkVUa8A0tCdfdDFiUua+gB0bGTGBVAE=",
+            "multi3": "g6Y/WkDvEazPVaRwydhDmy0p4HLnfx+kMrr0Yp9be20=",
+            "multi4": "e/wQUu58NOPZ366d1w2hfwbDoC7s5US6r0ftx2ZlA+o="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Debuff/Samgyetang.asset",
+            "temperature": 2,
+            "defense": 3,
+            "use": 0,
+            "duel": "+k1dxo3In2UFNOQMr2+qzEUCBxqMziA9VNOazC9C5to=",
+            "multi3": "g6Y/WkDvEazPVaRwydhDmy0p4HLnfx+kMrr0Yp9be20=",
+            "multi4": "e/wQUu58NOPZ366d1w2hfwbDoC7s5US6r0ftx2ZlA+o="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Debuff/Samgyetang.asset",
+            "temperature": 2,
+            "defense": 3,
+            "use": 1,
+            "duel": "+k1dxo3In2UFNOQMr2+qzEUCBxqMziA9VNOazC9C5to=",
+            "multi3": "g6Y/WkDvEazPVaRwydhDmy0p4HLnfx+kMrr0Yp9be20=",
+            "multi4": "e/wQUu58NOPZ366d1w2hfwbDoC7s5US6r0ftx2ZlA+o="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Defense/Mask.asset",
+            "temperature": 0,
+            "defense": 0,
+            "use": 0,
+            "duel": "x7hauMU8dQyJqWHzohG2mMojwRiSYBZ6xgqTAr/JUuk=",
+            "multi3": "EpTDJq5Y+euhjLBFS6qh/Ge2eUTXJYyVhR22TfNKJv8=",
+            "multi4": "A2TRKMAldWxd8YoqugSa6d0RbpHwyrQ6VYGwhOgwLvU="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Defense/Mask.asset",
+            "temperature": 0,
+            "defense": 0,
+            "use": 1,
+            "duel": "x7hauMU8dQyJqWHzohG2mMojwRiSYBZ6xgqTAr/JUuk=",
+            "multi3": "EpTDJq5Y+euhjLBFS6qh/Ge2eUTXJYyVhR22TfNKJv8=",
+            "multi4": "A2TRKMAldWxd8YoqugSa6d0RbpHwyrQ6VYGwhOgwLvU="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Defense/Mask.asset",
+            "temperature": 0,
+            "defense": 1,
+            "use": 0,
+            "duel": "x7hauMU8dQyJqWHzohG2mMojwRiSYBZ6xgqTAr/JUuk=",
+            "multi3": "EpTDJq5Y+euhjLBFS6qh/Ge2eUTXJYyVhR22TfNKJv8=",
+            "multi4": "A2TRKMAldWxd8YoqugSa6d0RbpHwyrQ6VYGwhOgwLvU="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Defense/Mask.asset",
+            "temperature": 0,
+            "defense": 1,
+            "use": 1,
+            "duel": "x7hauMU8dQyJqWHzohG2mMojwRiSYBZ6xgqTAr/JUuk=",
+            "multi3": "EpTDJq5Y+euhjLBFS6qh/Ge2eUTXJYyVhR22TfNKJv8=",
+            "multi4": "A2TRKMAldWxd8YoqugSa6d0RbpHwyrQ6VYGwhOgwLvU="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Defense/Mask.asset",
+            "temperature": 0,
+            "defense": 2,
+            "use": 0,
+            "duel": "x7hauMU8dQyJqWHzohG2mMojwRiSYBZ6xgqTAr/JUuk=",
+            "multi3": "EpTDJq5Y+euhjLBFS6qh/Ge2eUTXJYyVhR22TfNKJv8=",
+            "multi4": "A2TRKMAldWxd8YoqugSa6d0RbpHwyrQ6VYGwhOgwLvU="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Defense/Mask.asset",
+            "temperature": 0,
+            "defense": 2,
+            "use": 1,
+            "duel": "x7hauMU8dQyJqWHzohG2mMojwRiSYBZ6xgqTAr/JUuk=",
+            "multi3": "EpTDJq5Y+euhjLBFS6qh/Ge2eUTXJYyVhR22TfNKJv8=",
+            "multi4": "A2TRKMAldWxd8YoqugSa6d0RbpHwyrQ6VYGwhOgwLvU="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Defense/Mask.asset",
+            "temperature": 0,
+            "defense": 3,
+            "use": 0,
+            "duel": "x7hauMU8dQyJqWHzohG2mMojwRiSYBZ6xgqTAr/JUuk=",
+            "multi3": "EpTDJq5Y+euhjLBFS6qh/Ge2eUTXJYyVhR22TfNKJv8=",
+            "multi4": "A2TRKMAldWxd8YoqugSa6d0RbpHwyrQ6VYGwhOgwLvU="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Defense/Mask.asset",
+            "temperature": 0,
+            "defense": 3,
+            "use": 1,
+            "duel": "x7hauMU8dQyJqWHzohG2mMojwRiSYBZ6xgqTAr/JUuk=",
+            "multi3": "EpTDJq5Y+euhjLBFS6qh/Ge2eUTXJYyVhR22TfNKJv8=",
+            "multi4": "A2TRKMAldWxd8YoqugSa6d0RbpHwyrQ6VYGwhOgwLvU="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Defense/Mask.asset",
+            "temperature": 1,
+            "defense": 0,
+            "use": 0,
+            "duel": "x7hauMU8dQyJqWHzohG2mMojwRiSYBZ6xgqTAr/JUuk=",
+            "multi3": "EpTDJq5Y+euhjLBFS6qh/Ge2eUTXJYyVhR22TfNKJv8=",
+            "multi4": "A2TRKMAldWxd8YoqugSa6d0RbpHwyrQ6VYGwhOgwLvU="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Defense/Mask.asset",
+            "temperature": 1,
+            "defense": 0,
+            "use": 1,
+            "duel": "x7hauMU8dQyJqWHzohG2mMojwRiSYBZ6xgqTAr/JUuk=",
+            "multi3": "EpTDJq5Y+euhjLBFS6qh/Ge2eUTXJYyVhR22TfNKJv8=",
+            "multi4": "A2TRKMAldWxd8YoqugSa6d0RbpHwyrQ6VYGwhOgwLvU="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Defense/Mask.asset",
+            "temperature": 1,
+            "defense": 1,
+            "use": 0,
+            "duel": "x7hauMU8dQyJqWHzohG2mMojwRiSYBZ6xgqTAr/JUuk=",
+            "multi3": "EpTDJq5Y+euhjLBFS6qh/Ge2eUTXJYyVhR22TfNKJv8=",
+            "multi4": "A2TRKMAldWxd8YoqugSa6d0RbpHwyrQ6VYGwhOgwLvU="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Defense/Mask.asset",
+            "temperature": 1,
+            "defense": 1,
+            "use": 1,
+            "duel": "x7hauMU8dQyJqWHzohG2mMojwRiSYBZ6xgqTAr/JUuk=",
+            "multi3": "EpTDJq5Y+euhjLBFS6qh/Ge2eUTXJYyVhR22TfNKJv8=",
+            "multi4": "A2TRKMAldWxd8YoqugSa6d0RbpHwyrQ6VYGwhOgwLvU="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Defense/Mask.asset",
+            "temperature": 1,
+            "defense": 2,
+            "use": 0,
+            "duel": "x7hauMU8dQyJqWHzohG2mMojwRiSYBZ6xgqTAr/JUuk=",
+            "multi3": "EpTDJq5Y+euhjLBFS6qh/Ge2eUTXJYyVhR22TfNKJv8=",
+            "multi4": "A2TRKMAldWxd8YoqugSa6d0RbpHwyrQ6VYGwhOgwLvU="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Defense/Mask.asset",
+            "temperature": 1,
+            "defense": 2,
+            "use": 1,
+            "duel": "x7hauMU8dQyJqWHzohG2mMojwRiSYBZ6xgqTAr/JUuk=",
+            "multi3": "EpTDJq5Y+euhjLBFS6qh/Ge2eUTXJYyVhR22TfNKJv8=",
+            "multi4": "A2TRKMAldWxd8YoqugSa6d0RbpHwyrQ6VYGwhOgwLvU="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Defense/Mask.asset",
+            "temperature": 1,
+            "defense": 3,
+            "use": 0,
+            "duel": "x7hauMU8dQyJqWHzohG2mMojwRiSYBZ6xgqTAr/JUuk=",
+            "multi3": "EpTDJq5Y+euhjLBFS6qh/Ge2eUTXJYyVhR22TfNKJv8=",
+            "multi4": "A2TRKMAldWxd8YoqugSa6d0RbpHwyrQ6VYGwhOgwLvU="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Defense/Mask.asset",
+            "temperature": 1,
+            "defense": 3,
+            "use": 1,
+            "duel": "x7hauMU8dQyJqWHzohG2mMojwRiSYBZ6xgqTAr/JUuk=",
+            "multi3": "EpTDJq5Y+euhjLBFS6qh/Ge2eUTXJYyVhR22TfNKJv8=",
+            "multi4": "A2TRKMAldWxd8YoqugSa6d0RbpHwyrQ6VYGwhOgwLvU="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Defense/Mask.asset",
+            "temperature": 2,
+            "defense": 0,
+            "use": 0,
+            "duel": "x7hauMU8dQyJqWHzohG2mMojwRiSYBZ6xgqTAr/JUuk=",
+            "multi3": "EpTDJq5Y+euhjLBFS6qh/Ge2eUTXJYyVhR22TfNKJv8=",
+            "multi4": "A2TRKMAldWxd8YoqugSa6d0RbpHwyrQ6VYGwhOgwLvU="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Defense/Mask.asset",
+            "temperature": 2,
+            "defense": 0,
+            "use": 1,
+            "duel": "x7hauMU8dQyJqWHzohG2mMojwRiSYBZ6xgqTAr/JUuk=",
+            "multi3": "EpTDJq5Y+euhjLBFS6qh/Ge2eUTXJYyVhR22TfNKJv8=",
+            "multi4": "A2TRKMAldWxd8YoqugSa6d0RbpHwyrQ6VYGwhOgwLvU="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Defense/Mask.asset",
+            "temperature": 2,
+            "defense": 1,
+            "use": 0,
+            "duel": "x7hauMU8dQyJqWHzohG2mMojwRiSYBZ6xgqTAr/JUuk=",
+            "multi3": "EpTDJq5Y+euhjLBFS6qh/Ge2eUTXJYyVhR22TfNKJv8=",
+            "multi4": "A2TRKMAldWxd8YoqugSa6d0RbpHwyrQ6VYGwhOgwLvU="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Defense/Mask.asset",
+            "temperature": 2,
+            "defense": 1,
+            "use": 1,
+            "duel": "x7hauMU8dQyJqWHzohG2mMojwRiSYBZ6xgqTAr/JUuk=",
+            "multi3": "EpTDJq5Y+euhjLBFS6qh/Ge2eUTXJYyVhR22TfNKJv8=",
+            "multi4": "A2TRKMAldWxd8YoqugSa6d0RbpHwyrQ6VYGwhOgwLvU="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Defense/Mask.asset",
+            "temperature": 2,
+            "defense": 2,
+            "use": 0,
+            "duel": "x7hauMU8dQyJqWHzohG2mMojwRiSYBZ6xgqTAr/JUuk=",
+            "multi3": "EpTDJq5Y+euhjLBFS6qh/Ge2eUTXJYyVhR22TfNKJv8=",
+            "multi4": "A2TRKMAldWxd8YoqugSa6d0RbpHwyrQ6VYGwhOgwLvU="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Defense/Mask.asset",
+            "temperature": 2,
+            "defense": 2,
+            "use": 1,
+            "duel": "x7hauMU8dQyJqWHzohG2mMojwRiSYBZ6xgqTAr/JUuk=",
+            "multi3": "EpTDJq5Y+euhjLBFS6qh/Ge2eUTXJYyVhR22TfNKJv8=",
+            "multi4": "A2TRKMAldWxd8YoqugSa6d0RbpHwyrQ6VYGwhOgwLvU="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Defense/Mask.asset",
+            "temperature": 2,
+            "defense": 3,
+            "use": 0,
+            "duel": "x7hauMU8dQyJqWHzohG2mMojwRiSYBZ6xgqTAr/JUuk=",
+            "multi3": "EpTDJq5Y+euhjLBFS6qh/Ge2eUTXJYyVhR22TfNKJv8=",
+            "multi4": "A2TRKMAldWxd8YoqugSa6d0RbpHwyrQ6VYGwhOgwLvU="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Defense/Mask.asset",
+            "temperature": 2,
+            "defense": 3,
+            "use": 1,
+            "duel": "x7hauMU8dQyJqWHzohG2mMojwRiSYBZ6xgqTAr/JUuk=",
+            "multi3": "EpTDJq5Y+euhjLBFS6qh/Ge2eUTXJYyVhR22TfNKJv8=",
+            "multi4": "A2TRKMAldWxd8YoqugSa6d0RbpHwyrQ6VYGwhOgwLvU="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotAmericano.asset",
+            "temperature": 0,
+            "defense": 0,
+            "use": 0,
+            "duel": "3Jc1xzSS3SLx/rvtHQfCxo2bFD0NvFmtjEvgPy+a/dk=",
+            "multi3": "NLJiI3oDLf234lm4lnR4d/1ncgYjOd+xVo42LR8m5lA=",
+            "multi4": "XzqiQUCQJN/HS+oqjoF45WxnB40Muc2enyfJsMQEYAQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotAmericano.asset",
+            "temperature": 0,
+            "defense": 0,
+            "use": 1,
+            "duel": "3Jc1xzSS3SLx/rvtHQfCxo2bFD0NvFmtjEvgPy+a/dk=",
+            "multi3": "NLJiI3oDLf234lm4lnR4d/1ncgYjOd+xVo42LR8m5lA=",
+            "multi4": "XzqiQUCQJN/HS+oqjoF45WxnB40Muc2enyfJsMQEYAQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotAmericano.asset",
+            "temperature": 0,
+            "defense": 1,
+            "use": 0,
+            "duel": "3Jc1xzSS3SLx/rvtHQfCxo2bFD0NvFmtjEvgPy+a/dk=",
+            "multi3": "NLJiI3oDLf234lm4lnR4d/1ncgYjOd+xVo42LR8m5lA=",
+            "multi4": "XzqiQUCQJN/HS+oqjoF45WxnB40Muc2enyfJsMQEYAQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotAmericano.asset",
+            "temperature": 0,
+            "defense": 1,
+            "use": 1,
+            "duel": "3Jc1xzSS3SLx/rvtHQfCxo2bFD0NvFmtjEvgPy+a/dk=",
+            "multi3": "NLJiI3oDLf234lm4lnR4d/1ncgYjOd+xVo42LR8m5lA=",
+            "multi4": "XzqiQUCQJN/HS+oqjoF45WxnB40Muc2enyfJsMQEYAQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotAmericano.asset",
+            "temperature": 0,
+            "defense": 2,
+            "use": 0,
+            "duel": "3Jc1xzSS3SLx/rvtHQfCxo2bFD0NvFmtjEvgPy+a/dk=",
+            "multi3": "NLJiI3oDLf234lm4lnR4d/1ncgYjOd+xVo42LR8m5lA=",
+            "multi4": "XzqiQUCQJN/HS+oqjoF45WxnB40Muc2enyfJsMQEYAQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotAmericano.asset",
+            "temperature": 0,
+            "defense": 2,
+            "use": 1,
+            "duel": "3Jc1xzSS3SLx/rvtHQfCxo2bFD0NvFmtjEvgPy+a/dk=",
+            "multi3": "NLJiI3oDLf234lm4lnR4d/1ncgYjOd+xVo42LR8m5lA=",
+            "multi4": "XzqiQUCQJN/HS+oqjoF45WxnB40Muc2enyfJsMQEYAQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotAmericano.asset",
+            "temperature": 0,
+            "defense": 3,
+            "use": 0,
+            "duel": "3Jc1xzSS3SLx/rvtHQfCxo2bFD0NvFmtjEvgPy+a/dk=",
+            "multi3": "NLJiI3oDLf234lm4lnR4d/1ncgYjOd+xVo42LR8m5lA=",
+            "multi4": "XzqiQUCQJN/HS+oqjoF45WxnB40Muc2enyfJsMQEYAQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotAmericano.asset",
+            "temperature": 0,
+            "defense": 3,
+            "use": 1,
+            "duel": "3Jc1xzSS3SLx/rvtHQfCxo2bFD0NvFmtjEvgPy+a/dk=",
+            "multi3": "NLJiI3oDLf234lm4lnR4d/1ncgYjOd+xVo42LR8m5lA=",
+            "multi4": "XzqiQUCQJN/HS+oqjoF45WxnB40Muc2enyfJsMQEYAQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotAmericano.asset",
+            "temperature": 1,
+            "defense": 0,
+            "use": 0,
+            "duel": "3Jc1xzSS3SLx/rvtHQfCxo2bFD0NvFmtjEvgPy+a/dk=",
+            "multi3": "5amvETXhvAHrwXKMV2jFePboUXatmeubiXMdz48Ak1c=",
+            "multi4": "L96/UMHoutqY9xP2vHzKe8oHOso1D+Nbh+UbRrFV+gY="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotAmericano.asset",
+            "temperature": 1,
+            "defense": 0,
+            "use": 1,
+            "duel": "3Jc1xzSS3SLx/rvtHQfCxo2bFD0NvFmtjEvgPy+a/dk=",
+            "multi3": "5amvETXhvAHrwXKMV2jFePboUXatmeubiXMdz48Ak1c=",
+            "multi4": "L96/UMHoutqY9xP2vHzKe8oHOso1D+Nbh+UbRrFV+gY="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotAmericano.asset",
+            "temperature": 1,
+            "defense": 1,
+            "use": 0,
+            "duel": "3Jc1xzSS3SLx/rvtHQfCxo2bFD0NvFmtjEvgPy+a/dk=",
+            "multi3": "5amvETXhvAHrwXKMV2jFePboUXatmeubiXMdz48Ak1c=",
+            "multi4": "L96/UMHoutqY9xP2vHzKe8oHOso1D+Nbh+UbRrFV+gY="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotAmericano.asset",
+            "temperature": 1,
+            "defense": 1,
+            "use": 1,
+            "duel": "3Jc1xzSS3SLx/rvtHQfCxo2bFD0NvFmtjEvgPy+a/dk=",
+            "multi3": "5amvETXhvAHrwXKMV2jFePboUXatmeubiXMdz48Ak1c=",
+            "multi4": "L96/UMHoutqY9xP2vHzKe8oHOso1D+Nbh+UbRrFV+gY="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotAmericano.asset",
+            "temperature": 1,
+            "defense": 2,
+            "use": 0,
+            "duel": "3Jc1xzSS3SLx/rvtHQfCxo2bFD0NvFmtjEvgPy+a/dk=",
+            "multi3": "5amvETXhvAHrwXKMV2jFePboUXatmeubiXMdz48Ak1c=",
+            "multi4": "L96/UMHoutqY9xP2vHzKe8oHOso1D+Nbh+UbRrFV+gY="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotAmericano.asset",
+            "temperature": 1,
+            "defense": 2,
+            "use": 1,
+            "duel": "3Jc1xzSS3SLx/rvtHQfCxo2bFD0NvFmtjEvgPy+a/dk=",
+            "multi3": "5amvETXhvAHrwXKMV2jFePboUXatmeubiXMdz48Ak1c=",
+            "multi4": "L96/UMHoutqY9xP2vHzKe8oHOso1D+Nbh+UbRrFV+gY="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotAmericano.asset",
+            "temperature": 1,
+            "defense": 3,
+            "use": 0,
+            "duel": "3Jc1xzSS3SLx/rvtHQfCxo2bFD0NvFmtjEvgPy+a/dk=",
+            "multi3": "5amvETXhvAHrwXKMV2jFePboUXatmeubiXMdz48Ak1c=",
+            "multi4": "L96/UMHoutqY9xP2vHzKe8oHOso1D+Nbh+UbRrFV+gY="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotAmericano.asset",
+            "temperature": 1,
+            "defense": 3,
+            "use": 1,
+            "duel": "3Jc1xzSS3SLx/rvtHQfCxo2bFD0NvFmtjEvgPy+a/dk=",
+            "multi3": "5amvETXhvAHrwXKMV2jFePboUXatmeubiXMdz48Ak1c=",
+            "multi4": "L96/UMHoutqY9xP2vHzKe8oHOso1D+Nbh+UbRrFV+gY="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotAmericano.asset",
+            "temperature": 2,
+            "defense": 0,
+            "use": 0,
+            "duel": "3Jc1xzSS3SLx/rvtHQfCxo2bFD0NvFmtjEvgPy+a/dk=",
+            "multi3": "bCt7lKDSbn7exKXYJS3vow6SPWOchbpR500A19/K6qo=",
+            "multi4": "Qy2Hz/JsQ7Fq0hOHnxnHFprf0RQSZvwhFeKAf4o9Pow="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotAmericano.asset",
+            "temperature": 2,
+            "defense": 0,
+            "use": 1,
+            "duel": "3Jc1xzSS3SLx/rvtHQfCxo2bFD0NvFmtjEvgPy+a/dk=",
+            "multi3": "bCt7lKDSbn7exKXYJS3vow6SPWOchbpR500A19/K6qo=",
+            "multi4": "Qy2Hz/JsQ7Fq0hOHnxnHFprf0RQSZvwhFeKAf4o9Pow="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotAmericano.asset",
+            "temperature": 2,
+            "defense": 1,
+            "use": 0,
+            "duel": "3Jc1xzSS3SLx/rvtHQfCxo2bFD0NvFmtjEvgPy+a/dk=",
+            "multi3": "bCt7lKDSbn7exKXYJS3vow6SPWOchbpR500A19/K6qo=",
+            "multi4": "Qy2Hz/JsQ7Fq0hOHnxnHFprf0RQSZvwhFeKAf4o9Pow="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotAmericano.asset",
+            "temperature": 2,
+            "defense": 1,
+            "use": 1,
+            "duel": "3Jc1xzSS3SLx/rvtHQfCxo2bFD0NvFmtjEvgPy+a/dk=",
+            "multi3": "bCt7lKDSbn7exKXYJS3vow6SPWOchbpR500A19/K6qo=",
+            "multi4": "Qy2Hz/JsQ7Fq0hOHnxnHFprf0RQSZvwhFeKAf4o9Pow="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotAmericano.asset",
+            "temperature": 2,
+            "defense": 2,
+            "use": 0,
+            "duel": "3Jc1xzSS3SLx/rvtHQfCxo2bFD0NvFmtjEvgPy+a/dk=",
+            "multi3": "bCt7lKDSbn7exKXYJS3vow6SPWOchbpR500A19/K6qo=",
+            "multi4": "Qy2Hz/JsQ7Fq0hOHnxnHFprf0RQSZvwhFeKAf4o9Pow="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotAmericano.asset",
+            "temperature": 2,
+            "defense": 2,
+            "use": 1,
+            "duel": "3Jc1xzSS3SLx/rvtHQfCxo2bFD0NvFmtjEvgPy+a/dk=",
+            "multi3": "bCt7lKDSbn7exKXYJS3vow6SPWOchbpR500A19/K6qo=",
+            "multi4": "Qy2Hz/JsQ7Fq0hOHnxnHFprf0RQSZvwhFeKAf4o9Pow="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotAmericano.asset",
+            "temperature": 2,
+            "defense": 3,
+            "use": 0,
+            "duel": "3Jc1xzSS3SLx/rvtHQfCxo2bFD0NvFmtjEvgPy+a/dk=",
+            "multi3": "bCt7lKDSbn7exKXYJS3vow6SPWOchbpR500A19/K6qo=",
+            "multi4": "Qy2Hz/JsQ7Fq0hOHnxnHFprf0RQSZvwhFeKAf4o9Pow="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotAmericano.asset",
+            "temperature": 2,
+            "defense": 3,
+            "use": 1,
+            "duel": "3Jc1xzSS3SLx/rvtHQfCxo2bFD0NvFmtjEvgPy+a/dk=",
+            "multi3": "bCt7lKDSbn7exKXYJS3vow6SPWOchbpR500A19/K6qo=",
+            "multi4": "Qy2Hz/JsQ7Fq0hOHnxnHFprf0RQSZvwhFeKAf4o9Pow="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotPack.asset",
+            "temperature": 0,
+            "defense": 0,
+            "use": 0,
+            "duel": "cc3c2CTOKeZFNPn8uejFcCp04+YVF4TfF+O0vLUhVSY=",
+            "multi3": "NLJiI3oDLf234lm4lnR4d/1ncgYjOd+xVo42LR8m5lA=",
+            "multi4": "XzqiQUCQJN/HS+oqjoF45WxnB40Muc2enyfJsMQEYAQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotPack.asset",
+            "temperature": 0,
+            "defense": 0,
+            "use": 1,
+            "duel": "cc3c2CTOKeZFNPn8uejFcCp04+YVF4TfF+O0vLUhVSY=",
+            "multi3": "NLJiI3oDLf234lm4lnR4d/1ncgYjOd+xVo42LR8m5lA=",
+            "multi4": "XzqiQUCQJN/HS+oqjoF45WxnB40Muc2enyfJsMQEYAQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotPack.asset",
+            "temperature": 0,
+            "defense": 1,
+            "use": 0,
+            "duel": "cc3c2CTOKeZFNPn8uejFcCp04+YVF4TfF+O0vLUhVSY=",
+            "multi3": "NLJiI3oDLf234lm4lnR4d/1ncgYjOd+xVo42LR8m5lA=",
+            "multi4": "XzqiQUCQJN/HS+oqjoF45WxnB40Muc2enyfJsMQEYAQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotPack.asset",
+            "temperature": 0,
+            "defense": 1,
+            "use": 1,
+            "duel": "cc3c2CTOKeZFNPn8uejFcCp04+YVF4TfF+O0vLUhVSY=",
+            "multi3": "NLJiI3oDLf234lm4lnR4d/1ncgYjOd+xVo42LR8m5lA=",
+            "multi4": "XzqiQUCQJN/HS+oqjoF45WxnB40Muc2enyfJsMQEYAQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotPack.asset",
+            "temperature": 0,
+            "defense": 2,
+            "use": 0,
+            "duel": "cc3c2CTOKeZFNPn8uejFcCp04+YVF4TfF+O0vLUhVSY=",
+            "multi3": "NLJiI3oDLf234lm4lnR4d/1ncgYjOd+xVo42LR8m5lA=",
+            "multi4": "XzqiQUCQJN/HS+oqjoF45WxnB40Muc2enyfJsMQEYAQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotPack.asset",
+            "temperature": 0,
+            "defense": 2,
+            "use": 1,
+            "duel": "cc3c2CTOKeZFNPn8uejFcCp04+YVF4TfF+O0vLUhVSY=",
+            "multi3": "NLJiI3oDLf234lm4lnR4d/1ncgYjOd+xVo42LR8m5lA=",
+            "multi4": "XzqiQUCQJN/HS+oqjoF45WxnB40Muc2enyfJsMQEYAQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotPack.asset",
+            "temperature": 0,
+            "defense": 3,
+            "use": 0,
+            "duel": "cc3c2CTOKeZFNPn8uejFcCp04+YVF4TfF+O0vLUhVSY=",
+            "multi3": "NLJiI3oDLf234lm4lnR4d/1ncgYjOd+xVo42LR8m5lA=",
+            "multi4": "XzqiQUCQJN/HS+oqjoF45WxnB40Muc2enyfJsMQEYAQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotPack.asset",
+            "temperature": 0,
+            "defense": 3,
+            "use": 1,
+            "duel": "cc3c2CTOKeZFNPn8uejFcCp04+YVF4TfF+O0vLUhVSY=",
+            "multi3": "NLJiI3oDLf234lm4lnR4d/1ncgYjOd+xVo42LR8m5lA=",
+            "multi4": "XzqiQUCQJN/HS+oqjoF45WxnB40Muc2enyfJsMQEYAQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotPack.asset",
+            "temperature": 1,
+            "defense": 0,
+            "use": 0,
+            "duel": "cc3c2CTOKeZFNPn8uejFcCp04+YVF4TfF+O0vLUhVSY=",
+            "multi3": "xwqQdp/txD1jLIMk2Vgqqt7MRPj+tgzCsGuU58+XXhY=",
+            "multi4": "IPi7Fr/WC+VrFbH0b+c3Ur6V9d/pfYCjgXwj5lHxmhk="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotPack.asset",
+            "temperature": 1,
+            "defense": 0,
+            "use": 1,
+            "duel": "cc3c2CTOKeZFNPn8uejFcCp04+YVF4TfF+O0vLUhVSY=",
+            "multi3": "xwqQdp/txD1jLIMk2Vgqqt7MRPj+tgzCsGuU58+XXhY=",
+            "multi4": "IPi7Fr/WC+VrFbH0b+c3Ur6V9d/pfYCjgXwj5lHxmhk="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotPack.asset",
+            "temperature": 1,
+            "defense": 1,
+            "use": 0,
+            "duel": "cc3c2CTOKeZFNPn8uejFcCp04+YVF4TfF+O0vLUhVSY=",
+            "multi3": "xwqQdp/txD1jLIMk2Vgqqt7MRPj+tgzCsGuU58+XXhY=",
+            "multi4": "IPi7Fr/WC+VrFbH0b+c3Ur6V9d/pfYCjgXwj5lHxmhk="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotPack.asset",
+            "temperature": 1,
+            "defense": 1,
+            "use": 1,
+            "duel": "cc3c2CTOKeZFNPn8uejFcCp04+YVF4TfF+O0vLUhVSY=",
+            "multi3": "xwqQdp/txD1jLIMk2Vgqqt7MRPj+tgzCsGuU58+XXhY=",
+            "multi4": "IPi7Fr/WC+VrFbH0b+c3Ur6V9d/pfYCjgXwj5lHxmhk="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotPack.asset",
+            "temperature": 1,
+            "defense": 2,
+            "use": 0,
+            "duel": "cc3c2CTOKeZFNPn8uejFcCp04+YVF4TfF+O0vLUhVSY=",
+            "multi3": "xwqQdp/txD1jLIMk2Vgqqt7MRPj+tgzCsGuU58+XXhY=",
+            "multi4": "IPi7Fr/WC+VrFbH0b+c3Ur6V9d/pfYCjgXwj5lHxmhk="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotPack.asset",
+            "temperature": 1,
+            "defense": 2,
+            "use": 1,
+            "duel": "cc3c2CTOKeZFNPn8uejFcCp04+YVF4TfF+O0vLUhVSY=",
+            "multi3": "xwqQdp/txD1jLIMk2Vgqqt7MRPj+tgzCsGuU58+XXhY=",
+            "multi4": "IPi7Fr/WC+VrFbH0b+c3Ur6V9d/pfYCjgXwj5lHxmhk="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotPack.asset",
+            "temperature": 1,
+            "defense": 3,
+            "use": 0,
+            "duel": "cc3c2CTOKeZFNPn8uejFcCp04+YVF4TfF+O0vLUhVSY=",
+            "multi3": "xwqQdp/txD1jLIMk2Vgqqt7MRPj+tgzCsGuU58+XXhY=",
+            "multi4": "IPi7Fr/WC+VrFbH0b+c3Ur6V9d/pfYCjgXwj5lHxmhk="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotPack.asset",
+            "temperature": 1,
+            "defense": 3,
+            "use": 1,
+            "duel": "cc3c2CTOKeZFNPn8uejFcCp04+YVF4TfF+O0vLUhVSY=",
+            "multi3": "xwqQdp/txD1jLIMk2Vgqqt7MRPj+tgzCsGuU58+XXhY=",
+            "multi4": "IPi7Fr/WC+VrFbH0b+c3Ur6V9d/pfYCjgXwj5lHxmhk="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotPack.asset",
+            "temperature": 2,
+            "defense": 0,
+            "use": 0,
+            "duel": "cc3c2CTOKeZFNPn8uejFcCp04+YVF4TfF+O0vLUhVSY=",
+            "multi3": "fUoNFJFkNNtWsfMESvuCKKLXHa7k7k39E7m+IyShdpQ=",
+            "multi4": "vP96ByYqfGRBXkiOcwfU/l5M4cKmtuAfBIVTR5Sz4ls="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotPack.asset",
+            "temperature": 2,
+            "defense": 0,
+            "use": 1,
+            "duel": "cc3c2CTOKeZFNPn8uejFcCp04+YVF4TfF+O0vLUhVSY=",
+            "multi3": "fUoNFJFkNNtWsfMESvuCKKLXHa7k7k39E7m+IyShdpQ=",
+            "multi4": "vP96ByYqfGRBXkiOcwfU/l5M4cKmtuAfBIVTR5Sz4ls="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotPack.asset",
+            "temperature": 2,
+            "defense": 1,
+            "use": 0,
+            "duel": "cc3c2CTOKeZFNPn8uejFcCp04+YVF4TfF+O0vLUhVSY=",
+            "multi3": "fUoNFJFkNNtWsfMESvuCKKLXHa7k7k39E7m+IyShdpQ=",
+            "multi4": "vP96ByYqfGRBXkiOcwfU/l5M4cKmtuAfBIVTR5Sz4ls="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotPack.asset",
+            "temperature": 2,
+            "defense": 1,
+            "use": 1,
+            "duel": "cc3c2CTOKeZFNPn8uejFcCp04+YVF4TfF+O0vLUhVSY=",
+            "multi3": "fUoNFJFkNNtWsfMESvuCKKLXHa7k7k39E7m+IyShdpQ=",
+            "multi4": "vP96ByYqfGRBXkiOcwfU/l5M4cKmtuAfBIVTR5Sz4ls="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotPack.asset",
+            "temperature": 2,
+            "defense": 2,
+            "use": 0,
+            "duel": "cc3c2CTOKeZFNPn8uejFcCp04+YVF4TfF+O0vLUhVSY=",
+            "multi3": "fUoNFJFkNNtWsfMESvuCKKLXHa7k7k39E7m+IyShdpQ=",
+            "multi4": "vP96ByYqfGRBXkiOcwfU/l5M4cKmtuAfBIVTR5Sz4ls="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotPack.asset",
+            "temperature": 2,
+            "defense": 2,
+            "use": 1,
+            "duel": "cc3c2CTOKeZFNPn8uejFcCp04+YVF4TfF+O0vLUhVSY=",
+            "multi3": "fUoNFJFkNNtWsfMESvuCKKLXHa7k7k39E7m+IyShdpQ=",
+            "multi4": "vP96ByYqfGRBXkiOcwfU/l5M4cKmtuAfBIVTR5Sz4ls="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotPack.asset",
+            "temperature": 2,
+            "defense": 3,
+            "use": 0,
+            "duel": "cc3c2CTOKeZFNPn8uejFcCp04+YVF4TfF+O0vLUhVSY=",
+            "multi3": "fUoNFJFkNNtWsfMESvuCKKLXHa7k7k39E7m+IyShdpQ=",
+            "multi4": "vP96ByYqfGRBXkiOcwfU/l5M4cKmtuAfBIVTR5Sz4ls="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/HotPack.asset",
+            "temperature": 2,
+            "defense": 3,
+            "use": 1,
+            "duel": "cc3c2CTOKeZFNPn8uejFcCp04+YVF4TfF+O0vLUhVSY=",
+            "multi3": "fUoNFJFkNNtWsfMESvuCKKLXHa7k7k39E7m+IyShdpQ=",
+            "multi4": "vP96ByYqfGRBXkiOcwfU/l5M4cKmtuAfBIVTR5Sz4ls="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/Smartphone.asset",
+            "temperature": 0,
+            "defense": 0,
+            "use": 0,
+            "duel": "kV0Mhr0Mr734g79RC3ge7sE3aXD7n27gO/vAtMMN/D8=",
+            "multi3": "NLJiI3oDLf234lm4lnR4d/1ncgYjOd+xVo42LR8m5lA=",
+            "multi4": "XzqiQUCQJN/HS+oqjoF45WxnB40Muc2enyfJsMQEYAQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/Smartphone.asset",
+            "temperature": 0,
+            "defense": 0,
+            "use": 1,
+            "duel": "jG/4DPdl59Q4wwsPd9AtcDMVkZz1eX8AE5E/PFe8SJw=",
+            "multi3": "NLJiI3oDLf234lm4lnR4d/1ncgYjOd+xVo42LR8m5lA=",
+            "multi4": "XzqiQUCQJN/HS+oqjoF45WxnB40Muc2enyfJsMQEYAQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/Smartphone.asset",
+            "temperature": 0,
+            "defense": 1,
+            "use": 0,
+            "duel": "kV0Mhr0Mr734g79RC3ge7sE3aXD7n27gO/vAtMMN/D8=",
+            "multi3": "NLJiI3oDLf234lm4lnR4d/1ncgYjOd+xVo42LR8m5lA=",
+            "multi4": "XzqiQUCQJN/HS+oqjoF45WxnB40Muc2enyfJsMQEYAQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/Smartphone.asset",
+            "temperature": 0,
+            "defense": 1,
+            "use": 1,
+            "duel": "jG/4DPdl59Q4wwsPd9AtcDMVkZz1eX8AE5E/PFe8SJw=",
+            "multi3": "NLJiI3oDLf234lm4lnR4d/1ncgYjOd+xVo42LR8m5lA=",
+            "multi4": "XzqiQUCQJN/HS+oqjoF45WxnB40Muc2enyfJsMQEYAQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/Smartphone.asset",
+            "temperature": 0,
+            "defense": 2,
+            "use": 0,
+            "duel": "kV0Mhr0Mr734g79RC3ge7sE3aXD7n27gO/vAtMMN/D8=",
+            "multi3": "NLJiI3oDLf234lm4lnR4d/1ncgYjOd+xVo42LR8m5lA=",
+            "multi4": "XzqiQUCQJN/HS+oqjoF45WxnB40Muc2enyfJsMQEYAQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/Smartphone.asset",
+            "temperature": 0,
+            "defense": 2,
+            "use": 1,
+            "duel": "jG/4DPdl59Q4wwsPd9AtcDMVkZz1eX8AE5E/PFe8SJw=",
+            "multi3": "NLJiI3oDLf234lm4lnR4d/1ncgYjOd+xVo42LR8m5lA=",
+            "multi4": "XzqiQUCQJN/HS+oqjoF45WxnB40Muc2enyfJsMQEYAQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/Smartphone.asset",
+            "temperature": 0,
+            "defense": 3,
+            "use": 0,
+            "duel": "kV0Mhr0Mr734g79RC3ge7sE3aXD7n27gO/vAtMMN/D8=",
+            "multi3": "NLJiI3oDLf234lm4lnR4d/1ncgYjOd+xVo42LR8m5lA=",
+            "multi4": "XzqiQUCQJN/HS+oqjoF45WxnB40Muc2enyfJsMQEYAQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/Smartphone.asset",
+            "temperature": 0,
+            "defense": 3,
+            "use": 1,
+            "duel": "jG/4DPdl59Q4wwsPd9AtcDMVkZz1eX8AE5E/PFe8SJw=",
+            "multi3": "NLJiI3oDLf234lm4lnR4d/1ncgYjOd+xVo42LR8m5lA=",
+            "multi4": "XzqiQUCQJN/HS+oqjoF45WxnB40Muc2enyfJsMQEYAQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/Smartphone.asset",
+            "temperature": 1,
+            "defense": 0,
+            "use": 0,
+            "duel": "kV0Mhr0Mr734g79RC3ge7sE3aXD7n27gO/vAtMMN/D8=",
+            "multi3": "H4gfjeKi3L6tzB7XNnZA2U8qxNgBUOzUiQjdxOsDXR8=",
+            "multi4": "6XRgNyZbEWzIuywse2OLA0ubcbOEYj3SmE2hpjv3qXY="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/Smartphone.asset",
+            "temperature": 1,
+            "defense": 0,
+            "use": 1,
+            "duel": "jG/4DPdl59Q4wwsPd9AtcDMVkZz1eX8AE5E/PFe8SJw=",
+            "multi3": "qWNlY8r4ot9zrP+/Ofw57rb9EUn2d5l/IgdDlh7xqXA=",
+            "multi4": "pBFO0o70sYDJWdg96c5djV23wW3rYQwdkoqvfzePzjo="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/Smartphone.asset",
+            "temperature": 1,
+            "defense": 1,
+            "use": 0,
+            "duel": "kV0Mhr0Mr734g79RC3ge7sE3aXD7n27gO/vAtMMN/D8=",
+            "multi3": "H4gfjeKi3L6tzB7XNnZA2U8qxNgBUOzUiQjdxOsDXR8=",
+            "multi4": "6XRgNyZbEWzIuywse2OLA0ubcbOEYj3SmE2hpjv3qXY="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/Smartphone.asset",
+            "temperature": 1,
+            "defense": 1,
+            "use": 1,
+            "duel": "jG/4DPdl59Q4wwsPd9AtcDMVkZz1eX8AE5E/PFe8SJw=",
+            "multi3": "qWNlY8r4ot9zrP+/Ofw57rb9EUn2d5l/IgdDlh7xqXA=",
+            "multi4": "pBFO0o70sYDJWdg96c5djV23wW3rYQwdkoqvfzePzjo="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/Smartphone.asset",
+            "temperature": 1,
+            "defense": 2,
+            "use": 0,
+            "duel": "kV0Mhr0Mr734g79RC3ge7sE3aXD7n27gO/vAtMMN/D8=",
+            "multi3": "H4gfjeKi3L6tzB7XNnZA2U8qxNgBUOzUiQjdxOsDXR8=",
+            "multi4": "6XRgNyZbEWzIuywse2OLA0ubcbOEYj3SmE2hpjv3qXY="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/Smartphone.asset",
+            "temperature": 1,
+            "defense": 2,
+            "use": 1,
+            "duel": "jG/4DPdl59Q4wwsPd9AtcDMVkZz1eX8AE5E/PFe8SJw=",
+            "multi3": "qWNlY8r4ot9zrP+/Ofw57rb9EUn2d5l/IgdDlh7xqXA=",
+            "multi4": "pBFO0o70sYDJWdg96c5djV23wW3rYQwdkoqvfzePzjo="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/Smartphone.asset",
+            "temperature": 1,
+            "defense": 3,
+            "use": 0,
+            "duel": "kV0Mhr0Mr734g79RC3ge7sE3aXD7n27gO/vAtMMN/D8=",
+            "multi3": "H4gfjeKi3L6tzB7XNnZA2U8qxNgBUOzUiQjdxOsDXR8=",
+            "multi4": "6XRgNyZbEWzIuywse2OLA0ubcbOEYj3SmE2hpjv3qXY="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/Smartphone.asset",
+            "temperature": 1,
+            "defense": 3,
+            "use": 1,
+            "duel": "jG/4DPdl59Q4wwsPd9AtcDMVkZz1eX8AE5E/PFe8SJw=",
+            "multi3": "qWNlY8r4ot9zrP+/Ofw57rb9EUn2d5l/IgdDlh7xqXA=",
+            "multi4": "pBFO0o70sYDJWdg96c5djV23wW3rYQwdkoqvfzePzjo="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/Smartphone.asset",
+            "temperature": 2,
+            "defense": 0,
+            "use": 0,
+            "duel": "kV0Mhr0Mr734g79RC3ge7sE3aXD7n27gO/vAtMMN/D8=",
+            "multi3": "ijA9PcaIWgr9od6q43FqHnFA31c+AtVzMsuBOsz+5Ws=",
+            "multi4": "rfQ2FQQ2E3Yy5Nm6l4IbinjbU1JZ7X4HjQ6U5ZHzFOs="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/Smartphone.asset",
+            "temperature": 2,
+            "defense": 0,
+            "use": 1,
+            "duel": "jG/4DPdl59Q4wwsPd9AtcDMVkZz1eX8AE5E/PFe8SJw=",
+            "multi3": "Jf/Veq1RfexX0pOLJIlc6hDoGBLVXaCDBgxr6CAM0Zw=",
+            "multi4": "LPnF0BEZAiBwGQmOlp/eGG9RuvJ92Z0GoComVdPp4v0="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/Smartphone.asset",
+            "temperature": 2,
+            "defense": 1,
+            "use": 0,
+            "duel": "kV0Mhr0Mr734g79RC3ge7sE3aXD7n27gO/vAtMMN/D8=",
+            "multi3": "ijA9PcaIWgr9od6q43FqHnFA31c+AtVzMsuBOsz+5Ws=",
+            "multi4": "rfQ2FQQ2E3Yy5Nm6l4IbinjbU1JZ7X4HjQ6U5ZHzFOs="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/Smartphone.asset",
+            "temperature": 2,
+            "defense": 1,
+            "use": 1,
+            "duel": "jG/4DPdl59Q4wwsPd9AtcDMVkZz1eX8AE5E/PFe8SJw=",
+            "multi3": "Jf/Veq1RfexX0pOLJIlc6hDoGBLVXaCDBgxr6CAM0Zw=",
+            "multi4": "LPnF0BEZAiBwGQmOlp/eGG9RuvJ92Z0GoComVdPp4v0="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/Smartphone.asset",
+            "temperature": 2,
+            "defense": 2,
+            "use": 0,
+            "duel": "kV0Mhr0Mr734g79RC3ge7sE3aXD7n27gO/vAtMMN/D8=",
+            "multi3": "ijA9PcaIWgr9od6q43FqHnFA31c+AtVzMsuBOsz+5Ws=",
+            "multi4": "rfQ2FQQ2E3Yy5Nm6l4IbinjbU1JZ7X4HjQ6U5ZHzFOs="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/Smartphone.asset",
+            "temperature": 2,
+            "defense": 2,
+            "use": 1,
+            "duel": "jG/4DPdl59Q4wwsPd9AtcDMVkZz1eX8AE5E/PFe8SJw=",
+            "multi3": "Jf/Veq1RfexX0pOLJIlc6hDoGBLVXaCDBgxr6CAM0Zw=",
+            "multi4": "LPnF0BEZAiBwGQmOlp/eGG9RuvJ92Z0GoComVdPp4v0="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/Smartphone.asset",
+            "temperature": 2,
+            "defense": 3,
+            "use": 0,
+            "duel": "kV0Mhr0Mr734g79RC3ge7sE3aXD7n27gO/vAtMMN/D8=",
+            "multi3": "ijA9PcaIWgr9od6q43FqHnFA31c+AtVzMsuBOsz+5Ws=",
+            "multi4": "rfQ2FQQ2E3Yy5Nm6l4IbinjbU1JZ7X4HjQ6U5ZHzFOs="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Recovery/Smartphone.asset",
+            "temperature": 2,
+            "defense": 3,
+            "use": 1,
+            "duel": "jG/4DPdl59Q4wwsPd9AtcDMVkZz1eX8AE5E/PFe8SJw=",
+            "multi3": "Jf/Veq1RfexX0pOLJIlc6hDoGBLVXaCDBgxr6CAM0Zw=",
+            "multi4": "LPnF0BEZAiBwGQmOlp/eGG9RuvJ92Z0GoComVdPp4v0="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/BlueTape.asset",
+            "temperature": 0,
+            "defense": 0,
+            "use": 0,
+            "duel": "Q3k2zei7kXbgIpdGUy26f7uD1uJvHWYaErRzdD2sjG4=",
+            "multi3": "WzKNfSHCCAobAI/U84wJDiBvZJimbSx63zaDuVDG6Tw=",
+            "multi4": "6maokdPHxnreLh7U5DjLk3XoXV5/v+JbQhiNsA4v3OE="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/BlueTape.asset",
+            "temperature": 0,
+            "defense": 0,
+            "use": 1,
+            "duel": "Q3k2zei7kXbgIpdGUy26f7uD1uJvHWYaErRzdD2sjG4=",
+            "multi3": "WzKNfSHCCAobAI/U84wJDiBvZJimbSx63zaDuVDG6Tw=",
+            "multi4": "6maokdPHxnreLh7U5DjLk3XoXV5/v+JbQhiNsA4v3OE="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/BlueTape.asset",
+            "temperature": 0,
+            "defense": 1,
+            "use": 0,
+            "duel": "Q3k2zei7kXbgIpdGUy26f7uD1uJvHWYaErRzdD2sjG4=",
+            "multi3": "WzKNfSHCCAobAI/U84wJDiBvZJimbSx63zaDuVDG6Tw=",
+            "multi4": "6maokdPHxnreLh7U5DjLk3XoXV5/v+JbQhiNsA4v3OE="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/BlueTape.asset",
+            "temperature": 0,
+            "defense": 1,
+            "use": 1,
+            "duel": "Q3k2zei7kXbgIpdGUy26f7uD1uJvHWYaErRzdD2sjG4=",
+            "multi3": "WzKNfSHCCAobAI/U84wJDiBvZJimbSx63zaDuVDG6Tw=",
+            "multi4": "6maokdPHxnreLh7U5DjLk3XoXV5/v+JbQhiNsA4v3OE="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/BlueTape.asset",
+            "temperature": 0,
+            "defense": 2,
+            "use": 0,
+            "duel": "Q3k2zei7kXbgIpdGUy26f7uD1uJvHWYaErRzdD2sjG4=",
+            "multi3": "WzKNfSHCCAobAI/U84wJDiBvZJimbSx63zaDuVDG6Tw=",
+            "multi4": "6maokdPHxnreLh7U5DjLk3XoXV5/v+JbQhiNsA4v3OE="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/BlueTape.asset",
+            "temperature": 0,
+            "defense": 2,
+            "use": 1,
+            "duel": "Q3k2zei7kXbgIpdGUy26f7uD1uJvHWYaErRzdD2sjG4=",
+            "multi3": "WzKNfSHCCAobAI/U84wJDiBvZJimbSx63zaDuVDG6Tw=",
+            "multi4": "6maokdPHxnreLh7U5DjLk3XoXV5/v+JbQhiNsA4v3OE="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/BlueTape.asset",
+            "temperature": 0,
+            "defense": 3,
+            "use": 0,
+            "duel": "Q3k2zei7kXbgIpdGUy26f7uD1uJvHWYaErRzdD2sjG4=",
+            "multi3": "WzKNfSHCCAobAI/U84wJDiBvZJimbSx63zaDuVDG6Tw=",
+            "multi4": "6maokdPHxnreLh7U5DjLk3XoXV5/v+JbQhiNsA4v3OE="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/BlueTape.asset",
+            "temperature": 0,
+            "defense": 3,
+            "use": 1,
+            "duel": "Q3k2zei7kXbgIpdGUy26f7uD1uJvHWYaErRzdD2sjG4=",
+            "multi3": "WzKNfSHCCAobAI/U84wJDiBvZJimbSx63zaDuVDG6Tw=",
+            "multi4": "6maokdPHxnreLh7U5DjLk3XoXV5/v+JbQhiNsA4v3OE="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/BlueTape.asset",
+            "temperature": 1,
+            "defense": 0,
+            "use": 0,
+            "duel": "Q3k2zei7kXbgIpdGUy26f7uD1uJvHWYaErRzdD2sjG4=",
+            "multi3": "28Z80wMkzkxz8Qp0LCFHDJEexUXEEgTNIGZ669GQkIA=",
+            "multi4": "rG8jCF3foPuI5tURc1kqs+R9dTeN+g3jJF5clpeESDc="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/BlueTape.asset",
+            "temperature": 1,
+            "defense": 0,
+            "use": 1,
+            "duel": "Q3k2zei7kXbgIpdGUy26f7uD1uJvHWYaErRzdD2sjG4=",
+            "multi3": "28Z80wMkzkxz8Qp0LCFHDJEexUXEEgTNIGZ669GQkIA=",
+            "multi4": "rG8jCF3foPuI5tURc1kqs+R9dTeN+g3jJF5clpeESDc="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/BlueTape.asset",
+            "temperature": 1,
+            "defense": 1,
+            "use": 0,
+            "duel": "Q3k2zei7kXbgIpdGUy26f7uD1uJvHWYaErRzdD2sjG4=",
+            "multi3": "28Z80wMkzkxz8Qp0LCFHDJEexUXEEgTNIGZ669GQkIA=",
+            "multi4": "rG8jCF3foPuI5tURc1kqs+R9dTeN+g3jJF5clpeESDc="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/BlueTape.asset",
+            "temperature": 1,
+            "defense": 1,
+            "use": 1,
+            "duel": "Q3k2zei7kXbgIpdGUy26f7uD1uJvHWYaErRzdD2sjG4=",
+            "multi3": "28Z80wMkzkxz8Qp0LCFHDJEexUXEEgTNIGZ669GQkIA=",
+            "multi4": "rG8jCF3foPuI5tURc1kqs+R9dTeN+g3jJF5clpeESDc="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/BlueTape.asset",
+            "temperature": 1,
+            "defense": 2,
+            "use": 0,
+            "duel": "Q3k2zei7kXbgIpdGUy26f7uD1uJvHWYaErRzdD2sjG4=",
+            "multi3": "28Z80wMkzkxz8Qp0LCFHDJEexUXEEgTNIGZ669GQkIA=",
+            "multi4": "rG8jCF3foPuI5tURc1kqs+R9dTeN+g3jJF5clpeESDc="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/BlueTape.asset",
+            "temperature": 1,
+            "defense": 2,
+            "use": 1,
+            "duel": "Q3k2zei7kXbgIpdGUy26f7uD1uJvHWYaErRzdD2sjG4=",
+            "multi3": "28Z80wMkzkxz8Qp0LCFHDJEexUXEEgTNIGZ669GQkIA=",
+            "multi4": "rG8jCF3foPuI5tURc1kqs+R9dTeN+g3jJF5clpeESDc="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/BlueTape.asset",
+            "temperature": 1,
+            "defense": 3,
+            "use": 0,
+            "duel": "Q3k2zei7kXbgIpdGUy26f7uD1uJvHWYaErRzdD2sjG4=",
+            "multi3": "28Z80wMkzkxz8Qp0LCFHDJEexUXEEgTNIGZ669GQkIA=",
+            "multi4": "rG8jCF3foPuI5tURc1kqs+R9dTeN+g3jJF5clpeESDc="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/BlueTape.asset",
+            "temperature": 1,
+            "defense": 3,
+            "use": 1,
+            "duel": "Q3k2zei7kXbgIpdGUy26f7uD1uJvHWYaErRzdD2sjG4=",
+            "multi3": "28Z80wMkzkxz8Qp0LCFHDJEexUXEEgTNIGZ669GQkIA=",
+            "multi4": "rG8jCF3foPuI5tURc1kqs+R9dTeN+g3jJF5clpeESDc="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/BlueTape.asset",
+            "temperature": 2,
+            "defense": 0,
+            "use": 0,
+            "duel": "Q3k2zei7kXbgIpdGUy26f7uD1uJvHWYaErRzdD2sjG4=",
+            "multi3": "xSskllyG0+Dot7HPUb29X0PDb6rcn9LVR3l3EExmowc=",
+            "multi4": "ykGuR5m/2W4SEITCyWHWFrRV0WPJnEXMHvRWJpv+ur4="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/BlueTape.asset",
+            "temperature": 2,
+            "defense": 0,
+            "use": 1,
+            "duel": "Q3k2zei7kXbgIpdGUy26f7uD1uJvHWYaErRzdD2sjG4=",
+            "multi3": "xSskllyG0+Dot7HPUb29X0PDb6rcn9LVR3l3EExmowc=",
+            "multi4": "ykGuR5m/2W4SEITCyWHWFrRV0WPJnEXMHvRWJpv+ur4="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/BlueTape.asset",
+            "temperature": 2,
+            "defense": 1,
+            "use": 0,
+            "duel": "Q3k2zei7kXbgIpdGUy26f7uD1uJvHWYaErRzdD2sjG4=",
+            "multi3": "xSskllyG0+Dot7HPUb29X0PDb6rcn9LVR3l3EExmowc=",
+            "multi4": "ykGuR5m/2W4SEITCyWHWFrRV0WPJnEXMHvRWJpv+ur4="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/BlueTape.asset",
+            "temperature": 2,
+            "defense": 1,
+            "use": 1,
+            "duel": "Q3k2zei7kXbgIpdGUy26f7uD1uJvHWYaErRzdD2sjG4=",
+            "multi3": "xSskllyG0+Dot7HPUb29X0PDb6rcn9LVR3l3EExmowc=",
+            "multi4": "ykGuR5m/2W4SEITCyWHWFrRV0WPJnEXMHvRWJpv+ur4="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/BlueTape.asset",
+            "temperature": 2,
+            "defense": 2,
+            "use": 0,
+            "duel": "Q3k2zei7kXbgIpdGUy26f7uD1uJvHWYaErRzdD2sjG4=",
+            "multi3": "xSskllyG0+Dot7HPUb29X0PDb6rcn9LVR3l3EExmowc=",
+            "multi4": "ykGuR5m/2W4SEITCyWHWFrRV0WPJnEXMHvRWJpv+ur4="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/BlueTape.asset",
+            "temperature": 2,
+            "defense": 2,
+            "use": 1,
+            "duel": "Q3k2zei7kXbgIpdGUy26f7uD1uJvHWYaErRzdD2sjG4=",
+            "multi3": "xSskllyG0+Dot7HPUb29X0PDb6rcn9LVR3l3EExmowc=",
+            "multi4": "ykGuR5m/2W4SEITCyWHWFrRV0WPJnEXMHvRWJpv+ur4="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/BlueTape.asset",
+            "temperature": 2,
+            "defense": 3,
+            "use": 0,
+            "duel": "Q3k2zei7kXbgIpdGUy26f7uD1uJvHWYaErRzdD2sjG4=",
+            "multi3": "xSskllyG0+Dot7HPUb29X0PDb6rcn9LVR3l3EExmowc=",
+            "multi4": "ykGuR5m/2W4SEITCyWHWFrRV0WPJnEXMHvRWJpv+ur4="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/BlueTape.asset",
+            "temperature": 2,
+            "defense": 3,
+            "use": 1,
+            "duel": "Q3k2zei7kXbgIpdGUy26f7uD1uJvHWYaErRzdD2sjG4=",
+            "multi3": "xSskllyG0+Dot7HPUb29X0PDb6rcn9LVR3l3EExmowc=",
+            "multi4": "ykGuR5m/2W4SEITCyWHWFrRV0WPJnEXMHvRWJpv+ur4="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/ClawMachine.asset",
+            "temperature": 0,
+            "defense": 0,
+            "use": 0,
+            "duel": "l514+VnL9Zpw0GmyjJ85v3egUjMHdhbPkuKuTEqJOvA=",
+            "multi3": "9KPU9604HnVkn6Jhl6wcTOmwxXJkppNfF7+Nu95t+V0=",
+            "multi4": "iuMwuXLSLuNjLEwwu0xGhvTRlmd/sy2vXtbAZ1dcUzc="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/ClawMachine.asset",
+            "temperature": 0,
+            "defense": 0,
+            "use": 1,
+            "duel": "l514+VnL9Zpw0GmyjJ85v3egUjMHdhbPkuKuTEqJOvA=",
+            "multi3": "9KPU9604HnVkn6Jhl6wcTOmwxXJkppNfF7+Nu95t+V0=",
+            "multi4": "iuMwuXLSLuNjLEwwu0xGhvTRlmd/sy2vXtbAZ1dcUzc="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/ClawMachine.asset",
+            "temperature": 0,
+            "defense": 1,
+            "use": 0,
+            "duel": "l514+VnL9Zpw0GmyjJ85v3egUjMHdhbPkuKuTEqJOvA=",
+            "multi3": "9KPU9604HnVkn6Jhl6wcTOmwxXJkppNfF7+Nu95t+V0=",
+            "multi4": "iuMwuXLSLuNjLEwwu0xGhvTRlmd/sy2vXtbAZ1dcUzc="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/ClawMachine.asset",
+            "temperature": 0,
+            "defense": 1,
+            "use": 1,
+            "duel": "l514+VnL9Zpw0GmyjJ85v3egUjMHdhbPkuKuTEqJOvA=",
+            "multi3": "9KPU9604HnVkn6Jhl6wcTOmwxXJkppNfF7+Nu95t+V0=",
+            "multi4": "iuMwuXLSLuNjLEwwu0xGhvTRlmd/sy2vXtbAZ1dcUzc="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/ClawMachine.asset",
+            "temperature": 0,
+            "defense": 2,
+            "use": 0,
+            "duel": "l514+VnL9Zpw0GmyjJ85v3egUjMHdhbPkuKuTEqJOvA=",
+            "multi3": "9KPU9604HnVkn6Jhl6wcTOmwxXJkppNfF7+Nu95t+V0=",
+            "multi4": "iuMwuXLSLuNjLEwwu0xGhvTRlmd/sy2vXtbAZ1dcUzc="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/ClawMachine.asset",
+            "temperature": 0,
+            "defense": 2,
+            "use": 1,
+            "duel": "l514+VnL9Zpw0GmyjJ85v3egUjMHdhbPkuKuTEqJOvA=",
+            "multi3": "9KPU9604HnVkn6Jhl6wcTOmwxXJkppNfF7+Nu95t+V0=",
+            "multi4": "iuMwuXLSLuNjLEwwu0xGhvTRlmd/sy2vXtbAZ1dcUzc="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/ClawMachine.asset",
+            "temperature": 0,
+            "defense": 3,
+            "use": 0,
+            "duel": "l514+VnL9Zpw0GmyjJ85v3egUjMHdhbPkuKuTEqJOvA=",
+            "multi3": "9KPU9604HnVkn6Jhl6wcTOmwxXJkppNfF7+Nu95t+V0=",
+            "multi4": "iuMwuXLSLuNjLEwwu0xGhvTRlmd/sy2vXtbAZ1dcUzc="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/ClawMachine.asset",
+            "temperature": 0,
+            "defense": 3,
+            "use": 1,
+            "duel": "l514+VnL9Zpw0GmyjJ85v3egUjMHdhbPkuKuTEqJOvA=",
+            "multi3": "9KPU9604HnVkn6Jhl6wcTOmwxXJkppNfF7+Nu95t+V0=",
+            "multi4": "iuMwuXLSLuNjLEwwu0xGhvTRlmd/sy2vXtbAZ1dcUzc="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/ClawMachine.asset",
+            "temperature": 1,
+            "defense": 0,
+            "use": 0,
+            "duel": "l514+VnL9Zpw0GmyjJ85v3egUjMHdhbPkuKuTEqJOvA=",
+            "multi3": "tasuAzH365kye7PfulpEPhlTOOdjxfwXUzlzKq96Q+I=",
+            "multi4": "tBWEcd/BHP+3IXosJ/TVOFBjWZtiUownOQh5GUVNxak="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/ClawMachine.asset",
+            "temperature": 1,
+            "defense": 0,
+            "use": 1,
+            "duel": "l514+VnL9Zpw0GmyjJ85v3egUjMHdhbPkuKuTEqJOvA=",
+            "multi3": "tasuAzH365kye7PfulpEPhlTOOdjxfwXUzlzKq96Q+I=",
+            "multi4": "tBWEcd/BHP+3IXosJ/TVOFBjWZtiUownOQh5GUVNxak="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/ClawMachine.asset",
+            "temperature": 1,
+            "defense": 1,
+            "use": 0,
+            "duel": "l514+VnL9Zpw0GmyjJ85v3egUjMHdhbPkuKuTEqJOvA=",
+            "multi3": "tasuAzH365kye7PfulpEPhlTOOdjxfwXUzlzKq96Q+I=",
+            "multi4": "tBWEcd/BHP+3IXosJ/TVOFBjWZtiUownOQh5GUVNxak="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/ClawMachine.asset",
+            "temperature": 1,
+            "defense": 1,
+            "use": 1,
+            "duel": "l514+VnL9Zpw0GmyjJ85v3egUjMHdhbPkuKuTEqJOvA=",
+            "multi3": "tasuAzH365kye7PfulpEPhlTOOdjxfwXUzlzKq96Q+I=",
+            "multi4": "tBWEcd/BHP+3IXosJ/TVOFBjWZtiUownOQh5GUVNxak="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/ClawMachine.asset",
+            "temperature": 1,
+            "defense": 2,
+            "use": 0,
+            "duel": "l514+VnL9Zpw0GmyjJ85v3egUjMHdhbPkuKuTEqJOvA=",
+            "multi3": "tasuAzH365kye7PfulpEPhlTOOdjxfwXUzlzKq96Q+I=",
+            "multi4": "tBWEcd/BHP+3IXosJ/TVOFBjWZtiUownOQh5GUVNxak="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/ClawMachine.asset",
+            "temperature": 1,
+            "defense": 2,
+            "use": 1,
+            "duel": "l514+VnL9Zpw0GmyjJ85v3egUjMHdhbPkuKuTEqJOvA=",
+            "multi3": "tasuAzH365kye7PfulpEPhlTOOdjxfwXUzlzKq96Q+I=",
+            "multi4": "tBWEcd/BHP+3IXosJ/TVOFBjWZtiUownOQh5GUVNxak="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/ClawMachine.asset",
+            "temperature": 1,
+            "defense": 3,
+            "use": 0,
+            "duel": "l514+VnL9Zpw0GmyjJ85v3egUjMHdhbPkuKuTEqJOvA=",
+            "multi3": "tasuAzH365kye7PfulpEPhlTOOdjxfwXUzlzKq96Q+I=",
+            "multi4": "tBWEcd/BHP+3IXosJ/TVOFBjWZtiUownOQh5GUVNxak="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/ClawMachine.asset",
+            "temperature": 1,
+            "defense": 3,
+            "use": 1,
+            "duel": "l514+VnL9Zpw0GmyjJ85v3egUjMHdhbPkuKuTEqJOvA=",
+            "multi3": "tasuAzH365kye7PfulpEPhlTOOdjxfwXUzlzKq96Q+I=",
+            "multi4": "tBWEcd/BHP+3IXosJ/TVOFBjWZtiUownOQh5GUVNxak="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/ClawMachine.asset",
+            "temperature": 2,
+            "defense": 0,
+            "use": 0,
+            "duel": "l514+VnL9Zpw0GmyjJ85v3egUjMHdhbPkuKuTEqJOvA=",
+            "multi3": "yORJpwChyBN3b9X/npuxUtsE4UW9T+sCFyZX40WUZMU=",
+            "multi4": "1vsCDKPAOAoUtsns5GV+Z06ajB1gr3hxh/fwtuGievc="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/ClawMachine.asset",
+            "temperature": 2,
+            "defense": 0,
+            "use": 1,
+            "duel": "l514+VnL9Zpw0GmyjJ85v3egUjMHdhbPkuKuTEqJOvA=",
+            "multi3": "yORJpwChyBN3b9X/npuxUtsE4UW9T+sCFyZX40WUZMU=",
+            "multi4": "1vsCDKPAOAoUtsns5GV+Z06ajB1gr3hxh/fwtuGievc="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/ClawMachine.asset",
+            "temperature": 2,
+            "defense": 1,
+            "use": 0,
+            "duel": "l514+VnL9Zpw0GmyjJ85v3egUjMHdhbPkuKuTEqJOvA=",
+            "multi3": "yORJpwChyBN3b9X/npuxUtsE4UW9T+sCFyZX40WUZMU=",
+            "multi4": "1vsCDKPAOAoUtsns5GV+Z06ajB1gr3hxh/fwtuGievc="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/ClawMachine.asset",
+            "temperature": 2,
+            "defense": 1,
+            "use": 1,
+            "duel": "l514+VnL9Zpw0GmyjJ85v3egUjMHdhbPkuKuTEqJOvA=",
+            "multi3": "yORJpwChyBN3b9X/npuxUtsE4UW9T+sCFyZX40WUZMU=",
+            "multi4": "1vsCDKPAOAoUtsns5GV+Z06ajB1gr3hxh/fwtuGievc="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/ClawMachine.asset",
+            "temperature": 2,
+            "defense": 2,
+            "use": 0,
+            "duel": "l514+VnL9Zpw0GmyjJ85v3egUjMHdhbPkuKuTEqJOvA=",
+            "multi3": "yORJpwChyBN3b9X/npuxUtsE4UW9T+sCFyZX40WUZMU=",
+            "multi4": "1vsCDKPAOAoUtsns5GV+Z06ajB1gr3hxh/fwtuGievc="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/ClawMachine.asset",
+            "temperature": 2,
+            "defense": 2,
+            "use": 1,
+            "duel": "l514+VnL9Zpw0GmyjJ85v3egUjMHdhbPkuKuTEqJOvA=",
+            "multi3": "yORJpwChyBN3b9X/npuxUtsE4UW9T+sCFyZX40WUZMU=",
+            "multi4": "1vsCDKPAOAoUtsns5GV+Z06ajB1gr3hxh/fwtuGievc="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/ClawMachine.asset",
+            "temperature": 2,
+            "defense": 3,
+            "use": 0,
+            "duel": "l514+VnL9Zpw0GmyjJ85v3egUjMHdhbPkuKuTEqJOvA=",
+            "multi3": "yORJpwChyBN3b9X/npuxUtsE4UW9T+sCFyZX40WUZMU=",
+            "multi4": "1vsCDKPAOAoUtsns5GV+Z06ajB1gr3hxh/fwtuGievc="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/ClawMachine.asset",
+            "temperature": 2,
+            "defense": 3,
+            "use": 1,
+            "duel": "l514+VnL9Zpw0GmyjJ85v3egUjMHdhbPkuKuTEqJOvA=",
+            "multi3": "yORJpwChyBN3b9X/npuxUtsE4UW9T+sCFyZX40WUZMU=",
+            "multi4": "1vsCDKPAOAoUtsns5GV+Z06ajB1gr3hxh/fwtuGievc="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/RedCard.asset",
+            "temperature": 0,
+            "defense": 0,
+            "use": 0,
+            "duel": "BrCIo+UslDsleTb1nUFfKyn/U3ShwoLkH/fzwpkechM=",
+            "multi3": "b3zyRv/3yjv7XJP/W+bF+J/8PgCBW3p67JOhhzxtDj8=",
+            "multi4": "8De8adZqxyd/X0mgrnD+XNee9YAhGNXGRkEt0hgl3KQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/RedCard.asset",
+            "temperature": 0,
+            "defense": 0,
+            "use": 1,
+            "duel": "BrCIo+UslDsleTb1nUFfKyn/U3ShwoLkH/fzwpkechM=",
+            "multi3": "b3zyRv/3yjv7XJP/W+bF+J/8PgCBW3p67JOhhzxtDj8=",
+            "multi4": "8De8adZqxyd/X0mgrnD+XNee9YAhGNXGRkEt0hgl3KQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/RedCard.asset",
+            "temperature": 0,
+            "defense": 1,
+            "use": 0,
+            "duel": "BrCIo+UslDsleTb1nUFfKyn/U3ShwoLkH/fzwpkechM=",
+            "multi3": "b3zyRv/3yjv7XJP/W+bF+J/8PgCBW3p67JOhhzxtDj8=",
+            "multi4": "8De8adZqxyd/X0mgrnD+XNee9YAhGNXGRkEt0hgl3KQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/RedCard.asset",
+            "temperature": 0,
+            "defense": 1,
+            "use": 1,
+            "duel": "BrCIo+UslDsleTb1nUFfKyn/U3ShwoLkH/fzwpkechM=",
+            "multi3": "b3zyRv/3yjv7XJP/W+bF+J/8PgCBW3p67JOhhzxtDj8=",
+            "multi4": "8De8adZqxyd/X0mgrnD+XNee9YAhGNXGRkEt0hgl3KQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/RedCard.asset",
+            "temperature": 0,
+            "defense": 2,
+            "use": 0,
+            "duel": "BrCIo+UslDsleTb1nUFfKyn/U3ShwoLkH/fzwpkechM=",
+            "multi3": "b3zyRv/3yjv7XJP/W+bF+J/8PgCBW3p67JOhhzxtDj8=",
+            "multi4": "8De8adZqxyd/X0mgrnD+XNee9YAhGNXGRkEt0hgl3KQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/RedCard.asset",
+            "temperature": 0,
+            "defense": 2,
+            "use": 1,
+            "duel": "BrCIo+UslDsleTb1nUFfKyn/U3ShwoLkH/fzwpkechM=",
+            "multi3": "b3zyRv/3yjv7XJP/W+bF+J/8PgCBW3p67JOhhzxtDj8=",
+            "multi4": "8De8adZqxyd/X0mgrnD+XNee9YAhGNXGRkEt0hgl3KQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/RedCard.asset",
+            "temperature": 0,
+            "defense": 3,
+            "use": 0,
+            "duel": "BrCIo+UslDsleTb1nUFfKyn/U3ShwoLkH/fzwpkechM=",
+            "multi3": "b3zyRv/3yjv7XJP/W+bF+J/8PgCBW3p67JOhhzxtDj8=",
+            "multi4": "8De8adZqxyd/X0mgrnD+XNee9YAhGNXGRkEt0hgl3KQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/RedCard.asset",
+            "temperature": 0,
+            "defense": 3,
+            "use": 1,
+            "duel": "BrCIo+UslDsleTb1nUFfKyn/U3ShwoLkH/fzwpkechM=",
+            "multi3": "b3zyRv/3yjv7XJP/W+bF+J/8PgCBW3p67JOhhzxtDj8=",
+            "multi4": "8De8adZqxyd/X0mgrnD+XNee9YAhGNXGRkEt0hgl3KQ="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/RedCard.asset",
+            "temperature": 1,
+            "defense": 0,
+            "use": 0,
+            "duel": "BrCIo+UslDsleTb1nUFfKyn/U3ShwoLkH/fzwpkechM=",
+            "multi3": "pqZ8oCmPiztRd+6RDHg/hQB0loubd+tbcPJCuUDhHkU=",
+            "multi4": "wKeve17eo7+W02weNLxXv4R4eoYfjiGWPRukL99NhgE="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/RedCard.asset",
+            "temperature": 1,
+            "defense": 0,
+            "use": 1,
+            "duel": "BrCIo+UslDsleTb1nUFfKyn/U3ShwoLkH/fzwpkechM=",
+            "multi3": "pqZ8oCmPiztRd+6RDHg/hQB0loubd+tbcPJCuUDhHkU=",
+            "multi4": "wKeve17eo7+W02weNLxXv4R4eoYfjiGWPRukL99NhgE="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/RedCard.asset",
+            "temperature": 1,
+            "defense": 1,
+            "use": 0,
+            "duel": "BrCIo+UslDsleTb1nUFfKyn/U3ShwoLkH/fzwpkechM=",
+            "multi3": "pqZ8oCmPiztRd+6RDHg/hQB0loubd+tbcPJCuUDhHkU=",
+            "multi4": "wKeve17eo7+W02weNLxXv4R4eoYfjiGWPRukL99NhgE="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/RedCard.asset",
+            "temperature": 1,
+            "defense": 1,
+            "use": 1,
+            "duel": "BrCIo+UslDsleTb1nUFfKyn/U3ShwoLkH/fzwpkechM=",
+            "multi3": "pqZ8oCmPiztRd+6RDHg/hQB0loubd+tbcPJCuUDhHkU=",
+            "multi4": "wKeve17eo7+W02weNLxXv4R4eoYfjiGWPRukL99NhgE="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/RedCard.asset",
+            "temperature": 1,
+            "defense": 2,
+            "use": 0,
+            "duel": "BrCIo+UslDsleTb1nUFfKyn/U3ShwoLkH/fzwpkechM=",
+            "multi3": "pqZ8oCmPiztRd+6RDHg/hQB0loubd+tbcPJCuUDhHkU=",
+            "multi4": "wKeve17eo7+W02weNLxXv4R4eoYfjiGWPRukL99NhgE="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/RedCard.asset",
+            "temperature": 1,
+            "defense": 2,
+            "use": 1,
+            "duel": "BrCIo+UslDsleTb1nUFfKyn/U3ShwoLkH/fzwpkechM=",
+            "multi3": "pqZ8oCmPiztRd+6RDHg/hQB0loubd+tbcPJCuUDhHkU=",
+            "multi4": "wKeve17eo7+W02weNLxXv4R4eoYfjiGWPRukL99NhgE="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/RedCard.asset",
+            "temperature": 1,
+            "defense": 3,
+            "use": 0,
+            "duel": "BrCIo+UslDsleTb1nUFfKyn/U3ShwoLkH/fzwpkechM=",
+            "multi3": "pqZ8oCmPiztRd+6RDHg/hQB0loubd+tbcPJCuUDhHkU=",
+            "multi4": "wKeve17eo7+W02weNLxXv4R4eoYfjiGWPRukL99NhgE="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/RedCard.asset",
+            "temperature": 1,
+            "defense": 3,
+            "use": 1,
+            "duel": "BrCIo+UslDsleTb1nUFfKyn/U3ShwoLkH/fzwpkechM=",
+            "multi3": "pqZ8oCmPiztRd+6RDHg/hQB0loubd+tbcPJCuUDhHkU=",
+            "multi4": "wKeve17eo7+W02weNLxXv4R4eoYfjiGWPRukL99NhgE="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/RedCard.asset",
+            "temperature": 2,
+            "defense": 0,
+            "use": 0,
+            "duel": "BrCIo+UslDsleTb1nUFfKyn/U3ShwoLkH/fzwpkechM=",
+            "multi3": "1EdG0wbjStaZ06KEMyJ+o+YRgqxm6XmSIamOwRkm/l0=",
+            "multi4": "+4bKPTo4O95/Y8vA4birLZwaN2AgOlBZuYk53HljbsE="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/RedCard.asset",
+            "temperature": 2,
+            "defense": 0,
+            "use": 1,
+            "duel": "BrCIo+UslDsleTb1nUFfKyn/U3ShwoLkH/fzwpkechM=",
+            "multi3": "1EdG0wbjStaZ06KEMyJ+o+YRgqxm6XmSIamOwRkm/l0=",
+            "multi4": "+4bKPTo4O95/Y8vA4birLZwaN2AgOlBZuYk53HljbsE="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/RedCard.asset",
+            "temperature": 2,
+            "defense": 1,
+            "use": 0,
+            "duel": "BrCIo+UslDsleTb1nUFfKyn/U3ShwoLkH/fzwpkechM=",
+            "multi3": "1EdG0wbjStaZ06KEMyJ+o+YRgqxm6XmSIamOwRkm/l0=",
+            "multi4": "+4bKPTo4O95/Y8vA4birLZwaN2AgOlBZuYk53HljbsE="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/RedCard.asset",
+            "temperature": 2,
+            "defense": 1,
+            "use": 1,
+            "duel": "BrCIo+UslDsleTb1nUFfKyn/U3ShwoLkH/fzwpkechM=",
+            "multi3": "1EdG0wbjStaZ06KEMyJ+o+YRgqxm6XmSIamOwRkm/l0=",
+            "multi4": "+4bKPTo4O95/Y8vA4birLZwaN2AgOlBZuYk53HljbsE="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/RedCard.asset",
+            "temperature": 2,
+            "defense": 2,
+            "use": 0,
+            "duel": "BrCIo+UslDsleTb1nUFfKyn/U3ShwoLkH/fzwpkechM=",
+            "multi3": "1EdG0wbjStaZ06KEMyJ+o+YRgqxm6XmSIamOwRkm/l0=",
+            "multi4": "+4bKPTo4O95/Y8vA4birLZwaN2AgOlBZuYk53HljbsE="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/RedCard.asset",
+            "temperature": 2,
+            "defense": 2,
+            "use": 1,
+            "duel": "BrCIo+UslDsleTb1nUFfKyn/U3ShwoLkH/fzwpkechM=",
+            "multi3": "1EdG0wbjStaZ06KEMyJ+o+YRgqxm6XmSIamOwRkm/l0=",
+            "multi4": "+4bKPTo4O95/Y8vA4birLZwaN2AgOlBZuYk53HljbsE="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/RedCard.asset",
+            "temperature": 2,
+            "defense": 3,
+            "use": 0,
+            "duel": "BrCIo+UslDsleTb1nUFfKyn/U3ShwoLkH/fzwpkechM=",
+            "multi3": "1EdG0wbjStaZ06KEMyJ+o+YRgqxm6XmSIamOwRkm/l0=",
+            "multi4": "+4bKPTo4O95/Y8vA4birLZwaN2AgOlBZuYk53HljbsE="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Sabotage/RedCard.asset",
+            "temperature": 2,
+            "defense": 3,
+            "use": 1,
+            "duel": "BrCIo+UslDsleTb1nUFfKyn/U3ShwoLkH/fzwpkechM=",
+            "multi3": "1EdG0wbjStaZ06KEMyJ+o+YRgqxm6XmSIamOwRkm/l0=",
+            "multi4": "+4bKPTo4O95/Y8vA4birLZwaN2AgOlBZuYk53HljbsE="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Special/Screwdriver.asset",
+            "temperature": 0,
+            "defense": 0,
+            "use": 0,
+            "duel": "u4vJdEL8VjzUHUO46lGJxgtJBT5lc+lHw/N8tGvkh2o=",
+            "multi3": "FhkkqD7T/y4pyrGE/kZOxN7FZinEvW1+IRY4Dj45PrI=",
+            "multi4": "u96gCIgq8QGoLqvHPYJq6zrMOcPYCrzOx7osl0FPTS0="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Special/Screwdriver.asset",
+            "temperature": 0,
+            "defense": 0,
+            "use": 1,
+            "duel": "u4vJdEL8VjzUHUO46lGJxgtJBT5lc+lHw/N8tGvkh2o=",
+            "multi3": "FhkkqD7T/y4pyrGE/kZOxN7FZinEvW1+IRY4Dj45PrI=",
+            "multi4": "u96gCIgq8QGoLqvHPYJq6zrMOcPYCrzOx7osl0FPTS0="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Special/Screwdriver.asset",
+            "temperature": 0,
+            "defense": 1,
+            "use": 0,
+            "duel": "u4vJdEL8VjzUHUO46lGJxgtJBT5lc+lHw/N8tGvkh2o=",
+            "multi3": "FhkkqD7T/y4pyrGE/kZOxN7FZinEvW1+IRY4Dj45PrI=",
+            "multi4": "u96gCIgq8QGoLqvHPYJq6zrMOcPYCrzOx7osl0FPTS0="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Special/Screwdriver.asset",
+            "temperature": 0,
+            "defense": 1,
+            "use": 1,
+            "duel": "u4vJdEL8VjzUHUO46lGJxgtJBT5lc+lHw/N8tGvkh2o=",
+            "multi3": "FhkkqD7T/y4pyrGE/kZOxN7FZinEvW1+IRY4Dj45PrI=",
+            "multi4": "u96gCIgq8QGoLqvHPYJq6zrMOcPYCrzOx7osl0FPTS0="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Special/Screwdriver.asset",
+            "temperature": 0,
+            "defense": 2,
+            "use": 0,
+            "duel": "u4vJdEL8VjzUHUO46lGJxgtJBT5lc+lHw/N8tGvkh2o=",
+            "multi3": "FhkkqD7T/y4pyrGE/kZOxN7FZinEvW1+IRY4Dj45PrI=",
+            "multi4": "u96gCIgq8QGoLqvHPYJq6zrMOcPYCrzOx7osl0FPTS0="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Special/Screwdriver.asset",
+            "temperature": 0,
+            "defense": 2,
+            "use": 1,
+            "duel": "u4vJdEL8VjzUHUO46lGJxgtJBT5lc+lHw/N8tGvkh2o=",
+            "multi3": "FhkkqD7T/y4pyrGE/kZOxN7FZinEvW1+IRY4Dj45PrI=",
+            "multi4": "u96gCIgq8QGoLqvHPYJq6zrMOcPYCrzOx7osl0FPTS0="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Special/Screwdriver.asset",
+            "temperature": 0,
+            "defense": 3,
+            "use": 0,
+            "duel": "u4vJdEL8VjzUHUO46lGJxgtJBT5lc+lHw/N8tGvkh2o=",
+            "multi3": "FhkkqD7T/y4pyrGE/kZOxN7FZinEvW1+IRY4Dj45PrI=",
+            "multi4": "u96gCIgq8QGoLqvHPYJq6zrMOcPYCrzOx7osl0FPTS0="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Special/Screwdriver.asset",
+            "temperature": 0,
+            "defense": 3,
+            "use": 1,
+            "duel": "u4vJdEL8VjzUHUO46lGJxgtJBT5lc+lHw/N8tGvkh2o=",
+            "multi3": "FhkkqD7T/y4pyrGE/kZOxN7FZinEvW1+IRY4Dj45PrI=",
+            "multi4": "u96gCIgq8QGoLqvHPYJq6zrMOcPYCrzOx7osl0FPTS0="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Special/Screwdriver.asset",
+            "temperature": 1,
+            "defense": 0,
+            "use": 0,
+            "duel": "u4vJdEL8VjzUHUO46lGJxgtJBT5lc+lHw/N8tGvkh2o=",
+            "multi3": "WMCjCkoBtiD1hp6h7JjWswhOKw706IK89EgMkAPbbh0=",
+            "multi4": "1RFAcgcvd0HoZqRr6M6m56wEBgLRmwIVPkuC9+2h9Y0="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Special/Screwdriver.asset",
+            "temperature": 1,
+            "defense": 0,
+            "use": 1,
+            "duel": "u4vJdEL8VjzUHUO46lGJxgtJBT5lc+lHw/N8tGvkh2o=",
+            "multi3": "WMCjCkoBtiD1hp6h7JjWswhOKw706IK89EgMkAPbbh0=",
+            "multi4": "1RFAcgcvd0HoZqRr6M6m56wEBgLRmwIVPkuC9+2h9Y0="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Special/Screwdriver.asset",
+            "temperature": 1,
+            "defense": 1,
+            "use": 0,
+            "duel": "u4vJdEL8VjzUHUO46lGJxgtJBT5lc+lHw/N8tGvkh2o=",
+            "multi3": "WMCjCkoBtiD1hp6h7JjWswhOKw706IK89EgMkAPbbh0=",
+            "multi4": "1RFAcgcvd0HoZqRr6M6m56wEBgLRmwIVPkuC9+2h9Y0="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Special/Screwdriver.asset",
+            "temperature": 1,
+            "defense": 1,
+            "use": 1,
+            "duel": "u4vJdEL8VjzUHUO46lGJxgtJBT5lc+lHw/N8tGvkh2o=",
+            "multi3": "WMCjCkoBtiD1hp6h7JjWswhOKw706IK89EgMkAPbbh0=",
+            "multi4": "1RFAcgcvd0HoZqRr6M6m56wEBgLRmwIVPkuC9+2h9Y0="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Special/Screwdriver.asset",
+            "temperature": 1,
+            "defense": 2,
+            "use": 0,
+            "duel": "u4vJdEL8VjzUHUO46lGJxgtJBT5lc+lHw/N8tGvkh2o=",
+            "multi3": "WMCjCkoBtiD1hp6h7JjWswhOKw706IK89EgMkAPbbh0=",
+            "multi4": "1RFAcgcvd0HoZqRr6M6m56wEBgLRmwIVPkuC9+2h9Y0="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Special/Screwdriver.asset",
+            "temperature": 1,
+            "defense": 2,
+            "use": 1,
+            "duel": "u4vJdEL8VjzUHUO46lGJxgtJBT5lc+lHw/N8tGvkh2o=",
+            "multi3": "WMCjCkoBtiD1hp6h7JjWswhOKw706IK89EgMkAPbbh0=",
+            "multi4": "1RFAcgcvd0HoZqRr6M6m56wEBgLRmwIVPkuC9+2h9Y0="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Special/Screwdriver.asset",
+            "temperature": 1,
+            "defense": 3,
+            "use": 0,
+            "duel": "u4vJdEL8VjzUHUO46lGJxgtJBT5lc+lHw/N8tGvkh2o=",
+            "multi3": "WMCjCkoBtiD1hp6h7JjWswhOKw706IK89EgMkAPbbh0=",
+            "multi4": "1RFAcgcvd0HoZqRr6M6m56wEBgLRmwIVPkuC9+2h9Y0="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Special/Screwdriver.asset",
+            "temperature": 1,
+            "defense": 3,
+            "use": 1,
+            "duel": "u4vJdEL8VjzUHUO46lGJxgtJBT5lc+lHw/N8tGvkh2o=",
+            "multi3": "WMCjCkoBtiD1hp6h7JjWswhOKw706IK89EgMkAPbbh0=",
+            "multi4": "1RFAcgcvd0HoZqRr6M6m56wEBgLRmwIVPkuC9+2h9Y0="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Special/Screwdriver.asset",
+            "temperature": 2,
+            "defense": 0,
+            "use": 0,
+            "duel": "u4vJdEL8VjzUHUO46lGJxgtJBT5lc+lHw/N8tGvkh2o=",
+            "multi3": "xWgCWckXvVGtt8lTTr1GkX8+vMns2xYJTVmLZg8Shf0=",
+            "multi4": "uRBWom71K9QevtruwZPIAusEximThTP9f0MYIh3Jz8A="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Special/Screwdriver.asset",
+            "temperature": 2,
+            "defense": 0,
+            "use": 1,
+            "duel": "u4vJdEL8VjzUHUO46lGJxgtJBT5lc+lHw/N8tGvkh2o=",
+            "multi3": "xWgCWckXvVGtt8lTTr1GkX8+vMns2xYJTVmLZg8Shf0=",
+            "multi4": "uRBWom71K9QevtruwZPIAusEximThTP9f0MYIh3Jz8A="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Special/Screwdriver.asset",
+            "temperature": 2,
+            "defense": 1,
+            "use": 0,
+            "duel": "u4vJdEL8VjzUHUO46lGJxgtJBT5lc+lHw/N8tGvkh2o=",
+            "multi3": "xWgCWckXvVGtt8lTTr1GkX8+vMns2xYJTVmLZg8Shf0=",
+            "multi4": "uRBWom71K9QevtruwZPIAusEximThTP9f0MYIh3Jz8A="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Special/Screwdriver.asset",
+            "temperature": 2,
+            "defense": 1,
+            "use": 1,
+            "duel": "u4vJdEL8VjzUHUO46lGJxgtJBT5lc+lHw/N8tGvkh2o=",
+            "multi3": "xWgCWckXvVGtt8lTTr1GkX8+vMns2xYJTVmLZg8Shf0=",
+            "multi4": "uRBWom71K9QevtruwZPIAusEximThTP9f0MYIh3Jz8A="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Special/Screwdriver.asset",
+            "temperature": 2,
+            "defense": 2,
+            "use": 0,
+            "duel": "u4vJdEL8VjzUHUO46lGJxgtJBT5lc+lHw/N8tGvkh2o=",
+            "multi3": "xWgCWckXvVGtt8lTTr1GkX8+vMns2xYJTVmLZg8Shf0=",
+            "multi4": "uRBWom71K9QevtruwZPIAusEximThTP9f0MYIh3Jz8A="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Special/Screwdriver.asset",
+            "temperature": 2,
+            "defense": 2,
+            "use": 1,
+            "duel": "u4vJdEL8VjzUHUO46lGJxgtJBT5lc+lHw/N8tGvkh2o=",
+            "multi3": "xWgCWckXvVGtt8lTTr1GkX8+vMns2xYJTVmLZg8Shf0=",
+            "multi4": "uRBWom71K9QevtruwZPIAusEximThTP9f0MYIh3Jz8A="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Special/Screwdriver.asset",
+            "temperature": 2,
+            "defense": 3,
+            "use": 0,
+            "duel": "u4vJdEL8VjzUHUO46lGJxgtJBT5lc+lHw/N8tGvkh2o=",
+            "multi3": "xWgCWckXvVGtt8lTTr1GkX8+vMns2xYJTVmLZg8Shf0=",
+            "multi4": "uRBWom71K9QevtruwZPIAusEximThTP9f0MYIh3Jz8A="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Special/Screwdriver.asset",
+            "temperature": 2,
+            "defense": 3,
+            "use": 1,
+            "duel": "u4vJdEL8VjzUHUO46lGJxgtJBT5lc+lHw/N8tGvkh2o=",
+            "multi3": "xWgCWckXvVGtt8lTTr1GkX8+vMns2xYJTVmLZg8Shf0=",
+            "multi4": "uRBWom71K9QevtruwZPIAusEximThTP9f0MYIh3Jz8A="
+        }
+    ]
+}

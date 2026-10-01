@@ -1,5 +1,7 @@
 using AbsoluteZero.Core.Common;
 using AbsoluteZero.Core.Item;
+using AbsoluteZero.Core.Match;
+using AbsoluteZero.Core.Network;
 using AbsoluteZero.Core.Player;
 using AbsoluteZero.Core.Turn;
 using Unity.Netcode;
@@ -14,30 +16,57 @@ namespace AbsoluteZero.UI.MiniGame
 
         public static bool IsRunning => Instance != null && Instance._active != null;
 
-        public static event System.Action<byte, bool> OnFinishedLocal;
+        public event System.Action<byte, bool> OnFinishedLocal;
 
+        MatchCompositionRoot _match;
         PlayerState _localPlayer;
         TurnManager _tm;
         Canvas _canvas;
         MiniGameUIBase _active;
+        MiniGameUIBase _outgoing;
+        MiniGameTicket _activeTicket;
+        System.Action<byte, bool> _activeHandler;
+        bool _cancelCurrent;
 
         void Awake()
         {
             Instance = this;
+            _match = MatchCompositionRoot.Instance;
             BuildCanvas();
+        }
+
+        void OnDisable()
+        {
+            if (_active != null && _activeHandler != null)
+                _active.OnFinished -= _activeHandler;
+            if (_localPlayer != null)
+            {
+                _localPlayer.OnMiniGameStart -= HandleStart;
+                _localPlayer.OnItemSelectionRejected -= HandleRejected;
+            }
+            if (_tm != null) _tm.CurrentPhase.OnValueChanged -= HandlePhaseChanged;
+            _localPlayer = null;
+            _tm = null;
+            if (_active != null) Destroy(_active.gameObject);
+            if (_outgoing != null) Destroy(_outgoing.gameObject);
+            _active = _outgoing = null;
+            _activeHandler = null;
+            _cancelCurrent = false;
         }
 
         void OnDestroy()
         {
-            if (_localPlayer != null) _localPlayer.OnMiniGameStart -= HandleStart;
-            if (_tm != null) _tm.CurrentPhase.OnValueChanged -= HandlePhaseChanged;
+            OnDisable();
             if (Instance == this) Instance = null;
             OnFinishedLocal = null;
         }
 
         void Update()
         {
-            if (_tm == null && TurnManager.Instance != null)
+            if (_match == null || _match != MatchCompositionRoot.Instance || !_match.IsSessionCurrent)
+            { OnDisable(); return; }
+            if (_tm == null && TurnManager.Instance != null
+                && TurnManager.Instance.gameObject.scene == gameObject.scene)
             {
                 _tm = TurnManager.Instance;
                 _tm.CurrentPhase.OnValueChanged += HandlePhaseChanged;
@@ -45,6 +74,29 @@ namespace AbsoluteZero.UI.MiniGame
 
             if (_localPlayer == null)
                 TryBindLocalPlayer();
+
+            if (_active != null && _localPlayer != null
+                && (_localPlayer.IsReady.Value || !HasTicketItem()))
+            {
+                _cancelCurrent = true;
+                _active.ForceCancel();
+            }
+        }
+
+        bool HasTicketItem()
+        {
+            var root = MatchCompositionRoot.Instance;
+            if (root?.ActiveConfig?.Mode == GameMode.Multi)
+                // Inventory view delivery may trail the ticket. The server checks
+                // its CopyId and deadline when the result arrives.
+                return true;
+            var inventory = _localPlayer.GetInventory();
+            if (inventory == null || _activeTicket.CopyId == 0) return false;
+            for (int i = 0; i < inventory.SlotStates.Count; i++)
+                if (!inventory.SlotStates[i].IsEmpty
+                    && inventory.SlotStates[i].CopyId == _activeTicket.CopyId)
+                    return true;
+            return false;
         }
 
         void TryBindLocalPlayer()
@@ -60,11 +112,43 @@ namespace AbsoluteZero.UI.MiniGame
 
             _localPlayer = ps;
             _localPlayer.OnMiniGameStart += HandleStart;
+            _localPlayer.OnItemSelectionRejected += HandleRejected;
         }
 
-        void HandleStart(byte slotIndex, MiniGameType type, float timeLimit, int goal)
+        void HandleRejected(uint copyId)
         {
-            if (_active != null) return;
+            if (_active == null || copyId == 0 || copyId != _activeTicket.CopyId) return;
+            // Server invalidation is not a failed mini-game: do not submit a
+            // second result or debit an item that has already been invalidated.
+            _cancelCurrent = true;
+            _active.ForceCancel();
+        }
+
+        void HandleStart(MiniGameTicket ticket)
+        {
+            if (_activeTicket.AttemptId != 0 && !ticket.IsNewerThan(_activeTicket))
+                return;
+            if (_outgoing != null)
+            {
+                Destroy(_outgoing.gameObject);
+                _outgoing = null;
+            }
+            if (_active != null)
+            {
+                // A newer server ticket replaces the previous attempt. The old
+                // view must not submit a result or block the new attempt.
+                if (_activeHandler != null) _active.OnFinished -= _activeHandler;
+                _active.gameObject.SetActive(false);
+                Destroy(_active.gameObject);
+                _active = null;
+                _activeHandler = null;
+                _cancelCurrent = false;
+            }
+            _activeTicket = ticket;
+            byte slotIndex = ticket.Slot;
+            MiniGameType type = ticket.Type;
+            float timeLimit = ticket.TimeLimit;
+            int goal = ticket.Goal;
 
             float budget = timeLimit;
             var nm = NetworkManager.Singleton;
@@ -94,7 +178,7 @@ namespace AbsoluteZero.UI.MiniGame
             {
                 Debug.LogWarning($"[MiniGameHub] Unimplemented mini-game type: {type} — auto-fail");
                 Destroy(go);
-                _localPlayer.SubmitMiniGameResultServerRpc(slotIndex, false);
+                SubmitResult(ticket, false);
                 return;
             }
 
@@ -106,23 +190,45 @@ namespace AbsoluteZero.UI.MiniGame
                 if (data != null) itemIcon = data.Icon;
             }
 
-            _active.OnFinished += HandleFinished;
+            _cancelCurrent = false;
+            var startedUi = _active;
+            _activeHandler = (finishedSlot, success) =>
+                HandleFinished(startedUi, ticket, finishedSlot, success);
+            _active.OnFinished += _activeHandler;
             _active.Begin(slotIndex, budget, goal, _canvas.transform, itemIcon);
         }
 
-        void HandleFinished(byte slotIndex, bool success)
+        void HandleFinished(MiniGameUIBase source, MiniGameTicket ticket,
+            byte slotIndex, bool success)
         {
-            if (_active != null) _active.OnFinished -= HandleFinished;
+            if (_active != source || ticket.Slot != slotIndex) return;
+            if (_activeHandler != null) source.OnFinished -= _activeHandler;
+            _activeHandler = null;
             _active = null;
+            _outgoing = source;
 
-            _localPlayer?.SubmitMiniGameResultServerRpc(slotIndex, success);
-            OnFinishedLocal?.Invoke(slotIndex, success);
+            bool cancelled = _cancelCurrent;
+            if (!cancelled)
+                SubmitResult(ticket, success);
+            _cancelCurrent = false;
+            if (!cancelled)
+                OnFinishedLocal?.Invoke(slotIndex, success);
+        }
+
+        void SubmitResult(MiniGameTicket ticket, bool success)
+        {
+            _localPlayer?.SubmitMiniGameResultServerRpc(ticket.Slot, success,
+                ticket.MatchEpoch, ticket.RoundEpoch, ticket.Turn,
+                ticket.AttemptId, ticket.CopyId);
         }
 
         void HandlePhaseChanged(TurnPhase oldPhase, TurnPhase newPhase)
         {
             if (newPhase != TurnPhase.PrepPhase && _active != null)
+            {
+                _cancelCurrent = true;
                 _active.ForceCancel();
+            }
         }
 
         void BuildCanvas()

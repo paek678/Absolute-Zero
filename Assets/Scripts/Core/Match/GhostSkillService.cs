@@ -1,196 +1,83 @@
 using System;
-using System.Collections.Generic;
 using AbsoluteZero.Core.Combat;
 using AbsoluteZero.Core.Player;
 using UnityEngine;
 
 namespace AbsoluteZero.Core.Match
 {
-    public class GhostSkillService : IDisposable
+    public sealed class GhostSkillService : IDisposable
     {
-        public const byte SKILL_FROST_STRIKE = 0;
-        public const byte SKILL_CHILL_AURA = 1;
+        public const byte SKILL_GRUDGE = 0;
+        public const byte SKILL_POSSESSION = 1;
+        public const float GRUDGE_DAMAGE = 3f;
+        public const byte GRUDGE_COOLDOWN_TURNS = 2;
 
-        public const byte FROST_STRIKE_COOLDOWN = 3;
-        public const byte CHILL_AURA_COOLDOWN = 2;
-        public const float FROST_STRIKE_DAMAGE = 15f;
-        public const float CHILL_AURA_FAN_MULTIPLIER = 2f;
-        public const float CHILL_AURA_RECOVERY_MULTIPLIER = 0.5f;
-
-        public struct GhostDebuffEntry
-        {
-            public byte GhostSeat;
-            public byte SkillIndex;
-            public int AppliedTurn;
-        }
-
-        readonly Dictionary<byte, GhostDebuffEntry> _activeDebuffs = new();
-        MatchRoster _roster;
-        PlayerModifiers[] _modifiers;
+        readonly GhostSkillLedger _ledger = new();
         bool _disposed;
 
-        public IReadOnlyDictionary<byte, GhostDebuffEntry> ActiveDebuffs => _activeDebuffs;
+        public GhostSkillLedger Ledger => _ledger;
 
-        public GhostSkillService(MatchRoster roster, PlayerModifiers[] modifiers)
+        // Preserve the composition-root constructor shape while moving mutable skill
+        // state out of PlayerModifiers. Existing fan/recovery modifiers remain unrelated.
+        public GhostSkillService(MatchRoster roster, PlayerModifiers[] modifiers) { }
+
+        public void BeginMatch(MatchNetworkState netState, int seatCount)
         {
-            _roster = roster;
-            _modifiers = modifiers;
-            if (_roster != null)
-                _roster.OnPlayerDisconnectedFromSeat += OnSeatDisconnected;
+            if (_disposed || netState == null || netState.GhostMatchEpoch.Value == 0) return;
+            _ledger.BeginMatch(netState.GhostMatchEpoch.Value, seatCount);
+            netState.ServerPublishGhostLedger(_ledger);
         }
 
-        public void Dispose()
+        public void BeginRound(MatchNetworkState netState)
         {
-            if (_disposed) return;
-            _disposed = true;
-
-            if (_roster != null)
-            {
-                _roster.OnPlayerDisconnectedFromSeat -= OnSeatDisconnected;
-                _roster = null;
-            }
-
-            if (_modifiers != null)
-            {
-                RemoveAllActiveDebuffs();
-                _modifiers = null;
-            }
+            if (_disposed || netState == null || _ledger.MatchEpoch == 0) return;
+            _ledger.BeginRound();
+            netState.ServerPublishGhostLedger(_ledger);
         }
 
-        void OnSeatDisconnected(ulong clientId, byte seat)
+        public void BeginTurn(MatchNetworkState netState, int turn)
         {
-            if (_disposed || _modifiers == null) return;
-            RemoveDebuffsForSeat(seat);
+            if (_disposed || netState == null || _ledger.MatchEpoch == 0) return;
+            _ledger.BeginTurn(turn);
+            netState.ServerPublishGhostLedger(_ledger);
         }
 
-        void RemoveDebuffsForSeat(byte seat)
-        {
-            var toRemove = new List<byte>();
-            foreach (var kvp in _activeDebuffs)
-            {
-                if (kvp.Key == seat || kvp.Value.GhostSeat == seat)
-                {
-                    if (kvp.Value.SkillIndex == SKILL_CHILL_AURA)
-                        RevertChillAura(kvp.Key, _modifiers);
-                    toRemove.Add(kvp.Key);
-                }
-            }
-            foreach (var key in toRemove)
-                _activeDebuffs.Remove(key);
-        }
-
-        void RemoveAllActiveDebuffs()
-        {
-            foreach (var kvp in _activeDebuffs)
-            {
-                if (kvp.Value.SkillIndex == SKILL_CHILL_AURA)
-                    RevertChillAura(kvp.Key, _modifiers);
-            }
-            _activeDebuffs.Clear();
-        }
-
-        public bool TryUseFrostStrike(byte ghostSeat, byte targetSeat,
+        public bool TryUseGrudge(byte ghostSeat, byte targetSeat,
             MatchNetworkState netState, AuthoritativeDeathService deathService,
-            PlayerState[] players, ISeatStateAccessor roster, int currentTurn)
+            PlayerState[] players, ISeatStateAccessor roster)
         {
-            if (_disposed) return false;
-            if (netState.ServerGetCooldown(ghostSeat, SKILL_FROST_STRIKE) > 0) return false;
-            if (targetSeat >= players.Length || players[targetSeat] == null) return false;
-            if (roster.GetLifeState(targetSeat) != LifeState.Alive) return false;
+            if (_disposed || netState == null || deathService == null || players == null
+                || roster == null || targetSeat >= players.Length || players[targetSeat] == null
+                || !roster.IsConnected(targetSeat) || roster.GetLifeState(targetSeat) != LifeState.Alive
+                || !_ledger.CanUseGrudge(ghostSeat, targetSeat)) return false;
 
             float before = players[targetSeat].Temperature.Value;
-            float newTemp = Mathf.Max(TemperatureSystem.MIN_TEMP, before - FROST_STRIKE_DAMAGE);
-            players[targetSeat].Temperature.Value = newTemp;
-            Debug.Log($"[Ghost] FrostStrike: Ghost P{ghostSeat} → P{targetSeat}, {before:F1}→{newTemp:F1}°");
+            float after = Mathf.Max(TemperatureSystem.MIN_TEMP, before - GRUDGE_DAMAGE);
+            if (!_ledger.TryCommitGrudge(ghostSeat, targetSeat)) return false;
+            players[targetSeat].Temperature.Value = after;
+            netState.ServerSetCooldown(ghostSeat, SKILL_GRUDGE, GRUDGE_COOLDOWN_TURNS);
+            netState.ServerPublishGhostLedger(_ledger);
 
-            if (newTemp <= TemperatureSystem.MIN_TEMP && deathService != null)
+            if (after <= TemperatureSystem.MIN_TEMP)
             {
-                var src = DamageSource.Create(ghostSeat, DamageOrigin.GhostFrost);
-                deathService.TryKill(targetSeat, src);
+                deathService.TryKill(targetSeat, DamageSource.Create(ghostSeat, DamageOrigin.GhostFrost));
                 deathService.FlushDeathQueue();
             }
-
-            netState.ServerSetCooldown(ghostSeat, SKILL_FROST_STRIKE, FROST_STRIKE_COOLDOWN);
+            Debug.Log($"[Ghost] Grudge P{ghostSeat} → P{targetSeat}: {before:F1}→{after:F1}°");
             return true;
         }
 
-        public bool TryUseChillAura(byte ghostSeat, byte targetSeat,
-            MatchNetworkState netState, PlayerModifiers[] modifiers,
-            ISeatStateAccessor roster, int currentTurn)
+        public bool TryUsePossession(byte ghostSeat, byte targetSeat,
+            MatchNetworkState netState, ISeatStateAccessor roster)
         {
-            if (_disposed) return false;
-            if (netState.ServerGetCooldown(ghostSeat, SKILL_CHILL_AURA) > 0) return false;
-            if (targetSeat >= modifiers.Length) return false;
-            if (roster.GetLifeState(targetSeat) != LifeState.Alive) return false;
-            if (!roster.IsConnected(targetSeat)) return false;
-
-            if (_activeDebuffs.TryGetValue(targetSeat, out var existing))
-            {
-                RevertChillAura(targetSeat, modifiers);
-                _activeDebuffs.Remove(targetSeat);
-            }
-
-            modifiers[targetSeat].FanSpeedMultiplier = CHILL_AURA_FAN_MULTIPLIER;
-            modifiers[targetSeat].RecoveryMultiplier = CHILL_AURA_RECOVERY_MULTIPLIER;
-
-            _activeDebuffs[targetSeat] = new GhostDebuffEntry
-            {
-                GhostSeat = ghostSeat,
-                SkillIndex = SKILL_CHILL_AURA,
-                AppliedTurn = currentTurn
-            };
-
-            netState.ServerSetCooldown(ghostSeat, SKILL_CHILL_AURA, CHILL_AURA_COOLDOWN);
-            Debug.Log($"[Ghost] ChillAura: Ghost P{ghostSeat} → P{targetSeat}, fan×{CHILL_AURA_FAN_MULTIPLIER} rec×{CHILL_AURA_RECOVERY_MULTIPLIER}");
+            if (_disposed || netState == null || roster == null
+                || !roster.IsConnected(targetSeat) || roster.GetLifeState(targetSeat) != LifeState.Alive
+                || !_ledger.TryCommitPossession(ghostSeat, targetSeat)) return false;
+            netState.ServerPublishGhostLedger(_ledger);
+            Debug.Log($"[Ghost] Possession P{ghostSeat} → P{targetSeat} for turn {_ledger.Turn}");
             return true;
         }
 
-        public void ExpireChillAuras(int currentTurn, PlayerModifiers[] modifiers)
-        {
-            if (_disposed) return;
-            var toRemove = new List<byte>();
-            foreach (var kvp in _activeDebuffs)
-            {
-                if (kvp.Value.SkillIndex != SKILL_CHILL_AURA) continue;
-                if (currentTurn > kvp.Value.AppliedTurn + 1)
-                {
-                    RevertChillAura(kvp.Key, modifiers);
-                    toRemove.Add(kvp.Key);
-                }
-            }
-            foreach (var seat in toRemove)
-                _activeDebuffs.Remove(seat);
-        }
-
-        void RevertChillAura(byte targetSeat, PlayerModifiers[] modifiers)
-        {
-            if (targetSeat >= modifiers.Length) return;
-            modifiers[targetSeat].FanSpeedMultiplier = 1f;
-            modifiers[targetSeat].RecoveryMultiplier = 1f;
-            Debug.Log($"[Ghost] ChillAura expired on P{targetSeat}");
-        }
-
-        public void ReapplyActiveChillAuras(PlayerModifiers[] modifiers)
-        {
-            if (_disposed) return;
-            foreach (var kvp in _activeDebuffs)
-            {
-                if (kvp.Value.SkillIndex != SKILL_CHILL_AURA) continue;
-                if (kvp.Key >= modifiers.Length) continue;
-                modifiers[kvp.Key].FanSpeedMultiplier = CHILL_AURA_FAN_MULTIPLIER;
-                modifiers[kvp.Key].RecoveryMultiplier = CHILL_AURA_RECOVERY_MULTIPLIER;
-            }
-        }
-
-        public void ClearAll(PlayerModifiers[] modifiers)
-        {
-            if (_disposed) return;
-            foreach (var kvp in _activeDebuffs)
-            {
-                if (kvp.Value.SkillIndex == SKILL_CHILL_AURA)
-                    RevertChillAura(kvp.Key, modifiers);
-            }
-            _activeDebuffs.Clear();
-        }
+        public void Dispose() => _disposed = true;
     }
 }

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using AbsoluteZero.Core.Network;
+using AbsoluteZero.Core.Player.Identity;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -37,6 +38,9 @@ namespace AbsoluteZero.Core.Match
         SeatDecision[] _seatDecisions = new SeatDecision[2];
         byte _disconnectedMask;
         readonly Dictionary<ulong, byte> _matchRoster = new();
+        readonly Dictionary<byte, PlayerIdentity> _matchMembers = new();
+        public int MatchParticipantCount => _matchMembers.Count;
+        public int HumanConnectionCount => _matchRoster.Count;
         uint _epoch;
         bool _rematchCommitted;
 
@@ -132,15 +136,27 @@ namespace AbsoluteZero.Core.Match
 
         // ─── Roster ───────────────────────────────────────────
 
-        public void FixMatchRoster(Player.PlayerState[] players)
+        public bool FixMatchRoster(Player.PlayerState[] players)
         {
+            if (players == null) return false;
+            var descriptors = new List<MatchParticipantDescriptor>(players.Length);
+            foreach (var player in players)
+            {
+                if (player == null || !player.IsParticipantReady) return false;
+                descriptors.Add(player.Participant);
+            }
+            if (!MatchParticipantDescriptor.TryValidateSet(descriptors, players.Length, out _, out _)) return false;
             _matchRoster.Clear();
+            _matchMembers.Clear();
             foreach (var p in players)
             {
-                if (p != null && p.NetworkObject != null)
-                    _matchRoster[p.OwnerClientId] = (byte)p.PlayerIndex;
+                var identity = p.Binding.Identity;
+                _matchMembers.Add(identity.PlayerIndex, identity);
+                if (identity.ClientId.HasValue)
+                    _matchRoster.Add(identity.ClientId.Value, identity.PlayerIndex);
             }
-            Debug.Log($"[MatchManager] Roster fixed: {_matchRoster.Count} seats");
+            Debug.Log($"[MatchManager] Roster fixed: {_matchMembers.Count} seats, {_matchRoster.Count} human connections");
+            return true;
         }
 
         public byte BuildInitialDisconnectMask()
@@ -175,6 +191,9 @@ namespace AbsoluteZero.Core.Match
         {
             if (!IsServer) return false;
             if (CurrentMatchState.Value != MatchState.MatchComplete) return false;
+            // Solo replay has its own lifecycle. A server-owned bot must never be
+            // counted as a second connection or silently cast a rematch vote.
+            if (_matchMembers.Count == 0 || _matchMembers.Count != _matchRoster.Count) return false;
 
             _epoch++;
             _rematchCommitted = false;
@@ -216,6 +235,7 @@ namespace AbsoluteZero.Core.Match
 
         public bool AllAccepted()
         {
+            if (_matchMembers.Count == 0 || _matchMembers.Count != _matchRoster.Count) return false;
             foreach (var kvp in _matchRoster)
             {
                 if (_seatDecisions[kvp.Value] != SeatDecision.Accepted)

@@ -16,34 +16,7 @@ namespace AbsoluteZero.Core.Item.Data
         {
             Debug.Log($"[COMBAT] BuffItem '{ItemName}': P{ctx.UserIndex} self-buff, immediate={ImmediateTempDelta}, delayed={DelayedTempDelta} in {DelayTurns}t");
 
-            var outcome = new ItemEffectOutcome();
-
-            if (!Mathf.Approximately(ImmediateTempDelta, 0f))
-            {
-                if (ImmediateTempDelta > 0f)
-                {
-                    Debug.Log($"[COMBAT] BuffItem '{ItemName}': immediate HEAL self +{ImmediateTempDelta}");
-                    outcome.UserHeal = ImmediateTempDelta;
-                }
-                else
-                {
-                    Debug.Log($"[COMBAT] BuffItem '{ItemName}': immediate DAMAGE self {ImmediateTempDelta}");
-                    outcome.UserDamage = -ImmediateTempDelta;
-                    outcome.UserDamageFilter = DamageFilter.All;
-                }
-            }
-
-            if (!Mathf.Approximately(DelayedTempDelta, 0f))
-            {
-                Debug.Log($"[COMBAT] BuffItem '{ItemName}': scheduled delayed={DelayedTempDelta} on P{ctx.UserIndex} in {DelayTurns} turn(s)");
-                outcome.HasScheduledEffect = true;
-                outcome.ScheduledTargetIndex = ctx.UserIndex;
-                outcome.ScheduledType = EffectType.TempChange;
-                outcome.ScheduledValue = DelayedTempDelta;
-                outcome.ScheduledDelayTurns = DelayTurns;
-            }
-
-            return outcome;
+            return ItemEffectCalculations.Buff(ImmediateTempDelta, DelayedTempDelta, DelayTurns, ctx.UserIndex);
         }
     }
 }

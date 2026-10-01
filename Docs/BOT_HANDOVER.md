@@ -1,5 +1,9 @@
 # Bot AI Handover — Single-Player Opponent (초급/중급/고급/신)
 
+> Current implementation guide: [Solo BT authoring](SOLO_BT_AUTHORING.md), with exact graph structure, node code examples, configuration limits and validation steps. Use [Solo setup](SOLO_BOT_SETUP.md) to launch the current game. The older proposal below is retained for history, not as the current coding recipe.
+
+> Historical reference. The 2026-09-28 user decision selects one executable with an internal NGO host and a logical bot participant. Follow [PLAN_036](Plans/PLAN_036_solo_duel_bt_graph.md) for the current contract. The older instructions below to spawn a second PlayerObject with the same ClientId or directly reuse owner-based UI/RPC paths are not an executable integration recipe; participant identity, perspective, validated commands and lifecycle must first be adapted. Four difficulty tiers and the old mini-game success rates below are not current approved balance.
+
 > Purpose: hand this package to an external developer to build an AI opponent so the
 > game can be played solo. Four difficulty tiers: 초급(beginner) / 중급(intermediate) /
 > 고급(advanced) / 신(god). This doc lists the files to hand over and how the bot plugs in.

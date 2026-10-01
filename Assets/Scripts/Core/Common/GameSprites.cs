@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using AbsoluteZero.Core.Item.Data;
 using UnityEngine;
 
 namespace AbsoluteZero.Core.Common
@@ -106,8 +107,18 @@ namespace AbsoluteZero.Core.Common
 
         static readonly Dictionary<string, Sprite> _itemSpriteCache = new();
 
+        public static Sprite GetItemSpriteFor(ItemDataSO item, ItemPresentationCatalogSO catalog = null)
+        {
+            if (item == null) return null;
+            catalog = catalog != null ? catalog : ItemPresentation.Catalog;
+            if (catalog != null && catalog.TryGet(item, out var entry)) return entry.Sprite;
+            ItemPresentation.WarnLegacy();
+            return GetItemSprite(item.ItemName);
+        }
+
         public static Sprite GetItemSprite(string itemName)
         {
+            if (string.IsNullOrEmpty(itemName)) return null;
             if (_itemSpriteCache.TryGetValue(itemName, out var cached))
                 return cached;
 

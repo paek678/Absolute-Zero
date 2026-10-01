@@ -150,7 +150,6 @@ namespace AbsoluteZero.UI.LobbyUI
                 bool isHost = player.Id == lobby.HostId;
 
                 string label = "";
-                if (isHost) label += "♛ ";
                 label += playerName;
                 if (isHost) label += " [호스트]";
                 if (isMe) label += " (나)";

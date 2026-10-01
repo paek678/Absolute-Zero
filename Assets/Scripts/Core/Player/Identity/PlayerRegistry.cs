@@ -8,8 +8,11 @@ namespace AbsoluteZero.Core.Player.Identity
     {
         readonly Dictionary<ulong, PlayerBinding> _byClientId = new();
         readonly Dictionary<byte, PlayerBinding> _byIndex = new();
+        readonly Dictionary<string, PlayerBinding> _byParticipant = new(StringComparer.Ordinal);
+        readonly Dictionary<ulong, PlayerBinding> _byObject = new();
         readonly Dictionary<ulong, PlayerBinding> _pending = new();
         readonly List<PlayerBinding> _readyList = new();
+        long? _generation;
 
         public IReadOnlyCollection<PlayerBinding> Players => _readyList;
         public int ReadyCount => _readyList.Count;
@@ -37,77 +40,102 @@ namespace AbsoluteZero.Core.Player.Identity
 
         public IEnumerable<PlayerBinding> EnumeratePending() => _pending.Values;
 
-        public void RegisterPending(ulong clientId, PlayerBinding binding)
+        public bool TryGetByParticipantId(string participantId, out PlayerBinding player)
         {
-            if (_pending.ContainsKey(clientId) || _byClientId.ContainsKey(clientId))
-            {
-                Debug.LogWarning($"[PlayerRegistry] RegisterPending: ClientId {clientId} already tracked — ignoring duplicate");
-                return;
-            }
-
-            _pending[clientId] = binding;
-            Debug.Log($"[PlayerRegistry] Pending registered: ClientId={clientId}");
+            if (participantId != null && _byParticipant.TryGetValue(participantId, out player) && player.IsValid)
+                return true;
+            player = null;
+            return false;
         }
 
-        public void PromoteToReady(ulong clientId, byte playerIndex)
+        public bool RegisterPending(PlayerBinding binding)
         {
-            if (!_pending.TryGetValue(clientId, out var binding))
+            if (binding == null || !binding.IsValid) return false;
+            if (_byObject.TryGetValue(binding.NetworkObjectId, out var existing))
+                return ReferenceEquals(existing, binding);
+            if (binding.HasIdentity && _generation.HasValue && binding.Identity.Generation != _generation.Value)
+                return false;
+            _byObject.Add(binding.NetworkObjectId, binding);
+            _pending.Add(binding.NetworkObjectId, binding);
+            return true;
+        }
+
+        public bool TryPromote(PlayerBinding binding, MatchParticipantDescriptor participant, out string error)
+        {
+            error = null;
+            if (binding == null || participant == null || !binding.IsValid
+                || !_byObject.TryGetValue(binding.NetworkObjectId, out var tracked) || !ReferenceEquals(tracked, binding))
+            { error = "Binding is not the live registered network object."; return false; }
+            if (binding.HasIdentity)
             {
-                Debug.LogWarning($"[PlayerRegistry] PromoteToReady: ClientId {clientId} not in pending");
-                return;
+                if (!binding.Participant.Equals(participant))
+                { error = "A ready binding cannot change participant identity."; return false; }
+                if (_byIndex.TryGetValue(participant.Seat, out var ready) && ReferenceEquals(ready, binding))
+                    return true;
             }
-
-            if (_byIndex.ContainsKey(playerIndex))
+            if (_generation.HasValue && _generation.Value != participant.Generation)
+            { error = "Binding belongs to a stale session generation."; return false; }
+            if (participant.ControllerKind == PlayerControllerKind.Human)
             {
-                Debug.LogError($"[PlayerRegistry] PromoteToReady: PlayerIndex {playerIndex} already assigned — blocking duplicate");
-                return;
+                if (!participant.ClientId.HasValue || participant.ClientId.Value != binding.NetworkObject.OwnerClientId
+                    || !binding.NetworkObject.IsPlayerObject)
+                { error = "A live human must own its real player object and connection."; return false; }
             }
+            else if (!binding.NetworkObject.IsOwnedByServer || binding.NetworkObject.IsPlayerObject)
+            { error = "A bot must be a server-owned ordinary network object."; return false; }
+            if (_byIndex.ContainsKey(participant.Seat) || _byParticipant.ContainsKey(participant.ParticipantId)
+                || (participant.ClientId.HasValue && _byClientId.ContainsKey(participant.ClientId.Value)))
+            { error = "Seat, participant or human connection is already registered."; return false; }
 
-            _pending.Remove(clientId);
-
-            var identity = new PlayerIdentity(playerIndex, clientId);
-            binding.AssignIdentity(identity);
-
-            _byClientId[clientId] = binding;
-            _byIndex[playerIndex] = binding;
+            _pending.Remove(binding.NetworkObjectId);
+            binding.AssignIdentity(participant);
+            _generation = participant.Generation;
+            if (participant.ClientId.HasValue) _byClientId.Add(participant.ClientId.Value, binding);
+            _byIndex.Add(participant.Seat, binding);
+            _byParticipant.Add(participant.ParticipantId, binding);
             _readyList.Add(binding);
-
-            Debug.Log($"[PlayerRegistry] Ready: {identity}");
             Registered?.Invoke(binding);
+            return true;
         }
 
-        public void Unregister(PlayerIdentity identity)
+        public bool TryCaptureReadyBindings(IReadOnlyList<MatchParticipantDescriptor> expected,
+            out PlayerBinding[] bindings, out string error)
         {
-            bool removed = false;
-
-            if (_byIndex.TryGetValue(identity.PlayerIndex, out var existing)
-                && existing.Identity.ClientId == identity.ClientId)
+            bindings = null;
+            if (!MatchParticipantDescriptor.TryValidateSet(expected, expected?.Count ?? 0, out var bySeat, out error))
+                return false;
+            if (_readyList.Count != bySeat.Length || _pending.Count != 0)
+            { error = "The exact participant set is not ready."; return false; }
+            var snapshot = new PlayerBinding[bySeat.Length];
+            var objects = new HashSet<ulong>();
+            foreach (var participant in bySeat)
             {
-                _byIndex.Remove(identity.PlayerIndex);
-                _byClientId.Remove(identity.ClientId);
-                _readyList.Remove(existing);
-                removed = true;
+                if (!TryGetByPlayerIndex(participant.Seat, out var binding)
+                    || !binding.HasIdentity || !binding.Participant.Equals(participant)
+                    || !objects.Add(binding.NetworkObjectId)
+                    || !_byObject.TryGetValue(binding.NetworkObjectId, out var tracked) || !ReferenceEquals(binding, tracked))
+                { error = "A ready seat is missing, stale or mapped to the wrong participant/object."; return false; }
+                snapshot[participant.Seat] = binding;
             }
-
-            _pending.Remove(identity.ClientId);
-
-            if (removed)
-            {
-                Debug.Log($"[PlayerRegistry] Unregistered: {identity}");
-                Unregistered?.Invoke(identity);
-            }
+            bindings = snapshot;
+            return true;
         }
 
-        public void UnregisterByClientId(ulong clientId)
+        public void Unregister(PlayerBinding binding)
         {
-            if (_byClientId.TryGetValue(clientId, out var binding))
-            {
-                Unregister(binding.Identity);
-                return;
-            }
-
-            if (_pending.Remove(clientId))
-                Debug.Log($"[PlayerRegistry] Removed pending ClientId={clientId}");
+            if (binding == null || !_byObject.TryGetValue(binding.NetworkObjectId, out var tracked)
+                || !ReferenceEquals(tracked, binding)) return;
+            _byObject.Remove(binding.NetworkObjectId);
+            _pending.Remove(binding.NetworkObjectId);
+            if (!binding.HasIdentity) return;
+            var identity = binding.Identity;
+            if (!_byIndex.TryGetValue(identity.PlayerIndex, out var existing) || !ReferenceEquals(existing, binding)) return;
+            _byIndex.Remove(identity.PlayerIndex);
+            _byParticipant.Remove(identity.ParticipantId);
+            if (identity.ClientId.HasValue && _byClientId.TryGetValue(identity.ClientId.Value, out var human)
+                && ReferenceEquals(human, binding)) _byClientId.Remove(identity.ClientId.Value);
+            _readyList.Remove(binding);
+            Unregistered?.Invoke(identity);
         }
 
         public void Clear()
@@ -115,7 +143,10 @@ namespace AbsoluteZero.Core.Player.Identity
             _pending.Clear();
             _byClientId.Clear();
             _byIndex.Clear();
+            _byObject.Clear();
+            _byParticipant.Clear();
             _readyList.Clear();
+            _generation = null;
             Debug.Log("[PlayerRegistry] Cleared");
         }
     }

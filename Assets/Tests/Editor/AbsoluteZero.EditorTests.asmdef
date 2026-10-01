@@ -3,9 +3,13 @@
     "rootNamespace": "AbsoluteZero.Tests",
     "references": [
         "AbsoluteZero.Core",
+        "AbsoluteZero.UI",
         "Unity.Netcode.Runtime",
         "Unity.Collections",
-        "Unity.Networking.Transport"
+        "Unity.Networking.Transport",
+        "Unity.Services.Lobbies",
+        "Unity.Services.Core",
+        "Unity.Behavior"
     ],
     "includePlatforms": [
         "Editor"

@@ -1,0 +1,5 @@
+{
+  "name": "AbsoluteZero.PresentationFixture",
+  "references": ["AbsoluteZero.Core", "AbsoluteZero.UI", "Unity.Netcode.Runtime", "Unity.Networking.Transport", "Unity.Services.Core", "Unity.Behavior", "Unity.Collections"],
+  "autoReferenced": true
+}

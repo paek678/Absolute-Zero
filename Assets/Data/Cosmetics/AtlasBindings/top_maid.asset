@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7af9c70404ac3474cbeed81daa4fa9f3, type: 3}
+  m_Name: top_maid
+  m_EditorClassIdentifier: AbsoluteZero.Core::AbsoluteZero.Core.Cosmetic.CosmeticItemSO
+  _id: top_02
+  _part: 1
+  _type: 1
+  _sprite: {fileID: -1072556203, guid: f191c7c97b008e04c96cdd3e64de0a7f, type: 3}
+  _atlas: {fileID: 11400000, guid: ec905e7b62823764e93292bd091035c8, type: 2}
+  _sortOrderOffset: 0
+  _displayName: "\uBA54\uC774\uB4DC\uBCF5"

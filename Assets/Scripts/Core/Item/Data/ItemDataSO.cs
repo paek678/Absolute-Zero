@@ -53,6 +53,7 @@ namespace AbsoluteZero.Core.Item.Data
 
         public virtual bool CanUse(ItemContext ctx)
         {
+            if (!ItemAvailability.IsEnabled(this)) return false;
             if (ctx.User.IsBasicBlocked.Value && SlotType == ItemSlotType.Main)
                 return false;
             return true;

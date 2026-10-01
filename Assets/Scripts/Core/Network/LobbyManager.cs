@@ -43,7 +43,14 @@ namespace AbsoluteZero.Core.Network
         public bool IsInLobby => currentLobby != null;
         public bool IsGameSessionActive => isGameSessionActive;
         public uint OperationGeneration => _operationGeneration;
-        public string PlayerId => AuthenticationService.Instance?.PlayerId;
+        internal float HeartbeatInterval => heartbeatInterval;
+        internal float PollInterval => lobbyPollInterval;
+        public string PlayerId => UnityServices.State == ServicesInitializationState.Initialized
+            ? AuthenticationService.Instance.PlayerId : null;
+
+        bool IsCurrentLobbyRequest(uint generation, string lobbyId)
+            => this != null && generation == _operationGeneration && lobbyId != null
+                && currentLobby?.Id == lobbyId && Session.AppBootstrapper.Instance?.SessionRouter.IsSolo != true;
         public int MaxPlayers
         {
             get => maxPlayers;
@@ -63,10 +70,13 @@ namespace AbsoluteZero.Core.Network
             }
         }
 
-        // Unity Services initialization moved to AppBootstrapper → coordinator
+        // Online initialization is owned by NetworkSessionCoordinator and starts on demand.
 
         private void Update()
         {
+            // The online lease owns scheduling. Retain the legacy-only route until
+            // its serialized/debug callers have been audited in R12.
+            if (Session.NetworkSessionCoordinator.Instance?.OwnsOnlineSession == true) return;
             HandleHeartbeat();
             HandleLobbyPoll();
         }
@@ -271,7 +281,8 @@ namespace AbsoluteZero.Core.Network
         public async Task LeaveLobbyAsync()
         {
             if (currentLobby == null) return;
-            _operationGeneration++;
+            uint generation = ++_operationGeneration;
+            string lobbyId = currentLobby.Id;
 
             try
             {
@@ -292,10 +303,13 @@ namespace AbsoluteZero.Core.Network
             }
             finally
             {
-                currentLobby = null;
-                isHost = false;
-                SetGameSessionActive(false);
-                OnLobbyLeft?.Invoke();
+                if (IsCurrentLobbyRequest(generation, lobbyId))
+                {
+                    currentLobby = null;
+                    isHost = false;
+                    SetGameSessionActive(false);
+                    OnLobbyLeft?.Invoke();
+                }
             }
         }
 
@@ -320,6 +334,11 @@ namespace AbsoluteZero.Core.Network
         {
             if (currentLobby == null) return;
 
+            uint generation = _operationGeneration;
+            string lobbyId = currentLobby.Id;
+            var snapshotOwner = Session.NetworkSessionCoordinator.Instance?.LobbyWork;
+            long metadataEpoch = snapshotOwner?.MetadataEpoch ?? 0;
+            string playerId = PlayerId;
             await LobbyServiceHelper.ExecuteAsync(async () =>
             {
                 string actionWithTime = $"{DateTime.Now.Ticks}|{actionMessage}";
@@ -332,15 +351,22 @@ namespace AbsoluteZero.Core.Network
                     }
                 };
 
-                currentLobby = await LobbyService.Instance.UpdatePlayerAsync(currentLobby.Id, PlayerId, options);
+                var updated = await LobbyService.Instance.UpdatePlayerAsync(lobbyId, playerId, options);
+                if (!IsCurrentLobbyRequest(generation, lobbyId)) return;
+                AcceptUpdatedLobby(updated, snapshotOwner, metadataEpoch);
                 Debug.Log($"[LobbyManager] Action sent: {actionMessage}");
-            }, "Send action", FireError);
+            }, "Send action", error => { if (IsCurrentLobbyRequest(generation, lobbyId)) FireError(error); });
         }
 
         public async Task SetPlayerReadyAsync(bool isReady)
         {
             if (currentLobby == null) return;
 
+            uint generation = _operationGeneration;
+            string lobbyId = currentLobby.Id;
+            var snapshotOwner = Session.NetworkSessionCoordinator.Instance?.LobbyWork;
+            long metadataEpoch = snapshotOwner?.MetadataEpoch ?? 0;
+            string playerId = PlayerId;
             await LobbyServiceHelper.ExecuteAsync(async () =>
             {
                 var options = new UpdatePlayerOptions
@@ -351,15 +377,22 @@ namespace AbsoluteZero.Core.Network
                     }
                 };
 
-                currentLobby = await LobbyService.Instance.UpdatePlayerAsync(currentLobby.Id, PlayerId, options);
+                var updated = await LobbyService.Instance.UpdatePlayerAsync(lobbyId, playerId, options);
+                if (!IsCurrentLobbyRequest(generation, lobbyId)) return;
+                AcceptUpdatedLobby(updated, snapshotOwner, metadataEpoch);
                 Debug.Log($"[LobbyManager] Ready state updated: {isReady}");
-            }, "Ready update", FireError);
+            }, "Ready update", error => { if (IsCurrentLobbyRequest(generation, lobbyId)) FireError(error); });
         }
 
         public async Task SetPlayerNameAsync(string playerName)
         {
             if (currentLobby == null) return;
 
+            uint generation = _operationGeneration;
+            string lobbyId = currentLobby.Id;
+            var snapshotOwner = Session.NetworkSessionCoordinator.Instance?.LobbyWork;
+            long metadataEpoch = snapshotOwner?.MetadataEpoch ?? 0;
+            string playerId = PlayerId;
             await LobbyServiceHelper.ExecuteAsync(async () =>
             {
                 var options = new UpdatePlayerOptions
@@ -370,28 +403,11 @@ namespace AbsoluteZero.Core.Network
                     }
                 };
 
-                currentLobby = await LobbyService.Instance.UpdatePlayerAsync(currentLobby.Id, PlayerId, options);
+                var updated = await LobbyService.Instance.UpdatePlayerAsync(lobbyId, playerId, options);
+                if (!IsCurrentLobbyRequest(generation, lobbyId)) return;
+                AcceptUpdatedLobby(updated, snapshotOwner, metadataEpoch);
                 Debug.Log($"[LobbyManager] Player name updated: {playerName}");
-            }, "Set player name", FireError);
-        }
-
-        public async Task SetPlayerCosmeticDataAsync(string dto)
-        {
-            if (currentLobby == null) return;
-
-            await LobbyServiceHelper.ExecuteAsync(async () =>
-            {
-                var options = new UpdatePlayerOptions
-                {
-                    Data = new Dictionary<string, PlayerDataObject>
-                    {
-                        { "CosmeticData", new PlayerDataObject(PlayerDataObject.VisibilityOptions.Member, dto ?? "") }
-                    }
-                };
-
-                currentLobby = await LobbyService.Instance.UpdatePlayerAsync(currentLobby.Id, PlayerId, options);
-                Debug.Log("[LobbyManager] Player cosmetic data updated");
-            }, "Set player cosmetic data", FireError);
+            }, "Set player name", error => { if (IsCurrentLobbyRequest(generation, lobbyId)) FireError(error); });
         }
 
         #endregion
@@ -402,6 +418,10 @@ namespace AbsoluteZero.Core.Network
         {
             if (currentLobby == null || !isHost) return;
 
+            uint generation = _operationGeneration;
+            string lobbyId = currentLobby.Id;
+            var snapshotOwner = Session.NetworkSessionCoordinator.Instance?.LobbyWork;
+            long metadataEpoch = snapshotOwner?.MetadataEpoch ?? 0;
             await LobbyServiceHelper.ExecuteAsync(async () =>
             {
                 var options = new UpdateLobbyOptions
@@ -412,9 +432,11 @@ namespace AbsoluteZero.Core.Network
                     }
                 };
 
-                currentLobby = await LobbyService.Instance.UpdateLobbyAsync(currentLobby.Id, options);
+                var updated = await LobbyService.Instance.UpdateLobbyAsync(lobbyId, options);
+                if (!IsCurrentLobbyRequest(generation, lobbyId)) return;
+                AcceptUpdatedLobby(updated, snapshotOwner, metadataEpoch);
                 Debug.Log($"[LobbyManager] Relay Join Code set: {relayJoinCode}");
-            }, "Save Relay join code", FireError);
+            }, "Save Relay join code", error => { if (IsCurrentLobbyRequest(generation, lobbyId)) FireError(error); });
         }
 
         public string GetRelayJoinCode()
@@ -432,6 +454,10 @@ namespace AbsoluteZero.Core.Network
         {
             if (currentLobby == null || !isHost) return;
 
+            uint generation = _operationGeneration;
+            string lobbyId = currentLobby.Id;
+            var snapshotOwner = Session.NetworkSessionCoordinator.Instance?.LobbyWork;
+            long metadataEpoch = snapshotOwner?.MetadataEpoch ?? 0;
             await LobbyServiceHelper.ExecuteAsync(async () =>
             {
                 var options = new UpdateLobbyOptions
@@ -442,10 +468,12 @@ namespace AbsoluteZero.Core.Network
                     }
                 };
 
-                currentLobby = await LobbyService.Instance.UpdateLobbyAsync(currentLobby.Id, options);
-                SetGameSessionActive(started);
+                var updated = await LobbyService.Instance.UpdateLobbyAsync(lobbyId, options);
+                if (!IsCurrentLobbyRequest(generation, lobbyId)) return;
+                AcceptUpdatedLobby(updated, snapshotOwner, metadataEpoch);
+                SetGameSessionActive(IsGameStarted());
                 Debug.Log($"[LobbyManager] Game started flag updated: {started}");
-            }, "Set game started", FireError);
+            }, "Set game started", error => { if (IsCurrentLobbyRequest(generation, lobbyId)) FireError(error); });
         }
 
         public bool IsGameStarted()
@@ -468,14 +496,28 @@ namespace AbsoluteZero.Core.Network
             OnLobbyLeft?.Invoke();
         }
 
+        bool AcceptUpdatedLobby(Lobby snapshot, Session.LobbySessionWork owner, long epoch)
+        {
+            var coordinator = Session.NetworkSessionCoordinator.Instance;
+            if (owner != null) return coordinator != null && coordinator.AcceptLobbyResponse(owner, snapshot, epoch);
+            // A legacy request cannot replace a snapshot now owned by an online lease.
+            if (coordinator?.OwnsOnlineSession == true) return false;
+            if (snapshot == null || snapshot.Id != currentLobby?.Id || snapshot.Version <= currentLobby.Version)
+                return false;
+            currentLobby = snapshot;
+            return true;
+        }
+
         internal void SyncFromCoordinator(Lobby lobby, bool isHostRole)
         {
+            if (currentLobby?.Id != lobby?.Id || lobby == null) _operationGeneration++;
             currentLobby = lobby;
             isHost = isHostRole;
         }
 
         internal void FireCreatedEvent() => OnLobbyCreated?.Invoke(currentLobby);
         internal void FireJoinedEvent() => OnLobbyJoined?.Invoke(currentLobby);
+        internal void FireUpdatedEvent() => OnLobbyUpdated?.Invoke(currentLobby);
         internal void FireLeftEvent() => OnLobbyLeft?.Invoke();
 
         public void SetGameSessionActive(bool active)
@@ -541,20 +583,21 @@ namespace AbsoluteZero.Core.Network
         {
             if (_pollInFlight) return;
             _pollInFlight = true;
+            string lobbyId = currentLobby?.Id;
+            uint gen = _operationGeneration;
             try
             {
-                string lobbyId = currentLobby?.Id;
                 if (lobbyId == null) return;
-                uint gen = _operationGeneration;
 
                 var lobby = await LobbyService.Instance.GetLobbyAsync(lobbyId);
 
-                if (_operationGeneration != gen || currentLobby == null) return;
-                currentLobby = lobby;
-                OnLobbyUpdated?.Invoke(currentLobby);
+                if (!IsCurrentLobbyRequest(gen, lobbyId)) return;
+                if (AcceptUpdatedLobby(lobby, null, 0))
+                    OnLobbyUpdated?.Invoke(currentLobby);
             }
             catch (LobbyServiceException e)
             {
+                if (!IsCurrentLobbyRequest(gen, lobbyId)) return;
                 if (e.Reason == LobbyExceptionReason.LobbyNotFound
                     || e.Reason == LobbyExceptionReason.LobbyConflict)
                 {
@@ -570,6 +613,7 @@ namespace AbsoluteZero.Core.Network
             }
             catch (Exception e)
             {
+                if (!IsCurrentLobbyRequest(gen, lobbyId)) return;
                 Debug.LogWarning($"[LobbyManager] Unexpected poll error: {e.Message}");
                 if (currentLobby != null)
                 {

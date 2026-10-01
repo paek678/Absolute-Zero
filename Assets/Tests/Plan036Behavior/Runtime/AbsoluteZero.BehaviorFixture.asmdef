@@ -1,0 +1,6 @@
+{
+    "name": "AbsoluteZero.BehaviorFixture",
+    "rootNamespace": "AbsoluteZero.Validation.Behavior",
+    "references": ["Unity.Behavior", "Unity.Netcode.Runtime"],
+    "autoReferenced": true
+}

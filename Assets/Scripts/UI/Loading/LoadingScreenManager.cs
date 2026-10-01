@@ -1,6 +1,8 @@
 using System.Collections;
 using AbsoluteZero.Core.Common;
+using AbsoluteZero.Core.Item.Data;
 using AbsoluteZero.Core.Network;
+using AbsoluteZero.Core.Session;
 using AbsoluteZero.Core.Turn;
 using TMPro;
 using Unity.Netcode;
@@ -13,6 +15,8 @@ namespace AbsoluteZero.UI.Loading
     public class LoadingScreenManager : MonoBehaviour
     {
         public static LoadingScreenManager Instance { get; private set; }
+        [SerializeField] ItemPresentationCatalogSO presentationCatalog;
+        [SerializeField] ItemDataSO[] tipItems;
 
         struct LoadingTip
         {
@@ -56,6 +60,13 @@ namespace AbsoluteZero.UI.Loading
         float _progress;
         float _targetProgress;
         bool _sceneCallbackRegistered;
+        NetworkSessionCoordinator _coordinator;
+        NetworkSceneManager _sceneEvents;
+        NetworkManager _sceneNetwork;
+        long _sceneGeneration;
+        NetworkSceneManager.OnLoadDelegateHandler _loadHandler;
+        MatchSessionRouter _router;
+        MatchSessionLease _loadingLease;
 
         static readonly WaitForSeconds _waitFadeStep = new(0.016f);
 
@@ -64,8 +75,8 @@ namespace AbsoluteZero.UI.Loading
             if (Instance == null)
             {
                 Instance = this;
-                SessionManager.OnLoadingShow += Show;
-                SessionManager.OnLoadingHide += ForceHide;
+                SessionManager.OnLoadingShow += OnLegacyShow;
+                SessionManager.OnLoadingHide += OnLegacyHide;
             }
             else
             {
@@ -81,8 +92,20 @@ namespace AbsoluteZero.UI.Loading
 
         void Update()
         {
-            if (!_sceneCallbackRegistered)
-                TryRegisterSceneCallback();
+            var router = AppBootstrapper.Instance?.SessionRouter;
+            if (!ReferenceEquals(_router, router))
+            {
+                if (_router != null) _router.Changed -= OnRouterChanged;
+                _router = router;
+                if (_router != null) _router.Changed += OnRouterChanged;
+                OnRouterChanged();
+            }
+            TryRegisterSceneCallback();
+            if (_coordinator == null && NetworkSessionCoordinator.Instance != null)
+            {
+                _coordinator = NetworkSessionCoordinator.Instance;
+                _coordinator.OnStateChanged += OnSessionStateChanged;
+            }
 
             if (!_showing || _dismissing) return;
 
@@ -100,38 +123,73 @@ namespace AbsoluteZero.UI.Loading
         void OnDestroy()
         {
             UnregisterSceneCallback();
-            SessionManager.OnLoadingShow -= Show;
-            SessionManager.OnLoadingHide -= ForceHide;
+            if (_coordinator != null) _coordinator.OnStateChanged -= OnSessionStateChanged;
+            if (_router != null) _router.Changed -= OnRouterChanged;
+            SessionManager.OnLoadingShow -= OnLegacyShow;
+            SessionManager.OnLoadingHide -= OnLegacyHide;
             if (Instance == this) Instance = null;
         }
 
         void TryRegisterSceneCallback()
         {
-            if (_sceneCallbackRegistered) return;
             var nm = NetworkManager.Singleton;
+            long generation = _router?.Current?.Generation ?? 0;
+            if (_sceneCallbackRegistered && (nm != _sceneNetwork || nm == null
+                || !ReferenceEquals(nm.SceneManager, _sceneEvents) || generation != _sceneGeneration))
+                UnregisterSceneCallback();
+            if (_sceneCallbackRegistered) return;
             if (nm == null || nm.SceneManager == null) return;
-            nm.SceneManager.OnLoad += OnNetworkSceneLoad;
+            _sceneNetwork = nm;
+            _sceneEvents = nm.SceneManager;
+            var sceneEvents = _sceneEvents;
+            _sceneGeneration = generation;
+            _loadHandler = (client, scene, mode, operation) =>
+            {
+                if (nm == NetworkManager.Singleton && ReferenceEquals(nm.SceneManager, sceneEvents)
+                    && generation == (_router?.Current?.Generation ?? 0))
+                    OnNetworkSceneLoad(client, scene, mode, operation);
+            };
+            _sceneEvents.OnLoad += _loadHandler;
             _sceneCallbackRegistered = true;
         }
 
         void UnregisterSceneCallback()
         {
             if (!_sceneCallbackRegistered) return;
-            var nm = NetworkManager.Singleton;
-            if (nm != null && nm.SceneManager != null)
-                nm.SceneManager.OnLoad -= OnNetworkSceneLoad;
+            if (_sceneEvents != null) _sceneEvents.OnLoad -= _loadHandler;
+            _sceneEvents = null;
+            _sceneNetwork = null;
+            _loadHandler = null;
             _sceneCallbackRegistered = false;
         }
 
         void OnNetworkSceneLoad(ulong clientId, string sceneName, LoadSceneMode loadSceneMode, AsyncOperation asyncOperation)
         {
-            if (sceneName == "GameScene")
+            if (sceneName == "GameScene" || sceneName == "GameScene_Multi" || sceneName == "GameScene_Solo")
                 Show();
         }
+
+        void OnSessionStateChanged(SessionState state, SessionOperation operation)
+        {
+            if (_router?.IsSolo == true) return;
+            if (state == SessionState.LoadingGame) { TryRegisterSceneCallback(); Show(); }
+            if (state == SessionState.Ready || state == SessionState.Failed || state == SessionState.Disconnecting)
+                ForceHide();
+        }
+
+        void OnRouterChanged()
+        {
+            ForceHide();
+            if (_router?.IsSolo == true && !_router.IsStopping) Show();
+        }
+
+        void OnLegacyShow() { if (_router?.IsSolo != true) Show(); }
+        void OnLegacyHide() { if (_router?.IsSolo != true) ForceHide(); }
 
         public void Show()
         {
             if (_showing) return;
+            _loadingLease = _router?.Current;
             _showing = true;
             _dismissing = false;
             _progress = 0f;
@@ -173,10 +231,13 @@ namespace AbsoluteZero.UI.Loading
             bgRect.offsetMax = Vector2.zero;
 
             // Pick random tip
-            var tip = _tips[Random.Range(0, _tips.Length)];
+            int tipIndex = Random.Range(0, _tips.Length);
+            var tip = _tips[tipIndex];
 
             // Item icon — center top
-            var itemSprite = GameSprites.GetItemSprite(tip.ItemName);
+            var itemSprite = presentationCatalog != null && tipItems != null && tipIndex < tipItems.Length
+                ? GameSprites.GetItemSpriteFor(tipItems[tipIndex], presentationCatalog)
+                : GameSprites.GetItemSprite(tip.ItemName);
             var iconGO = CreateImage(root, "ItemIcon", new Vector2(0, 140), new Vector2(150, 150), Color.white);
             var iconImg = iconGO.GetComponent<Image>();
             if (itemSprite != null)
@@ -294,6 +355,7 @@ namespace AbsoluteZero.UI.Loading
         IEnumerator DismissRoutine()
         {
             if (_dismissing) yield break;
+            var lease = _loadingLease;
             _dismissing = true;
 
             Debug.Log("[LoadingScreen] Dismiss — filling to 100%");
@@ -301,6 +363,7 @@ namespace AbsoluteZero.UI.Loading
             // Fill to 100%
             while (_progress < 0.99f)
             {
+                if (!ReferenceEquals(lease, _router?.Current)) yield break;
                 _progress = Mathf.MoveTowards(_progress, 1f, 3f * Time.unscaledDeltaTime);
                 UpdateProgressUI();
                 yield return null;
@@ -314,6 +377,7 @@ namespace AbsoluteZero.UI.Loading
             float alpha = 1f;
             while (alpha > 0.01f)
             {
+                if (!ReferenceEquals(lease, _router?.Current)) yield break;
                 alpha -= 3f * Time.unscaledDeltaTime;
                 if (_canvasGroup != null) _canvasGroup.alpha = alpha;
                 yield return null;

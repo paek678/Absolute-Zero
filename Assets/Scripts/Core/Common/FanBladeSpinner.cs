@@ -1,5 +1,5 @@
 using AbsoluteZero.Core.Player;
-using Unity.Netcode;
+using AbsoluteZero.Core.Player.Identity;
 using UnityEngine;
 
 namespace AbsoluteZero.Core.Common
@@ -26,7 +26,7 @@ namespace AbsoluteZero.Core.Common
         [SerializeField] private float direction = -1f;
 
         [Header("=== Player Binding ===")]
-        [Tooltip("-1 = 로컬 플레이어, -2 = 상대 플레이어, 0/1 = 특정 clientId")]
+        [Tooltip("-1 = 로컬 사람, -2 = 1v1 상대, 0~3 = 논리 seat")]
         [SerializeField] private int playerIndex = -1;
         [Tooltip("플레이어 상태를 아직 못 찾았을 때 기본으로 돌릴지")]
         [SerializeField] private bool spinWhenNoState = true;
@@ -35,7 +35,6 @@ namespace AbsoluteZero.Core.Common
         private float _angle;                                    // 현재 스핀 각 (0~360 wrap — 무한 누적/오버플로우 방지)
         private Quaternion _baseRotation = Quaternion.identity;  // 초기 기울기(Y틸트) 보존용
         private bool _baseCaptured;
-        private PlayerState _cached;
 
         private void Awake()
         {
@@ -95,39 +94,15 @@ namespace AbsoluteZero.Core.Common
         {
             blades = bladesTf;
             playerIndex = index;
-            _cached = null;
         }
 
         private PlayerState GetPlayerState()
         {
-            if (_cached != null) return _cached;
-
-            var nm = NetworkManager.Singleton;
-            if (nm == null || !nm.IsListening) return null;   // 세션 시작 전/후엔 SpawnManager 접근 금지
-            var sm = nm.SpawnManager;
-            if (sm == null || sm.SpawnedObjects == null) return null;
-
-            foreach (var kvp in sm.SpawnedObjects)
-            {
-                var netObj = kvp.Value;
-                if (netObj == null || !netObj.IsPlayerObject) continue;
-
-                bool match;
-                if (playerIndex == -1) match = netObj.OwnerClientId == nm.LocalClientId;
-                else if (playerIndex == -2) match = netObj.OwnerClientId != nm.LocalClientId;
-                else
-                {
-                    var ps = netObj.GetComponent<PlayerState>();
-                    match = ps != null && ps.PlayerIndex == playerIndex;
-                }
-
-                if (match)
-                {
-                    _cached = netObj.GetComponent<PlayerState>();
-                    return _cached;
-                }
-            }
-            return null;
+            if (!LocalMatchPerspective.TryResolveCurrent(out var perspective)) return null;
+            if (playerIndex == -1) return perspective.HumanBinding.State;
+            if (playerIndex == -2)
+                return perspective.TryGetOpponentBinding(out var opponent) ? opponent.State : null;
+            return perspective.TryGetBinding(playerIndex, out var binding) ? binding.State : null;
         }
     }
 }

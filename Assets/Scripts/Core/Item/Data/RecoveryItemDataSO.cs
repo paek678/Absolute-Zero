@@ -12,8 +12,8 @@ namespace AbsoluteZero.Core.Item.Data
 
         public override ItemEffectOutcome ComputeEffect(ItemContext ctx)
         {
-            int useIndex = MaxUses > 0 ? MaxUses - ctx.UserSlot.RemainingUses : 0;
-            float heal = HealPerUse[Mathf.Clamp(useIndex, 0, HealPerUse.Length - 1)];
+            int useIndex = ItemEffectCalculations.RecoveryUseIndex(MaxUses, ctx.UserSlot.RemainingUses);
+            float heal = ItemEffectCalculations.RecoveryAtIndex(HealPerUse, useIndex);
             Debug.Log($"[COMBAT] RecoveryItem '{ItemName}': P{ctx.UserIndex} heal={heal}, useIndex={useIndex}, remaining={ctx.UserSlot.RemainingUses}/{MaxUses}");
             return new ItemEffectOutcome { UserHeal = heal };
         }

@@ -1,5 +1,9 @@
 using System.Collections.Generic;
 using AbsoluteZero.Core.Common;
+using AbsoluteZero.Core.Cosmetic;
+using AbsoluteZero.Core.Match;
+using AbsoluteZero.Core.Item.Data;
+using AbsoluteZero.Core.Player.Identity;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -12,6 +16,54 @@ namespace AbsoluteZero.Core.Player
         Animator _animator;
         SpriteRenderer _itemRenderer;
         bool _initialized;
+        CosmeticVisualController _cosmetics;
+        PlayerBinding _humanBinding;
+        internal PlayerBinding BoundHuman => _humanBinding;
+        public bool IsPresentationUsable => _initialized && _animator != null
+            && _animator.runtimeAnimatorController != null && _itemRenderer != null;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        public string DebugLastTrigger { get; private set; }
+        public int DebugAnimationCount { get; private set; }
+#endif
+
+        public static bool TryBindLocalHuman(PlayerState state)
+        {
+            if (!LocalMatchPerspective.TryResolveCurrent(out var perspective)
+                || !ReferenceEquals(perspective.HumanBinding.State, state)) return false;
+            EnsureInstance();
+            if (Instance == null || Instance.gameObject.scene != state.gameObject.scene) return false;
+            Instance._humanBinding = perspective.HumanBinding;
+            Instance.InitFromScene();
+            var views = MatchViewBindings.ForScene(state.gameObject.scene);
+            if (views != null && !views.RegisterFps(Instance, perspective.HumanBinding)) return false;
+            // Replay retained cosmetics: metadata or the DTO may precede this view.
+            Instance.ApplyCosmeticDto(state.CosmeticDataNV.Value.ToString());
+            return Instance._initialized;
+        }
+
+        public static void ReleaseLocalHuman(PlayerState state)
+        {
+            if (Instance == null || !ReferenceEquals(Instance._humanBinding?.State, state)) return;
+            MatchViewBindings.ForScene(Instance.gameObject.scene)?.ReleaseFps(Instance);
+            Instance._humanBinding = null;
+            Instance._cosmetics?.Clear();
+            Instance._cosmetics = null;
+            Instance.ReturnToIdle();
+        }
+
+        public void ApplyCosmeticDto(string json)
+        {
+            if (!LocalMatchPerspective.TryResolveCurrent(out var perspective)
+                || !ReferenceEquals(perspective.HumanBinding, _humanBinding)) return;
+            var registry = CosmeticProfileService.Instance?.Registry;
+            if (registry == null) return;
+            if (_cosmetics == null)
+            {
+                _cosmetics = new CosmeticVisualController();
+                _cosmetics.BindCharacter(transform, CosmeticView.FirstPerson);
+            }
+            _cosmetics.ApplyFromDto(json, registry);
+        }
         readonly Dictionary<string, Sprite> _spriteCache = new();
 
         const string IdleState = "New State";
@@ -34,11 +86,14 @@ namespace AbsoluteZero.Core.Player
             if (Instance == null) Instance = this;
             else { Destroy(gameObject); return; }
 
-            InitFromScene();
+            // Scene references may exist before participant metadata. The local
+            // human's ready binding owns FPS initialization and cosmetic replay.
         }
 
         void OnDestroy()
         {
+            MatchViewBindings.ForScene(gameObject.scene)?.ReleaseFps(this);
+            _cosmetics?.Clear();
             if (Instance == this) Instance = null;
         }
 
@@ -60,9 +115,18 @@ namespace AbsoluteZero.Core.Player
 
         public static void EnsureInstance()
         {
-            if (Instance != null) return;
+            if (!LocalMatchPerspective.TryResolveCurrent(out var perspective)) return;
+            var scene = perspective.HumanBinding.State.gameObject.scene;
+            if (Instance != null && Instance.gameObject.scene == scene) return;
+            Instance = null;
 
-            var existing = Object.FindAnyObjectByType<FPSVisualController>();
+            var views = MatchViewBindings.ForScene(scene);
+            FPSVisualController existing = views != null ? views.AuthoredFps : null;
+            if (views == null) foreach (var root in scene.GetRootGameObjects())
+            {
+                existing = root.GetComponentInChildren<FPSVisualController>(true);
+                if (existing != null) break;
+            }
             if (existing != null)
             {
                 Instance = existing;
@@ -71,8 +135,8 @@ namespace AbsoluteZero.Core.Player
                 return;
             }
 
-            var cam = Camera.main;
-            if (cam == null)
+            var cam = views != null ? views.GameplayCamera : Camera.main;
+            if (cam == null || cam.gameObject.scene != scene)
             {
                 Debug.LogWarning("[FPS] EnsureInstance — Camera.main is NULL");
                 return;
@@ -97,6 +161,8 @@ namespace AbsoluteZero.Core.Player
 
         public static FPSVisualController Build(Transform cameraTransform)
         {
+            if (cameraTransform == null || !LocalMatchPerspective.TryResolveCurrent(out var perspective)
+                || cameraTransform.gameObject.scene != perspective.HumanBinding.State.gameObject.scene) return null;
             if (Instance != null)
             {
                 Debug.Log("[FPS] Build skipped — Instance already exists");
@@ -108,11 +174,12 @@ namespace AbsoluteZero.Core.Player
             var root = new GameObject("FPS");
             root.transform.SetParent(cameraTransform, false);
 
-            var spawnMarker = GameObject.Find("FPSAnimSpawn");
+            var views = MatchViewBindings.ForScene(cameraTransform.gameObject.scene);
+            var spawnMarker = views != null ? views.FpsSpawn : GameObject.Find("FPSAnimSpawn")?.transform;
             if (spawnMarker != null)
             {
-                root.transform.position = spawnMarker.transform.position;
-                Debug.Log($"[FPS] Build — using FPSAnimSpawn position: {spawnMarker.transform.position}");
+                root.transform.position = spawnMarker.position;
+                Debug.Log($"[FPS] Build — using FPSAnimSpawn position: {spawnMarker.position}");
             }
             else
             {
@@ -123,7 +190,7 @@ namespace AbsoluteZero.Core.Player
             var sortGroup = root.AddComponent<SortingGroup>();
             sortGroup.sortingOrder = 0;
 
-            var ctrl = Resources.Load<RuntimeAnimatorController>("FPS/FPSA");
+            var ctrl = views != null ? views.FpsController : Resources.Load<RuntimeAnimatorController>("FPS/FPSA");
             var anim = root.AddComponent<Animator>();
             anim.runtimeAnimatorController = ctrl;
             anim.applyRootMotion = false;
@@ -166,16 +233,24 @@ namespace AbsoluteZero.Core.Player
 
         void ApplySpawnMarkerPosition()
         {
-            var spawnMarker = GameObject.Find("FPSAnimSpawn");
+            var views = MatchViewBindings.ForScene(gameObject.scene);
+            var spawnMarker = views != null ? views.FpsSpawn : GameObject.Find("FPSAnimSpawn")?.transform;
             if (spawnMarker != null)
             {
-                transform.position = spawnMarker.transform.position;
-                Debug.Log($"[FPS] ApplySpawnMarkerPosition: {spawnMarker.transform.position}");
+                transform.position = spawnMarker.position;
+                Debug.Log($"[FPS] ApplySpawnMarkerPosition: {spawnMarker.position}");
             }
         }
 
         void CacheSprites()
         {
+            var views = MatchViewBindings.ForScene(gameObject.scene);
+            if (views != null)
+            {
+                foreach (var name in SpriteNames) _spriteCache[name] = views.GetFpsSprite(name);
+                foreach (var trigger in TriggerToSprite.Keys) _spriteCache[trigger] = views.GetFpsSprite(trigger);
+                return;
+            }
             foreach (var name in SpriteNames)
             {
                 var sprites = Resources.LoadAll<Sprite>($"FPS/FPS_{name}");
@@ -191,6 +266,12 @@ namespace AbsoluteZero.Core.Player
         }
 
         public void PlayFPSAnimation(string trigger, string itemName = null)
+            => PlayAnimation(trigger, string.IsNullOrEmpty(itemName) ? null : GameSprites.GetItemSprite(itemName), itemName);
+
+        public void PlayFPSItemAnimation(string trigger, ItemDataSO item)
+            => PlayAnimation(trigger, GameSprites.GetItemSpriteFor(item), item?.ItemName);
+
+        void PlayAnimation(string trigger, Sprite itemSprite, string itemName)
         {
             if (_animator == null)
             {
@@ -203,15 +284,17 @@ namespace AbsoluteZero.Core.Player
 
             if (_itemRenderer != null)
             {
-                Sprite sprite = null;
-                if (!string.IsNullOrEmpty(itemName))
-                    sprite = GameSprites.GetItemSprite(itemName);
+                Sprite sprite = itemSprite;
                 if (sprite == null)
                     _spriteCache.TryGetValue(trigger, out sprite);
                 _itemRenderer.sprite = sprite;
             }
 
             _animator.SetTrigger(trigger);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            DebugLastTrigger = trigger;
+            DebugAnimationCount++;
+#endif
             Debug.Log($"[FPS] PlayFPSAnimation('{trigger}', item='{itemName}')");
         }
 

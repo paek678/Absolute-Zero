@@ -64,6 +64,18 @@ namespace AbsoluteZero.Core.Common
             }
         }
 
+        internal void ResetPresentation(SpriteRenderer source)
+        {
+            HoverRaycaster.Instance?.Forget(this);
+            _isHovered = false;
+            _isSelected = false;
+            if (_baseScale.x > 0f) transform.localScale = _baseScale;
+            if (_outlineRenderer == null) return;
+            _outlineRenderer.sprite = source != null ? source.sprite : null;
+            _outlineRenderer.color = HoverOutlineColor;
+            _outlineRenderer.enabled = false;
+        }
+
         void Update()
         {
             if (_baseScale.x <= 0f) return;

@@ -16,7 +16,7 @@ namespace AbsoluteZero.Core.Item
 
     public enum EffectType : byte { TempChange, FanSpeedChange, BasicBlock, RecoveryRateChange }
 
-    public enum CombatEventType : byte { MainEffect, DefenseActivated, Neutralized, Death }
+    public enum CombatEventType : byte { MainEffect, DefenseActivated, Neutralized, Death, SuppressedItemUse }
 
     public enum DamageFilter : byte { Temperature, Food, All }
 

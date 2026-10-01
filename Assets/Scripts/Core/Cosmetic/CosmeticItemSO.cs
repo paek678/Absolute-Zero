@@ -20,6 +20,9 @@ namespace AbsoluteZero.Core.Cosmetic
         [SerializeField] Sprite _sprite;
         public Sprite Sprite => _sprite;
 
+        [SerializeField] CosmeticAtlasSO _atlas;
+        public CosmeticAtlasSO Atlas => _atlas;
+
         [SerializeField] int _sortOrderOffset;
         public int SortOrderOffset => _sortOrderOffset;
 

@@ -13,20 +13,9 @@ namespace AbsoluteZero.Core.Turn
         public const float KIDS_STEAL_STAGING_SECONDS = 3.2f;
         public const float AMBULANCE_BLANKET_STAGING_SECONDS = 3f;
 
-        static readonly EnvironmentType[] Pool =
-        {
-            EnvironmentType.SunnyDay,
-            EnvironmentType.CoolBreeze,
-            EnvironmentType.CicadaSong,
-            EnvironmentType.Kids,
-            EnvironmentType.Ambulance,
-            EnvironmentType.SummerVacation,
-            EnvironmentType.HeatWaveWarning
-        };
-
         public EnvironmentType SelectRandom()
         {
-            return Pool[Random.Range(0, Pool.Length)];
+            return EnvironmentCalculations.Select(Random.Range(0, EnvironmentCalculations.PoolCount));
         }
 
         public float GetPrepDuration(EnvironmentType env, float baseDuration)
@@ -34,26 +23,23 @@ namespace AbsoluteZero.Core.Turn
             if (env == EnvironmentType.SummerVacation)
             {
                 Debug.Log($"[ENV] SummerVacation: prep duration {baseDuration}s → 10s");
-                return 10f;
             }
-            return baseDuration;
+            return EnvironmentCalculations.PrepDuration(env, baseDuration);
         }
 
         public float GetRecoveryRate(EnvironmentType env)
         {
-            if (env == EnvironmentType.SunnyDay) return 2f;
-            if (env == EnvironmentType.CoolBreeze) return 0f;
-            return TemperatureSystem.DEFAULT_RECOVERY_RATE;
+            return EnvironmentCalculations.RecoveryRate(env);
         }
 
         public bool ShouldApplyKidsEffect(EnvironmentType env, int turnNumber)
         {
-            return env == EnvironmentType.Kids && turnNumber == 3;
+            return EnvironmentCalculations.KidsTurn(env, turnNumber);
         }
 
         public bool ShouldApplyAmbulanceEffect(EnvironmentType env, int turnNumber)
         {
-            return env == EnvironmentType.Ambulance && turnNumber == 3;
+            return EnvironmentCalculations.AmbulanceTurn(env, turnNumber);
         }
 
         public int DetermineAmbulanceTarget(float p1Temp, float p2Temp)
@@ -65,20 +51,17 @@ namespace AbsoluteZero.Core.Turn
 
         public int DetermineAmbulanceTargetMulti(PlayerState[] players, ISeatStateAccessor roster)
         {
-            int target = -1;
-            float lowestTemp = float.MaxValue;
+            System.Span<float> temperatures = stackalloc float[players.Length];
+            System.Span<bool> eligible = stackalloc bool[players.Length];
+            eligible.Clear();
             for (int i = 0; i < players.Length; i++)
             {
                 if (players[i] == null) continue;
                 if (roster != null && roster.GetLifeState((byte)i) != LifeState.Alive) continue;
-                float temp = players[i].Temperature.Value;
-                if (temp < lowestTemp)
-                {
-                    lowestTemp = temp;
-                    target = i;
-                }
+                eligible[i] = true;
+                temperatures[i] = players[i].Temperature.Value;
             }
-            return target;
+            return EnvironmentCalculations.MultiAmbulanceTarget(temperatures, eligible);
         }
 
         public void LogActiveEnvironment(EnvironmentType env, int turnNumber)
@@ -111,8 +94,8 @@ namespace AbsoluteZero.Core.Turn
                 var slot = inventory.SlotStates[i];
                 if (slot.IsEmpty) continue;
                 var itemData = inventory.GetItemData(i);
-                if (itemData == null) continue;
-                if (itemData.Persistence != ItemPersistence.RandomConsumable) continue;
+                if (!EnvironmentCalculations.KidsCandidate(slot.IsEmpty,
+                    itemData != null ? itemData.Persistence : (ItemPersistence?)null)) continue;
                 candidates.Add(i);
             }
 

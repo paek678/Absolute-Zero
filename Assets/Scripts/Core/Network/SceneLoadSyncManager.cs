@@ -141,7 +141,7 @@ namespace AbsoluteZero.Core.Network
         {
             if (overlayRoot == null)
             {
-                Debug.LogWarning("[SceneLoadSyncManager] overlayRoot is not assigned.");
+                // Optional legacy UI. LoadingScreenManager owns the current 1v1/Multi loading canvas.
                 return;
             }
 

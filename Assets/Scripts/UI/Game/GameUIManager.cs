@@ -12,6 +12,9 @@ using AbsoluteZero.UI.Game.Presenters;
 using AbsoluteZero.UI.MiniGame;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using System.Collections.Generic;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 namespace AbsoluteZero.UI.Game
 {
@@ -29,15 +32,16 @@ namespace AbsoluteZero.UI.Game
         GhostSkillPresenter _ghostSkillPresenter;
 
         bool _initialized;
+        MiniGameHub _miniGameHub;
 
         // Multi target selection state
         bool _waitingForTarget;
-        byte _pendingTargetSlot;
         byte _snappedTargetSeat = byte.MaxValue;
         Transform _snappedTargetTransform;
         TargetingArrowPresenter _targetingArrowPresenter;
         const float TargetSnapEnterPixels = 105f;
         const float TargetSnapReleasePixels = 155f;
+        readonly List<RaycastResult> _pointerHits = new();
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         Transform _debugHoverTarget;
 #endif
@@ -77,6 +81,12 @@ namespace AbsoluteZero.UI.Game
             _bridge.OnPhaseChanged += HandlePhaseChanged;
 
             _initialized = true;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            var args = System.Environment.GetCommandLineArgs();
+            int scenario = System.Array.IndexOf(args, "--az-matrix");
+            if (scenario >= 0 && scenario + 1 < args.Length && args[scenario + 1] == "input")
+                gameObject.AddComponent<InventoryInteractionProbe>().Initialize(this, _inventoryPresenter, _commands);
+#endif
             Debug.Log("[GameUIManager] Initialized — all presenters created");
         }
 
@@ -94,8 +104,30 @@ namespace AbsoluteZero.UI.Game
         void SpawnMiniGameHub()
         {
             var hubGO = new GameObject("MiniGameHub");
-            hubGO.AddComponent<MiniGameHub>();
-            MiniGameHub.OnFinishedLocal += OnMiniGameFinished;
+            _miniGameHub = hubGO.AddComponent<MiniGameHub>();
+            _miniGameHub.OnFinishedLocal += OnMiniGameFinished;
+        }
+
+        void OnEnable()
+        {
+            if (!_initialized) return;
+            if (_miniGameHub != null)
+            {
+                _miniGameHub.OnFinishedLocal -= OnMiniGameFinished;
+                _miniGameHub.OnFinishedLocal += OnMiniGameFinished;
+                _miniGameHub.enabled = true;
+            }
+            _roundResultPresenter?.Resume();
+        }
+
+        void OnDisable()
+        {
+            if (_miniGameHub != null)
+            {
+                _miniGameHub.OnFinishedLocal -= OnMiniGameFinished;
+                _miniGameHub.enabled = false;
+            }
+            _roundResultPresenter?.Suspend();
         }
 
         void Update()
@@ -152,8 +184,8 @@ namespace AbsoluteZero.UI.Game
 
             if (isMulti && needsTarget)
             {
-                _pendingTargetSlot = (byte)slotIndex;
                 _inventoryPresenter.RequestItemConfirm(slotIndex);
+                if (_inventoryPresenter.SelectionStage != ItemSelectionStage.Aiming) return;
                 _waitingForTarget = true;
                 _snappedTargetSeat = byte.MaxValue;
                 _snappedTargetTransform = null;
@@ -161,10 +193,13 @@ namespace AbsoluteZero.UI.Game
                 return;
             }
 
-            if (_commands.TrySelectItem((byte)slotIndex))
+            ulong generation = _inventoryPresenter.BeginItemSubmission(slotIndex);
+            if (generation == 0) return;
+            bool sent = _commands.TrySelectItem((byte)slotIndex, _inventoryPresenter.GetLocalSlot(slotIndex).CopyId);
+            _inventoryPresenter.CompleteItemSubmission(generation, sent);
+            if (sent)
             {
                 GameAudioManager.Instance?.PlayButtonClick();
-                _inventoryPresenter.NotifyItemConfirmed(slotIndex);
                 _matchHudPresenter.SetStatusText($"Selected: {itemData.ItemName}");
             }
         }
@@ -172,6 +207,7 @@ namespace AbsoluteZero.UI.Game
         void HandleTargetSelection()
         {
             UpdateTargetingArrow();
+            if (!_waitingForTarget) return;
 
             if ((Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
                 || (Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame))
@@ -183,9 +219,7 @@ namespace AbsoluteZero.UI.Game
             if (Mouse.current == null || !Mouse.current.leftButton.wasPressedThisFrame)
                 return;
 
-            if (UnityEngine.EventSystems.EventSystem.current != null
-                && UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
-                return;
+            if (PointerOverCanvasControl()) return;
 
             byte target = _snappedTargetSeat;
             if (target == byte.MaxValue) return;
@@ -203,10 +237,13 @@ namespace AbsoluteZero.UI.Game
             _debugHoverTarget = null;
 #endif
 
-            if (_commands.TrySelectItemWithTarget(slot, target))
+            ulong generation = _inventoryPresenter.BeginItemSubmission(slot);
+            if (generation == 0) { CancelTargetSelection(); return; }
+            bool sent = _commands.TrySelectItemWithTarget(slot, target, _inventoryPresenter.GetLocalSlot(slot).CopyId);
+            _inventoryPresenter.CompleteItemSubmission(generation, sent);
+            if (sent)
             {
                 GameAudioManager.Instance?.PlayButtonClick();
-                _inventoryPresenter?.NotifyItemConfirmed(slot);
                 var itemData = _inventoryPresenter?.GetLocalItemData(slot);
                 _matchHudPresenter.SetStatusText($"{itemData?.ItemName} → P{target + 1}");
             }
@@ -227,6 +264,18 @@ namespace AbsoluteZero.UI.Game
 #endif
             _targetingArrowPresenter?.Hide();
             _matchHudPresenter?.SetStatusText("");
+        }
+
+        bool PointerOverCanvasControl()
+        {
+            var events = EventSystem.current;
+            if (events == null || Mouse.current == null) return false;
+            _pointerHits.Clear();
+            events.RaycastAll(new PointerEventData(events) { position = Mouse.current.position.ReadValue() }, _pointerHits);
+            // World colliders (including the target itself) can also be EventSystem
+            // hits. Only a Canvas UI hit should prevent committing that target.
+            foreach (var hit in _pointerHits) if (hit.module is GraphicRaycaster) return true;
+            return false;
         }
 
         void UpdateTargetingArrow()
@@ -301,17 +350,19 @@ namespace AbsoluteZero.UI.Game
             }
 
             float closest = TargetSnapEnterPixels;
-            foreach (var marker in FindObjectsByType<PlayerSeatMarker>(FindObjectsSortMode.None))
+            var views = MatchViewBindings.ForScene(gameObject.scene);
+            int count = _bridge.CurrentMatch.LifeStates?.Length ?? 0;
+            for (byte seat = 0; seat < count; seat++)
             {
-                if (marker == null || marker.Player == null) continue;
-                byte seat = marker.SeatIndex;
                 if (!IsEligibleTarget(seat)) continue;
-                Vector2 screen = TargetSnapScreenPosition(cam, marker.transform);
+                var target = views?.GetTarget(seat);
+                if (target == null) continue;
+                Vector2 screen = TargetSnapScreenPosition(cam, target);
                 float distance = Vector2.Distance(pointer, screen);
                 if (distance > closest) continue;
                 closest = distance;
                 targetSeat = seat;
-                targetTransform = marker.transform;
+                targetTransform = target;
                 targetScreen = screen;
             }
             return targetSeat != byte.MaxValue;
@@ -321,15 +372,8 @@ namespace AbsoluteZero.UI.Game
         {
             target = null;
             if (!IsEligibleTarget(seat)) return false;
-            foreach (var marker in FindObjectsByType<PlayerSeatMarker>(FindObjectsSortMode.None))
-            {
-                if (marker != null && marker.Player != null && marker.SeatIndex == seat)
-                {
-                    target = marker.transform;
-                    return true;
-                }
-            }
-            return false;
+            target = MatchViewBindings.ForScene(gameObject.scene)?.GetTarget(seat);
+            return target != null;
         }
 
         bool IsEligibleTarget(byte seat)
@@ -389,19 +433,11 @@ namespace AbsoluteZero.UI.Game
             var item = _inventoryPresenter.GetLocalItemData(slotIndex);
             if (item == null || item.GetTargetMode() != TargetMode.SingleTarget) return false;
 
-            PlayerSeatMarker targetMarker = null;
-            foreach (var marker in FindObjectsByType<PlayerSeatMarker>(FindObjectsSortMode.None))
-            {
-                if (marker.Player != null && marker.SeatIndex == targetSeat)
-                {
-                    targetMarker = marker;
-                    break;
-                }
-            }
-            if (targetMarker == null || Camera.main == null) return false;
+            if (!TryGetEligibleTarget(targetSeat, out var target) || Camera.main == null) return false;
+            var targetMarker = target.GetComponent<PlayerSeatMarker>();
 
-            _pendingTargetSlot = slotIndex;
             _inventoryPresenter.RequestItemConfirm(slotIndex);
+            if (_inventoryPresenter.SelectionStage != ItemSelectionStage.Aiming) return false;
             _waitingForTarget = true;
             _snappedTargetSeat = targetSeat;
             _snappedTargetTransform = targetMarker.transform;
@@ -422,6 +458,7 @@ namespace AbsoluteZero.UI.Game
 
         void OnMiniGameFinished(byte slotIndex, bool success)
         {
+            _inventoryPresenter?.NotifyMiniGameFinished(success);
             _matchHudPresenter?.SetStatusText(success ? "Mini-game clear!" : "Mini-game failed...");
         }
 
@@ -431,7 +468,7 @@ namespace AbsoluteZero.UI.Game
                 _bridge.OnPhaseChanged -= HandlePhaseChanged;
             _tempPresenter?.Dispose();
             _roundResultPresenter?.Dispose();
-            MiniGameHub.OnFinishedLocal -= OnMiniGameFinished;
+            if (_miniGameHub != null) _miniGameHub.OnFinishedLocal -= OnMiniGameFinished;
             if (_inventoryPresenter != null)
                 _inventoryPresenter.OnWorldItemClicked -= OnItemClicked;
             if (GameAudioManager.Instance != null)

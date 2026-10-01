@@ -1,4 +1,5 @@
 using System;
+using AbsoluteZero.Core.Session;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -20,6 +21,13 @@ namespace AbsoluteZero.Core.Network
         private bool networkCallbacksRegistered;
         private bool sceneLoadCallbackRegistered;
         private bool isDisconnecting;
+        NetworkManager _subscribedManager;
+        NetworkSceneManager _subscribedSceneManager;
+        long _subscribedGeneration;
+        Action<ulong> _connected, _disconnected;
+        Action<bool> _stopped;
+        Action _failed;
+        static MatchSessionRouter Router => AppBootstrapper.Instance?.SessionRouter;
 
         private void Awake()
         {
@@ -39,8 +47,7 @@ namespace AbsoluteZero.Core.Network
 
         private void Update()
         {
-            if (!networkCallbacksRegistered)
-                TryRegisterNetworkCallbacks();
+            TryRegisterNetworkCallbacks();
         }
 
         private void OnDisable()
@@ -53,21 +60,32 @@ namespace AbsoluteZero.Core.Network
         {
             UnregisterNetworkCallbacks();
             UnregisterSceneLoadCallback();
+            if (Instance == this) Instance = null;
         }
 
         #region Network Callbacks
 
         private void TryRegisterNetworkCallbacks()
         {
-            if (networkCallbacksRegistered) return;
-
             var nm = NetworkManager.Singleton;
+            long generation = Router?.Current?.Generation ?? 0;
+            if (networkCallbacksRegistered && (_subscribedManager != nm || _subscribedGeneration != generation))
+            {
+                UnregisterNetworkCallbacks();
+                UnregisterSceneLoadCallback();
+            }
+            if (networkCallbacksRegistered) return;
             if (nm == null) return;
-
-            nm.OnClientConnectedCallback += OnClientConnected;
-            nm.OnClientDisconnectCallback += OnClientDisconnected;
-            nm.OnClientStopped += OnClientStopped;
-            nm.OnTransportFailure += OnTransportFailure;
+            _subscribedManager = nm; _subscribedGeneration = generation;
+            bool Current() => nm == NetworkManager.Singleton && generation == (Router?.Current?.Generation ?? 0);
+            _connected = id => { if (Current()) OnClientConnected(id); };
+            _disconnected = id => { if (Current()) OnClientDisconnected(id); };
+            _stopped = host => { if (Current()) OnClientStopped(host); };
+            _failed = () => { if (Current()) OnTransportFailure(); };
+            nm.OnClientConnectedCallback += _connected;
+            nm.OnClientDisconnectCallback += _disconnected;
+            nm.OnClientStopped += _stopped;
+            nm.OnTransportFailure += _failed;
             networkCallbacksRegistered = true;
         }
 
@@ -75,15 +93,16 @@ namespace AbsoluteZero.Core.Network
         {
             if (!networkCallbacksRegistered) return;
 
-            var nm = NetworkManager.Singleton;
+            var nm = _subscribedManager;
             if (nm != null)
             {
-                nm.OnClientConnectedCallback -= OnClientConnected;
-                nm.OnClientDisconnectCallback -= OnClientDisconnected;
-                nm.OnClientStopped -= OnClientStopped;
-                nm.OnTransportFailure -= OnTransportFailure;
+                nm.OnClientConnectedCallback -= _connected;
+                nm.OnClientDisconnectCallback -= _disconnected;
+                nm.OnClientStopped -= _stopped;
+                nm.OnTransportFailure -= _failed;
             }
-
+            _subscribedManager = null;
+            _connected = null; _disconnected = null; _stopped = null; _failed = null;
             networkCallbacksRegistered = false;
         }
 
@@ -95,9 +114,9 @@ namespace AbsoluteZero.Core.Network
         {
             var nm = NetworkManager.Singleton;
             if (nm == null || nm.SceneManager == null) return;
-
-            nm.SceneManager.OnLoadComplete -= OnSceneLoadComplete;
-            nm.SceneManager.OnLoadComplete += OnSceneLoadComplete;
+            UnregisterSceneLoadCallback();
+            _subscribedSceneManager = nm.SceneManager;
+            _subscribedSceneManager.OnLoadComplete += OnSceneLoadComplete;
             sceneLoadCallbackRegistered = true;
         }
 
@@ -105,10 +124,9 @@ namespace AbsoluteZero.Core.Network
         {
             if (!sceneLoadCallbackRegistered) return;
 
-            var nm = NetworkManager.Singleton;
-            if (nm != null && nm.SceneManager != null)
-                nm.SceneManager.OnLoadComplete -= OnSceneLoadComplete;
-
+            if (_subscribedSceneManager != null)
+                _subscribedSceneManager.OnLoadComplete -= OnSceneLoadComplete;
+            _subscribedSceneManager = null;
             sceneLoadCallbackRegistered = false;
         }
 
@@ -131,6 +149,7 @@ namespace AbsoluteZero.Core.Network
 
         public void StartGame()
         {
+            if (Router?.IsSolo == true) return;
             var nm = NetworkManager.Singleton;
             if (nm == null)
             {
@@ -171,6 +190,11 @@ namespace AbsoluteZero.Core.Network
 
         public void Disconnect()
         {
+            if (Router?.Current != null)
+            {
+                StopOwnedSession(Router);
+                return;
+            }
             if (isDisconnecting) return;
             isDisconnecting = true;
 
@@ -213,6 +237,12 @@ namespace AbsoluteZero.Core.Network
 
         #region Callback Handlers
 
+        static async void StopOwnedSession(MatchSessionRouter router)
+        {
+            try { await router.StopAsync(); }
+            catch (Exception error) { Debug.LogException(error); }
+        }
+
         private void OnClientConnected(ulong clientId)
         {
             Debug.Log($"[SessionManager] Client connected - ClientId: {clientId}");
@@ -220,6 +250,7 @@ namespace AbsoluteZero.Core.Network
 
         private void OnClientDisconnected(ulong clientId)
         {
+            if (Router?.IsSolo == true) return; // The Solo coordinator owns local failure/exit.
             var nm = NetworkManager.Singleton;
 
             if (nm == null)
@@ -240,6 +271,7 @@ namespace AbsoluteZero.Core.Network
 
         private void OnClientStopped(bool isHost)
         {
+            if (Router?.IsSolo == true) return;
             if (!(RelayManager.Instance?.IsRelayConnected ?? false)) return;
 
             Debug.Log($"[SessionManager] OnClientStopped (IsHost: {isHost}). Returning to lobby.");
@@ -248,6 +280,7 @@ namespace AbsoluteZero.Core.Network
 
         private void OnTransportFailure()
         {
+            if (Router?.IsSolo == true) return;
             Debug.LogWarning("[SessionManager] Transport failure. Returning to lobby.");
             Disconnect();
         }

@@ -21,6 +21,7 @@ namespace AbsoluteZero.Core.Cosmetic
         public string Nickname => _nickname;
         public CosmeticEquipState EquipState => _equipState;
         public CosmeticRegistrySO Registry => _registry;
+        public CosmeticEquipmentService Equipment { get; private set; }
 
         void Awake()
         {
@@ -34,8 +35,12 @@ namespace AbsoluteZero.Core.Cosmetic
             _nickname = PlayerPrefs.GetString(NicknameKey, "");
 
             _equipState = new CosmeticEquipState();
+            Equipment = new CosmeticEquipmentService(_equipState, _registry, new PlayerPrefsCosmeticStore());
             if (_registry != null)
-                _equipState.Load(_registry);
+            {
+                var loaded = Equipment.Load();
+                if (!loaded.Success) Debug.LogWarning("[CosmeticProfileService] Load failed: " + loaded.Error);
+            }
         }
 
         void OnDestroy()
@@ -79,59 +84,13 @@ namespace AbsoluteZero.Core.Cosmetic
             return json;
         }
 
-        // 9-step server-side validation
         public bool TryValidateAndCanonicalizeDto(string raw, out FixedString128Bytes canonical)
         {
             canonical = default;
-
-            // 1. null/empty
-            if (string.IsNullOrEmpty(raw)) return false;
-
-            // 2. byte length pre-check
-            if (Encoding.UTF8.GetByteCount(raw) > 125) return false;
-
-            // 3. parse
-            CosmeticDto dto;
-            try
-            {
-                dto = JsonUtility.FromJson<CosmeticDto>(raw);
-            }
-            catch
-            {
+            if (!CosmeticCodec.TryParse(raw, out var dto) || !CosmeticCodec.TryEncode(dto, _registry, out var json))
                 return false;
-            }
-
-            // 4. dto null
-            if (dto == null) return false;
-
-            // 5. version
-            if (dto.v != 1) return false;
-
-            // 6. validate each part Id against registry
-            if (_registry == null) return false;
-            if (!ValidatePartId(dto.head, CosmeticPart.Head)) return false;
-            if (!ValidatePartId(dto.top, CosmeticPart.Top)) return false;
-            if (!ValidatePartId(dto.back, CosmeticPart.Back)) return false;
-            if (!ValidatePartId(dto.bottom, CosmeticPart.Bottom)) return false;
-            if (!ValidatePartId(dto.tail, CosmeticPart.Tail)) return false;
-
-            // 7. canonical re-serialize
-            string canonicalJson = JsonUtility.ToJson(dto);
-
-            // 8. byte recheck
-            if (Encoding.UTF8.GetByteCount(canonicalJson) > 125) return false;
-
-            // 9. assign
-            canonical = new FixedString128Bytes(canonicalJson);
+            canonical = new FixedString128Bytes(json);
             return true;
-        }
-
-        bool ValidatePartId(string id, CosmeticPart expectedPart)
-        {
-            if (string.IsNullOrEmpty(id)) return true;
-            var item = _registry.GetById(id);
-            if (item == null) return false;
-            return item.Part == expectedPart;
         }
     }
 }

@@ -28,7 +28,10 @@ namespace AbsoluteZero.UI.Game.Presenters
         GameObject _timeAlarmObj;
         Image _timeAlarmImage;
         bool _alarmShaking;
-        Coroutine _alarmCoroutine;
+        OwnedPositionOffset _alarmOffset, _summerOffset;
+        LocalSettingsService _settings;
+        readonly System.Random _visualRandom = new();
+        float _nextAlarmJitter;
 
         Image[] _nameBoxes;
         TextMeshProUGUI _crownText;
@@ -43,14 +46,10 @@ namespace AbsoluteZero.UI.Game.Presenters
         TextMeshProUGUI _envText;
 
         RectTransform _timerContainerRT;
-        Vector2 _timerContainerBasePos;
         bool _summerVacShaking;
-        Coroutine _summerVacShakeCoroutine;
 
         bool _hasSelectedItem;
 
-        static readonly WaitForSeconds _waitAlarmShake = new(0.05f);
-        static readonly WaitForSeconds _waitSummerShake = new(0.016f);
         static readonly WaitForSeconds _waitEnvHide = new(3.5f);
 
         const int ALARM_TIME_THRESHOLD = 5;
@@ -72,7 +71,11 @@ namespace AbsoluteZero.UI.Game.Presenters
             _timeAlarmObj = refs.TimeAlarmObj;
             _timeAlarmImage = refs.TimeAlarmImage;
             _timerContainerRT = refs.TimerContainerRT;
-            _timerContainerBasePos = _timerContainerRT.anchoredPosition;
+            if (_timerContainerRT != null) _summerOffset = OwnedPositionOffset.ForRectTransform(_timerContainerRT);
+            var alarmRect = _timeAlarmObj != null ? _timeAlarmObj.GetComponent<RectTransform>() : null;
+            if (alarmRect != null) _alarmOffset = OwnedPositionOffset.ForRectTransform(alarmRect);
+            _settings = LocalSettingsRuntime.Instance?.Service;
+            if (_settings != null) _settings.Changed += OnSettingsChanged;
             _readyCanvas = refs.ReadyCanvas;
             _readyButton = refs.ReadyButton;
             _readyButtonImage = refs.ReadyButtonImage;
@@ -199,30 +202,38 @@ namespace AbsoluteZero.UI.Game.Presenters
             {
                 _timeAlarmObj.SetActive(true);
                 _alarmShaking = true;
-                _alarmCoroutine = StartCoroutine(AlarmShakeRoutine());
+                _nextAlarmJitter = 0;
                 GameAudioManager.Instance?.PlayClockTick();
             }
             else if (!active && _alarmShaking)
             {
                 _alarmShaking = false;
-                if (_alarmCoroutine != null) StopCoroutine(_alarmCoroutine);
+                _alarmOffset?.Clear();
                 _timeAlarmObj.SetActive(false);
                 GameAudioManager.Instance?.StopClockTick();
             }
         }
 
-        IEnumerator AlarmShakeRoutine()
+        void OnSettingsChanged()
         {
-            var rt = _timeAlarmObj.GetComponent<RectTransform>();
-            var basePos = rt.anchoredPosition;
-            while (_alarmShaking)
+            if (_settings != null && !_settings.Current.Shake) ClearShakeOffsets();
+        }
+        void ClearShakeOffsets() { _alarmOffset?.Clear(); _summerOffset?.Clear(); }
+        void OnDisable() => ClearShakeOffsets();
+        void LateUpdate()
+        {
+            if (!_initialized || (_settings != null && !_settings.Current.Shake)) return;
+            if (_alarmShaking && Time.time >= _nextAlarmJitter)
             {
-                float ox = Random.Range(-8f, 8f);
-                float oy = Random.Range(-4f, 4f);
-                rt.anchoredPosition = basePos + new Vector2(ox, oy);
-                yield return _waitAlarmShake;
+                _alarmOffset?.Apply(new Vector3((float)(_visualRandom.NextDouble() * 16 - 8),
+                    (float)(_visualRandom.NextDouble() * 8 - 4), 0));
+                _nextAlarmJitter = Time.time + .05f;
             }
-            rt.anchoredPosition = basePos;
+            if (_summerVacShaking)
+            {
+                float t = Time.time * 6 * Mathf.PI * 2;
+                _summerOffset?.Apply(new Vector3(Mathf.Sin(t) * 3, Mathf.Cos(t * 1.3f) * 3, 0));
+            }
         }
 
         void UpdateScoreDisplay(MatchSnapshot match)
@@ -335,7 +346,6 @@ namespace AbsoluteZero.UI.Game.Presenters
                 if (_timerFillImage != null)
                     _timerFillImage.color = new Color(1f, 0.35f, 0.25f);
                 _summerVacShaking = true;
-                _summerVacShakeCoroutine = StartCoroutine(SummerVacShakeRoutine());
             }
         }
 
@@ -343,26 +353,9 @@ namespace AbsoluteZero.UI.Game.Presenters
         {
             if (!_summerVacShaking) return;
             _summerVacShaking = false;
-            if (_summerVacShakeCoroutine != null) StopCoroutine(_summerVacShakeCoroutine);
-            _summerVacShakeCoroutine = null;
-            if (_timerContainerRT != null)
-                _timerContainerRT.anchoredPosition = _timerContainerBasePos;
+            _summerOffset?.Clear();
             if (_timerFillImage != null)
                 _timerFillImage.color = Color.white;
-        }
-
-        IEnumerator SummerVacShakeRoutine()
-        {
-            const float amplitude = 3f;
-            const float frequency = 6f;
-            while (_summerVacShaking && _timerContainerRT != null)
-            {
-                float t = Time.time * frequency * Mathf.PI * 2f;
-                float offsetX = Mathf.Sin(t) * amplitude;
-                float offsetY = Mathf.Cos(t * 1.3f) * amplitude;
-                _timerContainerRT.anchoredPosition = _timerContainerBasePos + new Vector2(offsetX, offsetY);
-                yield return _waitSummerShake;
-            }
         }
 
         IEnumerator HideEnvPanelAfterDelay()
@@ -386,6 +379,8 @@ namespace AbsoluteZero.UI.Game.Presenters
 
         void OnDestroy()
         {
+            if (_settings != null) _settings.Changed -= OnSettingsChanged;
+            ClearShakeOffsets();
             if (_readyButton != null)
                 _readyButton.onClick.RemoveListener(OnReadyClicked);
 

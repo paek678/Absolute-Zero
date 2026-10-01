@@ -14,6 +14,19 @@ using UnityEngine;
 
 namespace AbsoluteZero.Core.Turn
 {
+    public enum GhostSkillRequestResult : byte
+    {
+        Accepted,
+        InvalidContext,
+        InputClosed,
+        InvalidActor,
+        InvalidTarget,
+        Unavailable,
+        TargetAlreadyAffected,
+        MatchEnded,
+        StaleRequest
+    }
+
     public class TurnManager : NetworkBehaviour, ITurnContext, IPlayerTurnCancellation
     {
         public static TurnManager Instance { get; private set; }
@@ -48,6 +61,25 @@ namespace AbsoluteZero.Core.Turn
         public static event System.Action<CombatResultData> OnCombatResult;
         public static event System.Action<EnvironmentType> OnEnvironmentAnnounced;
 
+        readonly PrepInputWindow _prepInput = new();
+        MatchCompositionRoot _prepMatch;
+        ulong _prepSequence;
+        public event System.Action<PrepInputSnapshot> PrepInputOpened;
+
+        public bool TryGetPrepInputSnapshot(out PrepInputSnapshot snapshot)
+        {
+            snapshot = null;
+            var match = MatchCompositionRoot.Instance;
+            if (!IsSpawned || !IsServer || NetworkManager == null || NetworkManager.ShutdownInProgress
+                || !NetworkManager.IsListening || match == null || !match.IsSessionCurrent
+                || !ReferenceEquals(match, _prepMatch) || !ReferenceEquals(Instance, this)
+                || match.InitializationFailure != null || CurrentPhase.Value != TurnPhase.PrepPhase
+                || _ghostRoundEndTriggered || _multiTerminalWinnerMask != 0 || IsDeathmatchGrantInProgress
+                || _matchManager == null) return false;
+            return _prepInput.TryRead(new PrepInputKey(match.Generation, _matchManager.RoundNumber.Value,
+                TurnNumber.Value, _prepSequence), NetworkManager.ServerTime.Time, out snapshot);
+        }
+
         PlayerState[] _players = new PlayerState[2];
         PlayerModifiers[] _modifiers = new PlayerModifiers[2];
         TemperatureSystem _tempSystem;
@@ -73,10 +105,23 @@ namespace AbsoluteZero.Core.Turn
         const float EMOTE_DISPLAY_SEC = 1.0f;
         bool _emoteWindowClosed;
         bool _ghostRoundEndTriggered;
-        bool _deathmatchGranted;
+        DeathmatchGrantCoordinator _deathmatchGrantCoordinator;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        public void DebugInjectTopUpFailureAfterFirst()
+            => _deathmatchGrantCoordinator?.DebugFailAfterFirstAttempts(1);
+        public void DebugInjectTopUpFailureAfterBothAttempts()
+            => _deathmatchGrantCoordinator?.DebugFailAfterFirstAttempts(2);
+        public void DebugRetryDeathmatchTopUp() => TryGrantDeathmatchItems();
+#endif
+        uint _nextGhostCastId;
+        public bool IsDeathmatchGrantInProgress => _deathmatchGrantCoordinator?.IsAdmissionClosed == true;
+        public bool IsDeathmatchGrantFaulted => _deathmatchGrantCoordinator?.IsFaulted == true;
         byte _multiTerminalWinnerMask;
         bool _multiPresentationInFlight;
         bool _multiRoundEndInProgress;
+        bool _ghostInputOpen;
+        readonly GhostRequestHistory _ghostRequests = new();
+        public static event System.Action<uint, GhostSkillRequestResult> OnGhostSkillRequestResult;
         public bool AcceptEmotes => IsSpawned && CurrentPhase.Value == TurnPhase.PrepPhase && !_emoteWindowClosed;
 
         static readonly WaitForSeconds _waitHalf = new(0.5f);
@@ -122,6 +167,7 @@ namespace AbsoluteZero.Core.Turn
             var player = _players[seat];
             if (player == null) return;
             player.ClearPendingIntent();
+            player.CancelPendingMiniGame();
             player.IsReady.Value = false;
             player.HasSelectedItem.Value = false;
         }
@@ -179,6 +225,8 @@ namespace AbsoluteZero.Core.Turn
                 _barrier = new PresentationBarrier();
                 _envRules = new EnvironmentRuleService();
                 _roundLifecycle = new RoundLifecycleService();
+                _deathmatchGrantCoordinator = new DeathmatchGrantCoordinator(
+                    reason => MatchCompositionRoot.Instance?.FailInitialization(reason));
 
                 var mcr = MatchCompositionRoot.Instance;
                 if (mcr != null)
@@ -200,6 +248,8 @@ namespace AbsoluteZero.Core.Turn
 
         public override void OnNetworkDespawn()
         {
+            _prepInput.Close();
+            PrepInputOpened = null;
             if (_rematchWaitHandle != null)
             {
                 StopCoroutine(_rematchWaitHandle);
@@ -218,13 +268,24 @@ namespace AbsoluteZero.Core.Turn
                 rosterForUnsub.OnPlayerDisconnectedFromSeat -= OnSeatDisconnectedForceGhost;
             _ghostSkillService?.Dispose();
             _ghostSkillService = null;
+            _ghostInputOpen = false;
+            _ghostRequests.Clear();
             _barrier?.Reset();
-            OnCombatResult = null;
-            OnMultiCombatResult = null;
-            OnMultiDeathPresentation = null;
             OnMultiMatchOutcome = null;
-            OnEnvironmentAnnounced = null;
-            if (Instance == this) Instance = null;
+            OnOpponentRevealed = null;
+            // Unmigrated transient compatibility events belong to the active facade.
+            // A late despawn of an old object cannot erase the new match's listeners.
+            if (Instance == this)
+            {
+                OnCombatResult = null;
+                OnMultiCombatResult = null;
+                OnMultiDeathPresentation = null;
+                OnGhostSkillUsed = null;
+                OnGhostSkillUsedSequenced = null;
+                OnGhostSkillRequestResult = null;
+                OnEnvironmentAnnounced = null;
+                Instance = null;
+            }
             base.OnNetworkDespawn();
         }
 
@@ -251,7 +312,7 @@ namespace AbsoluteZero.Core.Turn
             _deathService.FlushDeathQueue();
 
             if (CurrentPhase.Value == TurnPhase.RoundOver || _multiTerminalWinnerMask != 0) return;
-            TryGrantDeathmatchItems();
+            if (!TryGrantDeathmatchItems()) return;
             // The running phase observes the updated roster at its next boundary.
             // Never start a second phase driver from a network callback.
         }
@@ -268,26 +329,69 @@ namespace AbsoluteZero.Core.Turn
 
         public void ReceivePresentationAck(uint sequence, ulong senderClientId)
         {
+            if (!IsServer) return;
             _barrier?.ReceiveAck(sequence, senderClientId);
+        }
+
+        List<ulong> GetPresentationViewers(MatchCompositionRoot mcr)
+        {
+            var viewers = new List<ulong>();
+            foreach (var binding in mcr.Registry.Players)
+            {
+                if (!binding.IsValid || binding.Identity.ControllerKind != PlayerControllerKind.Human
+                    || !binding.Identity.ClientId.HasValue) continue;
+                ulong id = binding.Identity.ClientId.Value;
+                if (NetworkManager.ConnectedClients.ContainsKey(id) && !viewers.Contains(id)) viewers.Add(id);
+            }
+            return viewers;
         }
 
         // ─── Player Discovery ────────────────────────────────
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        public static System.Action<MatchCompositionRoot> DebugBeforeReadyHandoff;
+        public static bool DebugFailAfterFirstInitialGrant;
+        public static string DebugInitialGrantFailureMessage;
+        public void DebugRetryInitialDiscovery() => StartCoroutine(WaitForPlayersRoutine());
+        public void DebugHoldTurnForPresentationValidation()
+        {
+            if (!IsServer || _gameMode != GameMode.Solo) throw new System.InvalidOperationException("Solo server required");
+            StopAllCoroutines();
+            foreach (var player in _players) if (player != null) player.IsFanActive.Value = false;
+        }
+        public BarrierState DebugPresentationBarrierState => _barrier?.State ?? BarrierState.Idle;
+        public int DebugPresentationPendingCount => _barrier?.DebugPendingCount ?? 0;
+        public ulong[] DebugExpectedPresentationViewers => GetPresentationViewers(MatchCompositionRoot.Instance).ToArray();
+        public uint DebugPresentForValidation(CombatResultData data)
+        {
+            if (!IsServer || _gameMode != GameMode.Solo) throw new System.InvalidOperationException("Solo server required");
+            data.ResultSequence = ++_resultSequence;
+            if (!_barrier.Begin(data.ResultSequence, GetPresentationViewers(MatchCompositionRoot.Instance)))
+                throw new System.InvalidOperationException("Presentation already active");
+            PublishCombatResult(data);
+            return data.ResultSequence;
+        }
+        public void DebugTriggerDeathForValidation(byte seat, bool endsMatch)
+        {
+            if (!IsServer || _gameMode != GameMode.Solo) throw new System.InvalidOperationException("Solo server required");
+            PublishDeathSequence(seat, endsMatch);
+        }
+#endif
+
         IEnumerator WaitForPlayersRoutine()
         {
-            CurrentPhase.Value = TurnPhase.WaitingForPlayers;
-
             var mcr = MatchCompositionRoot.Instance;
             if (mcr == null)
             {
                 Debug.LogError("[TurnManager] MatchCompositionRoot not found — cannot discover players");
                 yield break;
             }
-
+            if (mcr.InitializationState != MatchInitializationState.NotStarted) yield break;
+            CurrentPhase.Value = TurnPhase.WaitingForPlayers;
             float deadline = Time.realtimeSinceStartup + MatchCompositionRoot.InitializationTimeout;
             while (mcr != null && mcr.ActiveConfig == null)
             {
-                if (!IsSpawned || mcr.InitializationFailure != null) yield break;
+                if (!IsSpawned || !mcr.IsSessionCurrent || mcr.InitializationFailure != null) yield break;
                 if (IsServer) mcr.ServerBootstrapMatch();
                 if (Time.realtimeSinceStartup >= deadline)
                 {
@@ -296,149 +400,164 @@ namespace AbsoluteZero.Core.Turn
                 }
                 yield return _waitHalf;
             }
-            if (mcr == null || !IsSpawned) yield break;
-
+            if (mcr == null || !IsSpawned || !mcr.IsSessionCurrent) yield break;
             _gameMode = mcr.ActiveConfig.Mode;
             _gameRule = mcr.ActiveConfig.Rule;
             int requiredCount = mcr.ActiveConfig.RequiredPlayerCount;
-
-            if (_players.Length < requiredCount)
-            {
-                _players = new PlayerState[requiredCount];
-                _modifiers = new PlayerModifiers[requiredCount];
-                _tempsAtTurnStart = new float[requiredCount];
-            }
-
             var registry = mcr.WritableRegistry;
             deadline = Time.realtimeSinceStartup + MatchCompositionRoot.InitializationTimeout;
-            while (registry.TotalCount < requiredCount)
+
+            if (_gameMode == GameMode.Solo)
             {
-                if (!IsSpawned || mcr == null) yield break;
-                if (Time.realtimeSinceStartup >= deadline)
+                if (mcr.ServerCreateRoster(requiredCount, NetworkManager.ConnectedClientsIds) == null) yield break;
+                var spawner = PlayerSpawnManager.Instance;
+                string sceneError = "PlayerSpawnManager is missing";
+                while (spawner == null || !spawner.TryPrepareMatchScene(mcr.Generation, out sceneError))
                 {
-                    mcr.FailInitialization($"Timed out waiting for players: {registry.TotalCount}/{requiredCount}");
-                    yield break;
+                    if (!IsSpawned || mcr == null || !mcr.IsSessionCurrent || mcr.InitializationFailure != null) yield break;
+                    if (Time.realtimeSinceStartup >= deadline)
+                    {
+                        mcr.FailInitialization("Solo spawn scene did not become ready: " + sceneError);
+                        yield break;
+                    }
+                    yield return _waitHalf;
+                    spawner = PlayerSpawnManager.Instance;
                 }
-                yield return _waitHalf;
-            }
-
-            if (IsServer && mcr.Roster == null)
-            {
-                var nm = NetworkManager.Singleton;
-                mcr.ServerCreateRoster(requiredCount, nm.ConnectedClientsIds);
-                if (mcr.Roster == null) yield break;
-            }
-
-            var pending = new List<PlayerBinding>(registry.EnumeratePending());
-            var roster = mcr.Roster;
-
-            if (IsServer && roster != null)
-                roster.SetModifiersSource(
-                    seat => seat < _modifiers.Length ? _modifiers[seat] : default,
-                    (seat, val) => { if (seat < _modifiers.Length) _modifiers[seat] = val; });
-
-            if (roster != null && roster.RosterReady)
-            {
-                foreach (var p in pending)
+                if (!spawner.TrySpawnSoloParticipants(mcr.Participants, out string spawnError))
                 {
-                    if (!roster.TryGetSeatByClientId(p.NetworkObject.OwnerClientId, out byte seat))
-                        continue;
-                    if (seat >= _players.Length) continue;
-                    _players[seat] = p.State;
-                    _players[seat].Initialize(seat, _players[seat].GetComponent<PlayerInventory>());
-                    _players[seat].BindTurnContext(this);
+                    mcr.FailInitialization("Solo participants could not spawn: " + spawnError);
+                    yield break;
                 }
             }
             else
             {
-                pending.Sort((a, b) =>
-                    a.NetworkObject.OwnerClientId.CompareTo(b.NetworkObject.OwnerClientId));
-
-                for (int i = 0; i < _players.Length && i < pending.Count; i++)
+                while (registry.TotalCount < requiredCount)
                 {
-                    _players[i] = pending[i].State;
-                    _players[i].Initialize(i, _players[i].GetComponent<PlayerInventory>());
-                    _players[i].BindTurnContext(this);
-                }
-            }
-
-            if (IsMulti && _gameRule == null)
-            {
-                mcr.FailInitialization("Multi mode requires a game rule");
-                yield break;
-            }
-
-            _ghostSkillService?.Dispose();
-            _ghostSkillService = null;
-
-            if (IsMulti && roster != null && mcr.NetworkState != null)
-            {
-                _deathService = new AuthoritativeDeathService(roster, mcr.NetworkState);
-                _deathService.SetTurnCancellation(this);
-                _deathService.OnSeatKilled += OnSeatKilledClearBuffs;
-
-                roster.OnPlayerDisconnectedFromSeat += OnSeatDisconnectedForceGhost;
-
-                if (_gameRule != null && _gameRule.EnableGhostSystem)
-                    _ghostSkillService = new GhostSkillService(roster, _modifiers);
-            }
-
-            if (_players.Length != _modifiers.Length || _players.Length != _tempsAtTurnStart.Length
-                || _players.Length != requiredCount)
-            {
-                mcr.FailInitialization("Player arrays do not match the configured roster");
-                yield break;
-            }
-
-            for (int i = 0; i < _players.Length; i++)
-            {
-                if (_players[i] == null)
-                {
-                    if (IsMulti)
+                    if (!IsSpawned || mcr == null || !mcr.IsSessionCurrent || mcr.InitializationFailure != null) yield break;
+                    if (Time.realtimeSinceStartup >= deadline)
                     {
-                        mcr.FailInitialization($"Player state is missing for seat {i}");
+                        mcr.FailInitialization($"Timed out waiting for players: {registry.TotalCount}/{requiredCount}");
                         yield break;
                     }
-                    continue;
+                    yield return _waitHalf;
                 }
-                if (_players[i].PlayerIndex != i)
+                if (mcr.ServerCreateRoster(requiredCount, NetworkManager.ConnectedClientsIds) == null) yield break;
+            }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            DebugBeforeReadyHandoff?.Invoke(mcr);
+#endif
+            PlayerBinding[] ready;
+            string bindingError;
+            while (true)
+            {
+                if (!IsSpawned || mcr == null || !mcr.IsSessionCurrent || mcr.InitializationFailure != null) yield break;
+                TurnParticipantSetup.AssignPending(registry, mcr.Participants);
+                if (registry.TryCaptureReadyBindings(mcr.Participants, out ready, out bindingError)) break;
+                if (Time.realtimeSinceStartup >= deadline)
                 {
-                    mcr.FailInitialization($"Seat {i} identity mismatch: PlayerIndex={_players[i].PlayerIndex}");
+                    mcr.FailInitialization("Ready participant handoff failed: " + bindingError);
                     yield break;
                 }
+                yield return _waitHalf;
             }
-
-            if (_itemManager != null)
+            // NetworkBehaviour references can exist before their OnNetworkSpawn ran.
+            // In particular, ItemManager has no drop table until its server spawn.
+            while (_itemManager == null || !_itemManager.IsSpawned || _itemManager.GetDropTable() == null
+                || _matchManager == null || !_matchManager.IsSpawned)
             {
+                if (!IsSpawned || mcr == null || !mcr.IsSessionCurrent || mcr.InitializationFailure != null) yield break;
+                if (Time.realtimeSinceStartup >= deadline)
+                {
+                    mcr.FailInitialization("Match services did not finish network initialization");
+                    yield break;
+                }
+                _itemManager = mcr.ItemManager;
+                _matchManager = mcr.MatchManager;
+                yield return _waitHalf;
+            }
+            if (!registry.TryCaptureReadyBindings(mcr.Participants, out ready, out bindingError))
+            {
+                mcr.FailInitialization("Participants changed while services initialized: " + bindingError);
+                yield break;
+            }
+            if (!InitializeReadyParticipants(mcr, ready)) yield break;
+            while (mcr.RequiresSoloPresentation && !TurnParticipantSetup.AreViewsReady(ready))
+            {
+                if (!IsSpawned || !mcr.IsSessionCurrent || mcr.InitializationFailure != null) yield break;
+                if (Time.realtimeSinceStartup >= deadline)
+                {
+                    mcr.FailInitialization("Solo participant presentation did not finish initialization");
+                    yield break;
+                }
+                yield return null;
+            }
+            yield return StartCoroutine(PrepPhaseRoutine());
+        }
+
+        bool InitializeReadyParticipants(MatchCompositionRoot mcr, PlayerBinding[] ready)
+        {
+            if (!mcr.TryBeginInitialization()) return false;
+            try
+            {
+                TurnParticipantSetup.ValidateBatch(ready, _gameRule, mcr.ActiveConfig.RequiredPlayerCount);
+                _players = new PlayerState[ready.Length];
+                _modifiers = new PlayerModifiers[ready.Length];
+                _tempsAtTurnStart = new float[ready.Length];
+                TurnParticipantSetup.BindStates(ready, _players, this);
+                var roster = mcr.Roster;
+                roster.SetModifiersSource(seat => _modifiers[seat], (seat, value) => _modifiers[seat] = value);
+                _ghostSkillService?.Dispose();
+                _ghostSkillService = null;
+                if (IsMulti)
+                {
+                    _deathService = new AuthoritativeDeathService(roster, mcr.NetworkState);
+                    _deathService.SetTurnCancellation(this);
+                    _deathService.OnSeatKilled += OnSeatKilledClearBuffs;
+                    roster.OnPlayerDisconnectedFromSeat += OnSeatDisconnectedForceGhost;
+                    if (_gameRule.EnableGhostSystem)
+                    {
+                        _ghostSkillService = new GhostSkillService(roster, _modifiers);
+                        mcr.NetworkState.ServerBeginGhostMatch();
+                        _ghostSkillService.BeginMatch(mcr.NetworkState, ready.Length);
+                    }
+                }
                 for (int i = 0; i < _players.Length; i++)
                 {
-                    if (_players[i] == null) continue;
-                    if (IsMulti)
-                        _itemManager.InitializePlayerInventory(_players[i].GetInventory(), _gameRule);
-                    else
-                        _itemManager.InitializePlayerInventory(_players[i].GetInventory());
+                    if (IsMulti) _itemManager.InitializePlayerInventory(ready[i].Inventory, _gameRule);
+                    else _itemManager.InitializePlayerInventory(ready[i].Inventory);
+                    if (!ready[i].Inventory.IsRegistryReady || ready[i].Inventory.SlotStates.Count < 4)
+                        throw new System.InvalidOperationException($"Initial inventory grant failed for seat {i}");
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    if (i == 0 && DebugFailAfterFirstInitialGrant)
+                    {
+                        DebugFailAfterFirstInitialGrant = false;
+                        throw new System.InvalidOperationException(DebugInitialGrantFailureMessage
+                            ?? "Injected initial grant failure after seat 0");
+                    }
+#endif
                 }
-            }
-
-            if (_matchManager != null)
-            {
-                _matchManager.FixMatchRoster(_players);
+                if (!_matchManager.FixMatchRoster(_players))
+                    throw new System.InvalidOperationException("Logical match membership could not be fixed");
                 _matchManager.StartRound();
+                if (_matchManager.RoundNumber.Value != 1 || _matchManager.CurrentMatchState.Value != MatchState.RoundInProgress)
+                    throw new System.InvalidOperationException("Initial round did not start exactly once");
+                mcr.CompleteInitialization();
+                Debug.Log($"[TurnManager] Initialized {ready.Length} logical participants, generation={mcr.Generation}");
+                return true;
             }
-
-            var logParts = new System.Text.StringBuilder("[TurnManager] Players found via Registry:");
-            for (int i = 0; i < _players.Length; i++)
-                logParts.Append($" P{i}={(_players[i] != null ? _players[i].OwnerClientId.ToString() : "null")}");
-            Debug.Log(logParts.ToString());
-
-            yield return StartCoroutine(PrepPhaseRoutine());
+            catch (System.Exception error)
+            {
+                mcr.FailInitialization(error.Message);
+                return false;
+            }
         }
 
         // ─── Prep Phase ──────────────────────────────────────
 
         IEnumerator PrepPhaseRoutine()
         {
-            if (!IsSpawned) yield break;
+            _prepInput.Close();
+            if (!IsSpawned || IsDeathmatchGrantFaulted) yield break;
             if (_multiTerminalWinnerMask != 0 || _multiRoundEndInProgress) yield break;
             if (TryGetCurrentMultiRoundEnd(out int entryWinner))
             {
@@ -452,14 +571,13 @@ namespace AbsoluteZero.Core.Turn
 
             if (IsMulti)
             {
-                if (_ghostSkillService != null)
-                    _ghostSkillService.ExpireChillAuras(TurnNumber.Value, _modifiers);
                 _roundLifecycle.ResetForNewTurn(_players, _modifiers);
-                if (_ghostSkillService != null)
-                    _ghostSkillService.ReapplyActiveChillAuras(_modifiers);
                 var nState = MatchCompositionRoot.Instance?.NetworkState;
                 if (nState != null)
+                {
                     nState.ServerTickAllCooldowns();
+                    _ghostSkillService?.BeginTurn(nState, TurnNumber.Value);
+                }
             }
             else
                 _roundLifecycle.ResetForNewTurn(_players[0], _players[1], _modifiers);
@@ -473,12 +591,7 @@ namespace AbsoluteZero.Core.Turn
                 Debug.Log("[ENV] Kids: steal staging + removing 1 random item from each player");
                 PublishKidsStealStaging();
                 yield return _waitKidsSteal;
-                for (int i = 0; i < _players.Length; i++)
-                {
-                    if (_players[i] == null) continue;
-                    if (IsMulti && _players[i].CurrentLifeState.Value != LifeState.Alive) continue;
-                    _envRules.RemoveRandomUnusedItem(_players[i].GetInventory());
-                }
+                PrepTurnOperations.RemoveKidsItems(_players, IsMulti, _envRules);
             }
 
             if (_envRules.ShouldApplyAmbulanceEffect(ActiveEnvironment.Value, TurnNumber.Value))
@@ -521,9 +634,7 @@ namespace AbsoluteZero.Core.Turn
             PrepDuration.Value = currentPrepDuration;
 
             _emoteWindowClosed = false;
-            CurrentPhase.Value = TurnPhase.PrepPhase;
-            PublishPhaseChanged(TurnPhase.PrepPhase, TurnNumber.Value);
-
+            _ghostInputOpen = IsMulti;
             for (int i = 0; i < _players.Length; i++)
                 _tempsAtTurnStart[i] = _players[i] != null ? _players[i].Temperature.Value : 0f;
 
@@ -533,8 +644,19 @@ namespace AbsoluteZero.Core.Turn
 
             RemainingTime.Value = Mathf.CeilToInt(currentPrepDuration);
 
+            // Publish only after resets, timing and temperature baselines are committed.
+            // Keep the existing elapsed/first-cooling-tick behavior below unchanged.
+            CurrentPhase.Value = TurnPhase.PrepPhase;
+            _prepMatch = MatchCompositionRoot.Instance;
+            var prep = _prepInput.Commit(new PrepInputKey(MatchCompositionRoot.Instance.Generation,
+                _matchManager.RoundNumber.Value, TurnNumber.Value, checked(++_prepSequence)),
+                PrepStartServerTime.Value, currentPrepDuration, _tempsAtTurnStart);
+            PublishPhaseChanged(TurnPhase.PrepPhase, TurnNumber.Value);
+            PrepInputOpened?.Invoke(prep);
+
             while (elapsed < currentPrepDuration)
             {
+                if (IsDeathmatchGrantFaulted) yield break;
                 if (_ghostRoundEndTriggered) yield break;
                 if (IsMulti && _multiPresentationInFlight)
                 {
@@ -564,24 +686,13 @@ namespace AbsoluteZero.Core.Turn
                     if (IsMulti)
                     {
                         int[] scoresBefore = CaptureKillScores();
-                        for (int i = 0; i < _players.Length; i++)
-                        {
-                            if (_players[i] == null || _players[i].CurrentLifeState.Value != LifeState.Alive)
-                                continue;
-                            if (!skipFirstFanTick)
-                                _tempSystem.ApplyFanTick(_players[i], _modifiers[i].FanSpeedMultiplier);
-                            _tempSystem.ApplyRecoveryTick(_players[i], recoveryRate, _modifiers[i].RecoveryMultiplier);
-                        }
+                        PrepTurnOperations.ApplyMultiTick(_players, _modifiers, _tempSystem, skipFirstFanTick, recoveryRate);
 
                         for (int i = 0; i < _players.Length; i++)
                         {
                             if (_players[i] == null || !_tempSystem.IsDead(_players[i]) || _deathService == null)
                                 continue;
-                            var source = DamageSource.None;
-                            if (_ghostSkillService != null
-                                && _ghostSkillService.ActiveDebuffs.TryGetValue((byte)i, out var debuff))
-                                source = DamageSource.Create(debuff.GhostSeat, DamageOrigin.GhostChill);
-                            _deathService.TryKill((byte)i, source);
+                            _deathService.TryKill((byte)i, DamageSource.None);
                         }
                         _deathService?.FlushDeathQueue();
                         byte deathMask = _deathService?.ConsumeDeathMask() ?? 0;
@@ -596,17 +707,9 @@ namespace AbsoluteZero.Core.Turn
                         }
 
                         int maxRandom = _gameRule != null ? _gameRule.MaxRandomItems : int.MaxValue;
-                        for (int i = 0; i < _players.Length; i++)
-                        {
-                            if (_players[i] == null || _players[i].CurrentLifeState.Value != LifeState.Alive)
-                                continue;
-                            var inventory = _players[i].GetInventory();
-                            if (inventory != null)
-                                _tempSystem.CheckThresholds(_players[i], inventory,
-                                    inventory.GetThresholdGranted(), dropTable, true, maxRandom);
-                        }
+                        PrepTurnOperations.GrantMultiThresholds(_players, _tempSystem, dropTable, maxRandom);
 
-                        if (deathMask != 0) TryGrantDeathmatchItems();
+                        if (deathMask != 0 && !TryGrantDeathmatchItems()) yield break;
                         var roundEnd = _deathService?.EvaluateRoundEnd() ?? default;
                         if (deathMask != 0)
                             yield return StartCoroutine(PresentMultiDeathsAndWait(deathMask, roundEnd.IsRoundOver));
@@ -619,16 +722,7 @@ namespace AbsoluteZero.Core.Turn
                     }
                     else
                     {
-                        for (int i = 0; i < _players.Length; i++)
-                        {
-                            if (_players[i] == null) continue;
-                            if (!skipFirstFanTick) _tempSystem.ApplyFanTick(_players[i]);
-                            _tempSystem.ApplyRecoveryTick(_players[i], recoveryRate);
-                            var inventory = _players[i].GetInventory();
-                            if (inventory != null)
-                                _tempSystem.CheckThresholds(_players[i], inventory,
-                                    inventory.GetThresholdGranted(), dropTable);
-                        }
+                        PrepTurnOperations.ApplyDuelTick(_players, _tempSystem, skipFirstFanTick, recoveryRate, dropTable);
                     }
                     skipFirstFanTick = false;
                 }
@@ -643,138 +737,38 @@ namespace AbsoluteZero.Core.Turn
                     }
                 }
 
-                bool allReady = true;
-                for (int i = 0; i < _players.Length; i++)
-                {
-                    if (_players[i] == null) continue;
-                    if (IsMulti && _players[i].CurrentLifeState.Value != LifeState.Alive) continue;
-                    if (!_players[i].IsReady.Value) { allReady = false; break; }
-                }
+                bool allReady = PrepTurnOperations.AllReady(_players, IsMulti);
                 if (allReady) break;
 
                 yield return null;
             }
 
-            if (_ghostRoundEndTriggered) yield break;
+            if (_ghostRoundEndTriggered || IsDeathmatchGrantFaulted) yield break;
 
+            _prepInput.Close();
+            _ghostInputOpen = false;
             RemainingTime.Value = 0;
 
-            for (int i = 0; i < _players.Length; i++)
-            {
-                if (_players[i] == null) continue;
-                if (IsMulti && _players[i].CurrentLifeState.Value != LifeState.Alive) continue;
-                if (!_players[i].IsReady.Value) _roundLifecycle.ForceReady(_players[i]);
-                _roundLifecycle.RevertFanUpgrade(_players[i]);
-            }
+            PrepTurnOperations.CompleteReady(_players, IsMulti, _roundLifecycle);
 
-            byte firstSeat = byte.MaxValue;
-            float earliestTimestamp = float.MaxValue;
-            for (int i = 0; i < _players.Length; i++)
-            {
-                if (_players[i] == null) continue;
-                if (IsMulti && _players[i].CurrentLifeState.Value != LifeState.Alive) continue;
-                var q = _players[i].GetActionQueue();
-                if (q.readyTimestamp > 0f && q.readyTimestamp < earliestTimestamp)
-                {
-                    earliestTimestamp = q.readyTimestamp;
-                    firstSeat = (byte)i;
-                }
-            }
+            byte firstSeat = PrepTurnOperations.FirstReadySeat(_players, IsMulti);
             FirstReadySeat.Value = firstSeat;
 
             _emoteWindowClosed = true;
-            double lastEmote = 0;
-            for (int i = 0; i < _players.Length; i++)
-            {
-                if (_players[i] == null) continue;
-                if (IsMulti && _players[i].CurrentLifeState.Value != LifeState.Alive) continue;
-                lastEmote = System.Math.Max(lastEmote, _players[i].LastEmoteServerTime);
-            }
+            double lastEmote = PrepTurnOperations.LastEmoteTime(_players, IsMulti);
 
             float emoteRemain = (float)(EMOTE_DISPLAY_SEC - (NetworkManager.ServerTime.Time - lastEmote));
             for (float t = 0f; t < emoteRemain; t += Time.deltaTime)
             {
-                if (_ghostRoundEndTriggered) yield break;
+                if (_ghostRoundEndTriggered || IsDeathmatchGrantFaulted) yield break;
                 yield return null;
             }
 
-            if (_ghostRoundEndTriggered) yield break;
+            if (_ghostRoundEndTriggered || IsDeathmatchGrantFaulted) yield break;
             yield return StartCoroutine(AttackPhaseRoutine());
         }
 
         // ─── Multi Combat Helpers ─────────────────────────────
-
-        ItemEffectRuleSnapshot[] BuildItemRules()
-        {
-            var allItems = _itemManager.GetAllItems();
-            if (allItems == null) return System.Array.Empty<ItemEffectRuleSnapshot>();
-            var rules = new ItemEffectRuleSnapshot[allItems.Length];
-            for (int i = 0; i < allItems.Length; i++)
-            {
-                if (allItems[i] == null) continue;
-                rules[i] = ItemEffectRuleSnapshot.From(allItems[i], (short)i);
-            }
-            return rules;
-        }
-
-        ActionIntent[] BuildActionIntents()
-        {
-            var intents = new ActionIntent[_players.Length];
-            for (int i = 0; i < _players.Length; i++)
-            {
-                if (_players[i] == null) { intents[i] = ActionIntent.Empty; continue; }
-                if (IsMulti && _players[i].CurrentLifeState.Value != LifeState.Alive)
-                    { intents[i] = ActionIntent.Empty; continue; }
-                var q = _players[i].GetActionQueue();
-                if (!q.selectedAction.HasValue) { intents[i] = ActionIntent.Empty; continue; }
-
-                var action = q.selectedAction.Value;
-                var inv = _players[i].GetInventory();
-                if (action.SlotIndex < 0 || action.SlotIndex >= inv.SlotStates.Count)
-                {
-                    Debug.LogError($"[TurnManager] BuildActionIntents: P{i} SlotIndex {action.SlotIndex} out of range ({inv.SlotStates.Count}) — skipping");
-                    intents[i] = ActionIntent.Empty;
-                    continue;
-                }
-                short itemId = inv.SlotStates[action.SlotIndex].ItemId;
-                byte targetSeat = action.TargetSeat;
-
-                intents[i] = new ActionIntent(
-                    sourceSeat: (byte)i,
-                    slotIndex: (byte)action.SlotIndex,
-                    itemId: itemId,
-                    targetSeat: targetSeat,
-                    readyServerTick: (int)(q.readyTimestamp * 1000f));
-            }
-            return intents;
-        }
-
-        ActionIntent BuildActionIntentForSeat(int seat)
-        {
-            if (seat < 0 || seat >= _players.Length || _players[seat] == null
-                || _players[seat].CurrentLifeState.Value != LifeState.Alive)
-                return ActionIntent.Empty;
-            var queue = _players[seat].GetActionQueue();
-            if (!queue.selectedAction.HasValue) return ActionIntent.Empty;
-            var action = queue.selectedAction.Value;
-            var inventory = _players[seat].GetInventory();
-            if (inventory == null || action.SlotIndex >= inventory.SlotStates.Count)
-                return ActionIntent.Empty;
-            var slot = inventory.SlotStates[action.SlotIndex];
-            if (!slot.IsUsable || inventory.GetItemData(action.SlotIndex) != action.ItemData)
-                return ActionIntent.Empty;
-            return new ActionIntent((byte)seat, action.SlotIndex, slot.ItemId,
-                action.TargetSeat, (int)(queue.readyTimestamp * 1000f));
-        }
-
-        static void AppendCommittedResolution(MultiCombatResolution aggregate,
-            MultiCombatResolution action, int actorSeat)
-        {
-            aggregate.MainItemIds[actorSeat] = action.MainItemIds[actorSeat];
-            aggregate.DeadMask |= action.DeadMask;
-            for (int i = 0; i < action.EventCount; i++)
-                aggregate.AddEvent(action.OrderedEvents[i]);
-        }
 
         int[] CaptureKillScores()
         {
@@ -795,69 +789,19 @@ namespace AbsoluteZero.Core.Turn
         void LatchMultiVictory(byte winnerMask)
         {
             if (_multiTerminalWinnerMask != 0 || winnerMask == 0) return;
+            _prepInput.Close();
             _multiTerminalWinnerMask = winnerMask;
             _ghostRoundEndTriggered = true;
             for (byte seat = 0; seat < _players.Length; seat++)
                 CancelTurnParticipation(seat);
         }
 
-        MatchCombatSnapshot BuildMultiSnapshot(ItemEffectRuleSnapshot[] itemRules)
-        {
-            int count = _players.Length;
-            var currentTemps = new float[count];
-            var mods = new PlayerModifiers[count];
-            var lifeStates = new LifeState[count];
-            var inventories = new InventorySnapshot[count];
-            var isReady = new bool[count];
-            var killScores = new int[count];
-
-            var mcr = MatchCompositionRoot.Instance;
-            var roster = mcr?.Roster;
-
-            for (int i = 0; i < count; i++)
-            {
-                if (_players[i] == null)
-                {
-                    currentTemps[i] = 0f;
-                    lifeStates[i] = LifeState.Ghost;
-                    inventories[i] = new InventorySnapshot((byte)i, System.Array.Empty<SlotSnapshot>());
-                    continue;
-                }
-                currentTemps[i] = _players[i].Temperature.Value;
-                mods[i] = _modifiers[i];
-                lifeStates[i] = roster != null ? roster.GetLifeState((byte)i) : LifeState.Alive;
-                isReady[i] = _players[i].IsReady.Value;
-
-                var inv = _players[i].GetInventory();
-                var slotCount = inv.SlotStates.Count;
-                var slots = new SlotSnapshot[slotCount];
-                for (int s = 0; s < slotCount; s++)
-                {
-                    var slot = inv.SlotStates[s];
-                    slots[s] = new SlotSnapshot(slot.ItemId, slot.IsUnlimited, slot.RemainingUses);
-                }
-                inventories[i] = new InventorySnapshot((byte)i, slots);
-            }
-
-            if (mcr?.NetworkState?.KillScores != null)
-                for (int i = 0; i < count && i < mcr.NetworkState.KillScores.Count; i++)
-                    killScores[i] = mcr.NetworkState.KillScores[i];
-
-            var ruleSnap = _gameRule != null
-                ? GameModeRuleSnapshot.From(_gameRule)
-                : default;
-
-            return new MatchCombatSnapshot(
-                _tempsAtTurnStart, currentTemps, mods, lifeStates,
-                inventories, System.Array.Empty<ScheduledEffectSnapshot>(),
-                killScores, isReady, ActiveEnvironment.Value, ruleSnap, itemRules);
-        }
-
         // ─── Attack Phase ────────────────────────────────────
 
         IEnumerator AttackPhaseRoutine()
         {
-            if (!IsSpawned) yield break;
+            _prepInput.Close();
+            if (!IsSpawned || IsDeathmatchGrantFaulted) yield break;
             if (_multiTerminalWinnerMask != 0 || _multiRoundEndInProgress) yield break;
             if (TryGetCurrentMultiRoundEnd(out int entryWinner))
             {
@@ -885,6 +829,7 @@ namespace AbsoluteZero.Core.Turn
                 _buffSystem.BeginMultiTurnStart();
                 while (_buffSystem.TryProcessNextDueMulti(_players, out var effect))
                 {
+                    if (IsDeathmatchGrantFaulted) yield break;
                     int[] scoresBefore = CaptureKillScores();
                     if (effect.CausedDeath && _deathService != null)
                     {
@@ -906,7 +851,7 @@ namespace AbsoluteZero.Core.Turn
                         yield break;
                     }
 
-                    TryGrantDeathmatchItems();
+                    if (!TryGrantDeathmatchItems()) yield break;
                     var roundEnd = _deathService.EvaluateRoundEnd();
                     if (deathMask != 0)
                         yield return StartCoroutine(PresentMultiDeathsAndWait(deathMask, roundEnd.IsRoundOver));
@@ -946,7 +891,7 @@ namespace AbsoluteZero.Core.Turn
 
             if (IsMulti)
             {
-                var itemRules = BuildItemRules();
+                var itemRules = MultiCombatCapture.BuildItemRules(_itemManager);
                 var mcr = MatchCompositionRoot.Instance;
                 var roster = mcr?.Roster;
                 if (roster == null || _deathService == null)
@@ -955,69 +900,45 @@ namespace AbsoluteZero.Core.Turn
                     yield break;
                 }
 
-                var initialSnapshot = BuildMultiSnapshot(itemRules);
+                var capture = new MultiCombatCapture(_players, _modifiers, _tempsAtTurnStart,
+                    _itemManager, mcr, _gameRule, ActiveEnvironment.Value, _ghostSkillService);
+                var initialSnapshot = capture.BuildSnapshot(itemRules);
                 if (TryGetCurrentMultiRoundEnd(out int disconnectedWinner))
                 {
                     yield return StartCoroutine(HandleRoundEnd(disconnectedWinner));
                     yield break;
                 }
-                var initialIntents = BuildActionIntents();
-                var actionOrder = _combatResolver.BuildActionOrder(
-                    initialSnapshot, initialIntents, initialSnapshot.SeatCount);
-                var aggregate = MultiCombatResolution.Create(initialSnapshot.SeatCount);
-                System.Array.Copy(actionOrder, aggregate.ActionOrder, actionOrder.Length);
+                var operation = new MultiAttackOperation(capture, itemRules, initialSnapshot,
+                    _combatResolver, _deathService, _buffSystem, GetDropTable());
                 var roundEnd = default(RoundEndResult);
-                var inventoryMutator = new SeatInventoryMutator(
-                    _players, roster, GetDropTable(), initialSnapshot.SeatCount);
-                var applicator = new MultiCombatApplicator(
-                    roster, _deathService, _buffSystem, inventoryMutator);
-
-                var defenseResolution = _combatResolver.ResolveMultiDefenses(initialSnapshot, initialIntents);
-                if (!applicator.Apply(defenseResolution, initialSnapshot))
+                if (!operation.TryApplyDefenses())
                 {
                     Debug.LogError("[TurnManager] Multi defense preflight failed — stopping attack phase");
                     yield break;
                 }
 
-                for (int orderIndex = 0; orderIndex < actionOrder.Length; orderIndex++)
+                while (operation.HasNext)
                 {
-                    int actorSeat = actionOrder[orderIndex];
-                    var originalIntent = initialIntents[actorSeat];
-                    if (originalIntent.IsEmpty) continue;
-                    var originalItem = _itemManager.GetItemData(originalIntent.ItemId);
-                    if (originalItem is DefenseItemDataSO) continue;
-
-                    var currentIntent = BuildActionIntentForSeat(actorSeat);
-                    if (currentIntent.IsEmpty) continue;
-                    var actionSnapshot = BuildMultiSnapshot(itemRules);
-                    var actionResolution = _combatResolver.ResolveMultiAction(actionSnapshot, currentIntent);
-                    if (actionResolution.EventCount == 0) continue;
-
-                    int[] scoresBefore = CaptureKillScores();
-                    if (!applicator.Apply(actionResolution, actionSnapshot))
+                    if (IsDeathmatchGrantFaulted) yield break;
+                    var step = operation.ApplyNext();
+                    if (step.Failed)
                     {
-                        Debug.LogError($"[TurnManager] Multi action preflight failed: seat={actorSeat}, item={currentIntent.ItemId}");
+                        Debug.LogError($"[TurnManager] Multi action preflight failed: seat={step.ActorSeat}, item={step.ItemId}");
                         yield break;
                     }
-                    AppendCommittedResolution(aggregate, actionResolution, actorSeat);
-                    _deathService.ConsumeDeathMask();
-
-                    byte matchWinners = FindNewMultiWinners(scoresBefore);
-                    if (matchWinners != 0)
+                    if (!step.Committed) continue;
+                    // Commit, attributed deaths, score and winner latch stay synchronous.
+                    if (step.WinnerMask != 0)
                     {
-                        LatchMultiVictory(matchWinners);
+                        LatchMultiVictory(step.WinnerMask);
                         break;
                     }
-
-                    TryGrantDeathmatchItems();
+                    if (!TryGrantDeathmatchItems()) yield break;
                     roundEnd = _deathService.EvaluateRoundEnd();
                     if (roundEnd.IsRoundOver) break;
                 }
 
-                var finalSnapshot = BuildMultiSnapshot(itemRules);
-                for (int i = 0; i < aggregate.TemperatureDeltas.Length; i++)
-                    aggregate.TemperatureDeltas[i] = finalSnapshot.CurrentTemperatures[i]
-                        - initialSnapshot.CurrentTemperatures[i];
+                var aggregate = operation.Finish();
 
                 byte roundWinnerMask = roundEnd.IsRoundOver && !roundEnd.IsDraw
                     ? (byte)(1 << roundEnd.WinnerSeat)
@@ -1043,9 +964,7 @@ namespace AbsoluteZero.Core.Turn
 
                 if (mcr != null)
                 {
-                    var expectedIds = new List<ulong>();
-                    foreach (var p in mcr.Registry.Players)
-                        expectedIds.Add(p.Identity.ClientId);
+                    var expectedIds = GetPresentationViewers(mcr);
                     if (!_barrier.Begin(_resultSequence, expectedIds))
                     {
                         Debug.LogError($"[TurnManager] Multi presentation overlap rejected (seq={_resultSequence})");
@@ -1055,19 +974,19 @@ namespace AbsoluteZero.Core.Turn
 
                 OnMultiCombatResultClientRpc(batchData);
 
+                var schedule = MultiPresentationSchedule.Build(batchData,
+                    id => _itemManager?.GetItemData(id)?.AnimDuration ?? 0f,
+                    id => _itemManager?.GetItemData(id)?.Category == ItemCategory.Defense);
                 float timeout = Mathf.Max(presentationTimeoutSeconds,
-                    2f + aggregate.EventCount * 3f + CountBits(aggregate.DeadMask) * 2f);
+                    schedule.BarrierBudgetSeconds);
                 yield return StartCoroutine(_barrier.WaitForCompletion(timeout));
 
                 if (_barrier.State == BarrierState.TimedOut)
                     Debug.LogWarning($"[TurnManager] Barrier timed out (seq={_resultSequence}) — proceeding");
 
-                var summaryMulti = new System.Text.StringBuilder($"Turn{TurnNumber.Value}");
-                for (int i = 0; i < _players.Length; i++)
-                    if (_players[i] != null)
-                        summaryMulti.Append($" | P{i}: {_tempsAtTurnStart[i]:F1}→{_players[i].Temperature.Value:F1}°");
-                summaryMulti.Append(roundEnd.IsRoundOver ? $" | ROUND OVER (winner={roundEnd.WinnerSeat})" : " | continue");
-                PublishDebugLog(summaryMulti.ToString());
+                string summaryMulti = TurnResultOperations.MultiSummary(TurnNumber.Value, _players,
+                    _tempsAtTurnStart, roundEnd);
+                PublishDebugLog(summaryMulti);
 
                 if (_multiTerminalWinnerMask != 0)
                 {
@@ -1076,7 +995,7 @@ namespace AbsoluteZero.Core.Turn
                 }
 
                 yield return _waitOne;
-                if (!IsSpawned) yield break;
+                if (!IsSpawned || IsDeathmatchGrantFaulted) yield break;
 
                 yield return StartCoroutine(MultiResolutionPhaseRoutine(roundEnd));
             }
@@ -1089,19 +1008,14 @@ namespace AbsoluteZero.Core.Turn
                     _players[0], _players[1], _modifiers, _tempSystem, _buffSystem,
                     ActiveEnvironment.Value, snapshot, ref _resultSequence, GetDropTable());
 
-                string summary = $"Turn{TurnNumber.Value}" +
-                    $" | P0: {mainNames[0]}(sub:{subNames[0]}) P1: {mainNames[1]}(sub:{subNames[1]})" +
-                    $" | P0: {_tempsAtTurnStart[0]:F1}→{_players[0].Temperature.Value:F1}°" +
-                    $" P1: {_tempsAtTurnStart[1]:F1}→{_players[1].Temperature.Value:F1}°" +
-                    $" | {(result.WinnerIndex >= 0 ? $"P{result.WinnerIndex} WINS" : "no death")}";
+                string summary = TurnResultOperations.DuelSummary(TurnNumber.Value, mainNames, subNames,
+                    _players, _tempsAtTurnStart, result.WinnerIndex);
                 PublishDebugLog(summary);
 
                 var mcr = MatchCompositionRoot.Instance;
                 if (mcr != null)
                 {
-                    var expectedIds = new List<ulong>();
-                    foreach (var p in mcr.Registry.Players)
-                        expectedIds.Add(p.Identity.ClientId);
+                    var expectedIds = GetPresentationViewers(mcr);
                     if (!_barrier.Begin(result.ResultSequence, expectedIds))
                     {
                         Debug.LogError($"[TurnManager] 1v1 presentation overlap rejected (seq={result.ResultSequence})");
@@ -1140,9 +1054,7 @@ namespace AbsoluteZero.Core.Turn
                 yield break;
             }
 
-            for (int i = 0; i < _players.Length; i++)
-                if (_players[i] != null)
-                    _players[i].GetInventory().CompactSlots();
+            TurnResultOperations.CompactInventories(_players);
 
             yield return _waitOne;
             if (!IsSpawned) yield break;
@@ -1158,7 +1070,7 @@ namespace AbsoluteZero.Core.Turn
 
         IEnumerator MultiResolutionPhaseRoutine(RoundEndResult roundEnd)
         {
-            if (!IsSpawned) yield break;
+            if (!IsSpawned || IsDeathmatchGrantFaulted) yield break;
             if (_multiTerminalWinnerMask != 0 || _multiRoundEndInProgress) yield break;
             // Re-read after the presentation wait: the roster may have changed.
             roundEnd = _deathService.EvaluateRoundEnd();
@@ -1171,43 +1083,44 @@ namespace AbsoluteZero.Core.Turn
                 yield break;
             }
 
-            for (int i = 0; i < _players.Length; i++)
-                if (_players[i] != null)
-                    _players[i].GetInventory().CompactSlots();
+            TurnResultOperations.CompactInventories(_players);
 
             yield return _waitOne;
-            if (!IsSpawned) yield break;
+            if (!IsSpawned || IsDeathmatchGrantFaulted) yield break;
 
             if (TurnNumber.Value == 1 && ActiveEnvironment.Value == EnvironmentType.None)
             {
                 yield return StartCoroutine(EnvironmentAnnouncementRoutine());
-                if (!IsSpawned) yield break;
+                if (!IsSpawned || IsDeathmatchGrantFaulted) yield break;
             }
 
             yield return StartCoroutine(PrepPhaseRoutine());
         }
 
-        IEnumerator GhostKillDeathPresentation(byte deathMask, RoundEndResult roundEnd)
+        IEnumerator GhostKillDeathPresentation(byte deathMask, RoundEndResult roundEnd, uint castId)
         {
             yield return StartCoroutine(PresentMultiDeathsAndWait(
-                deathMask, roundEnd.IsRoundOver, presentationSlotReserved: true));
+                deathMask, roundEnd.IsRoundOver, presentationSlotReserved: true,
+                ghostCastId: castId));
 
+            if (IsDeathmatchGrantFaulted) yield break;
             if (roundEnd.IsRoundOver)
                 yield return StartCoroutine(HandleRoundEnd(roundEnd.IsDraw ? -1 : roundEnd.WinnerSeat));
         }
 
-        IEnumerator GhostTerminalDeathPresentation(byte deathMask)
+        IEnumerator GhostTerminalDeathPresentation(byte deathMask, uint castId)
         {
             if (deathMask != 0)
                 yield return StartCoroutine(PresentMultiDeathsAndWait(
-                    deathMask, true, presentationSlotReserved: true));
+                    deathMask, true, presentationSlotReserved: true,
+                    ghostCastId: castId));
             else
                 _multiPresentationInFlight = false;
             CompleteLatchedMultiMatch(_resultSequence);
         }
 
         IEnumerator PresentMultiDeathsAndWait(byte deathMask, bool endsRound,
-            bool presentationSlotReserved = false)
+            bool presentationSlotReserved = false, uint ghostCastId = 0)
         {
             if (deathMask == 0) yield break;
             if (!presentationSlotReserved)
@@ -1221,6 +1134,7 @@ namespace AbsoluteZero.Core.Turn
             {
                 while (_barrier.IsActive)
                     yield return null;
+                if (IsDeathmatchGrantFaulted) yield break;
 
                 _resultSequence++;
                 var mcr = MatchCompositionRoot.Instance;
@@ -1234,10 +1148,7 @@ namespace AbsoluteZero.Core.Turn
                 }
                 if (mcr != null)
                 {
-                    var expectedIds = new List<ulong>();
-                    foreach (var p in mcr.Registry.Players)
-                        if (mcr.Roster.IsConnected(p.Identity.PlayerIndex))
-                            expectedIds.Add(p.Identity.ClientId);
+                    var expectedIds = GetPresentationViewers(mcr);
                     if (!_barrier.Begin(_resultSequence, expectedIds))
                     {
                         Debug.LogError($"[TurnManager] Death presentation overlap rejected (seq={_resultSequence})");
@@ -1245,7 +1156,7 @@ namespace AbsoluteZero.Core.Turn
                     }
                 }
 
-                PresentMultiDeathsRpc(deathMask, endsRound, _resultSequence);
+                PresentMultiDeathsRpc(deathMask, endsRound, _resultSequence, ghostCastId);
 
                 yield return StartCoroutine(_barrier.WaitForCompletion(presentationTimeoutSeconds));
 
@@ -1262,7 +1173,8 @@ namespace AbsoluteZero.Core.Turn
 
         IEnumerator HandleRoundEnd(int winnerIndex)
         {
-            if (!IsSpawned) yield break;
+            _prepInput.Close();
+            if (!IsSpawned || IsDeathmatchGrantFaulted) yield break;
             if (IsMulti)
             {
                 if (_multiTerminalWinnerMask != 0 || _multiRoundEndInProgress) yield break;
@@ -1331,6 +1243,11 @@ namespace AbsoluteZero.Core.Turn
                     yield break;
                 }
 
+                // Solo has one human connection and no opponent vote. MatchComplete
+                // remains published until an explicit replay/exit owns cleanup.
+                if (MatchCompositionRoot.Instance?.ActiveConfig?.Mode == Network.GameMode.Solo)
+                    yield break;
+
                 _matchManager.DisconnectedMask = _matchManager.BuildInitialDisconnectMask();
 
                 if (_matchManager.DisconnectedMask != 0)
@@ -1368,6 +1285,7 @@ namespace AbsoluteZero.Core.Turn
 
         void CompleteLatchedMultiMatch(uint decidingSequence)
         {
+            _prepInput.Close();
             if (!IsServer || !IsMulti || _multiTerminalWinnerMask == 0) return;
 
             var networkState = MatchCompositionRoot.Instance?.NetworkState;
@@ -1411,86 +1329,224 @@ namespace AbsoluteZero.Core.Turn
         }
 
         [Rpc(SendTo.Server)]
-        public void UseGhostSkillRpc(byte skillIndex, byte targetSeat, RpcParams rpcParams = default)
+        public void UseGhostSkillRpc(byte skillIndex, byte targetSeat, uint matchEpoch,
+            uint roundEpoch, int turn, uint requestId, RpcParams rpcParams = default)
         {
-            if (!IsServer || !IsMulti) return;
-            if (_multiTerminalWinnerMask != 0) return;
-            if (_multiPresentationInFlight || (_barrier?.IsActive ?? false)) return;
-            if (_gameRule == null || !_gameRule.EnableGhostSystem) return;
-            if (_ghostSkillService == null) return;
-            if (CurrentPhase.Value != TurnPhase.PrepPhase) return;
-
+            if (!IsServer) return;
             ulong senderId = rpcParams.Receive.SenderClientId;
+            if (IsDeathmatchGrantInProgress)
+            {
+                ReplyGhostSkillRequest(senderId, matchEpoch, requestId, GhostSkillRequestResult.InputClosed);
+                return;
+            }
             var mcr = MatchCompositionRoot.Instance;
-            if (mcr == null) return;
-
-            var roster = mcr.Roster;
-            var nState = mcr.NetworkState;
-            if (roster == null || nState == null) return;
-
-            if (!roster.TryGetSeatByClientId(senderId, out byte ghostSeat)) return;
-            if (ghostSeat >= _players.Length || _players[ghostSeat] == null) return;
-            if (!roster.IsConnected(ghostSeat)) return;
-            if (_players[ghostSeat].CurrentLifeState.Value != LifeState.Ghost) return;
-
-            int seatCount = _players.Length;
-            if (targetSeat >= seatCount || targetSeat == ghostSeat) return;
-            if (!roster.IsConnected(targetSeat)) return;
-            if (roster.GetLifeState(targetSeat) != LifeState.Alive) return;
-
-            bool success = false;
-            if (skillIndex == GhostSkillService.SKILL_FROST_STRIKE)
+            var roster = mcr?.Roster;
+            var nState = mcr?.NetworkState;
+            if (!IsMulti || nState == null || roster == null || _ghostSkillService == null
+                || _gameRule == null || !_gameRule.EnableGhostSystem)
             {
-                int[] scoresBefore = CaptureKillScores();
-                success = _ghostSkillService.TryUseFrostStrike(
-                    ghostSeat, targetSeat, nState, _deathService, _players, roster, TurnNumber.Value);
+                ReplyGhostSkillRequest(senderId, matchEpoch, requestId, GhostSkillRequestResult.InvalidContext);
+                return;
+            }
 
-                if (success)
+            if (matchEpoch != nState.GhostMatchEpoch.Value
+                || roundEpoch != nState.GhostRoundEpoch.Value
+                || turn != TurnNumber.Value || requestId == 0)
+            {
+                ReplyGhostSkillRequest(senderId, matchEpoch, requestId, GhostSkillRequestResult.InvalidContext);
+                return;
+            }
+
+            if (_ghostRequests.TryGet(senderId, requestId, out var previous))
+            {
+                ReplyGhostSkillRequest(senderId, matchEpoch, requestId, previous);
+                return;
+            }
+            if (_ghostRequests.IsStale(senderId, requestId))
+            {
+                ReplyGhostSkillRequest(senderId, matchEpoch, requestId, GhostSkillRequestResult.StaleRequest);
+                return;
+            }
+
+            GhostSkillRequestResult outcome;
+            if (_multiTerminalWinnerMask != 0)
+                outcome = GhostSkillRequestResult.MatchEnded;
+            else if (!_ghostInputOpen || _ghostRoundEndTriggered || _multiRoundEndInProgress
+                || CurrentPhase.Value != TurnPhase.PrepPhase)
+                outcome = GhostSkillRequestResult.InputClosed;
+            else if (!roster.TryGetSeatByClientId(senderId, out byte ghostSeat)
+                || ghostSeat >= _players.Length || _players[ghostSeat] == null
+                || !roster.IsConnected(ghostSeat)
+                || _players[ghostSeat].CurrentLifeState.Value != LifeState.Ghost)
+                outcome = GhostSkillRequestResult.InvalidActor;
+            else if (targetSeat >= _players.Length || targetSeat == ghostSeat
+                || !roster.IsConnected(targetSeat)
+                || roster.GetLifeState(targetSeat) != LifeState.Alive)
+                outcome = GhostSkillRequestResult.InvalidTarget;
+            else
+            {
+                var ledger = _ghostSkillService.Ledger;
+                bool success = false;
+                uint castId = 0;
+                if (skillIndex == GhostSkillService.SKILL_GRUDGE)
                 {
-                    byte ghostKillMask = _deathService?.ConsumeDeathMask() ?? 0;
-                    byte matchWinners = FindNewMultiWinners(scoresBefore);
-                    if (matchWinners != 0)
+                    if ((ledger.GhostDamageMask & (1 << targetSeat)) != 0)
+                        outcome = GhostSkillRequestResult.TargetAlreadyAffected;
+                    else if (!ledger.CanUseGrudge(ghostSeat, targetSeat))
+                        outcome = GhostSkillRequestResult.Unavailable;
+                    else
                     {
-                        LatchMultiVictory(matchWinners);
-                        GhostSkillUsedClientRpc(ghostSeat, skillIndex, targetSeat);
-                        _multiPresentationInFlight = true;
-                        StartCoroutine(GhostTerminalDeathPresentation(ghostKillMask));
-                        return;
+                        int[] scoresBefore = CaptureKillScores();
+                        success = _ghostSkillService.TryUseGrudge(
+                            ghostSeat, targetSeat, nState, _deathService, _players, roster);
+                        outcome = success ? GhostSkillRequestResult.Accepted
+                            : GhostSkillRequestResult.InvalidTarget;
+                        if (success)
+                        {
+                            castId = ++_nextGhostCastId;
+                            if (castId == 0) castId = ++_nextGhostCastId;
+                            GhostSkillUsedClientRpc(ghostSeat, skillIndex, targetSeat, castId);
+                            byte ghostKillMask = _deathService.ConsumeDeathMask();
+                            byte matchWinners = FindNewMultiWinners(scoresBefore);
+                            if (matchWinners != 0)
+                            {
+                                LatchMultiVictory(matchWinners);
+                                _ghostInputOpen = false;
+                                RecordAndReplyGhostRequest(senderId, matchEpoch, requestId, outcome);
+                                _multiPresentationInFlight = true;
+                                StartCoroutine(GhostTerminalDeathPresentation(ghostKillMask, castId));
+                                return;
+                            }
+
+                            if (!TryGrantDeathmatchItems())
+                            {
+                                RecordAndReplyGhostRequest(senderId, matchEpoch, requestId, outcome);
+                                return;
+                            }
+                            var roundEnd = _deathService.EvaluateRoundEnd();
+                            if (roundEnd.IsRoundOver)
+                            {
+                                _ghostRoundEndTriggered = true;
+                                _ghostInputOpen = false;
+                            }
+                            if (ghostKillMask != 0)
+                            {
+                                _multiPresentationInFlight = true;
+                                StartCoroutine(GhostKillDeathPresentation(ghostKillMask, roundEnd, castId));
+                            }
+                            else if (roundEnd.IsRoundOver)
+                                StartCoroutine(HandleRoundEnd(roundEnd.IsDraw ? -1 : roundEnd.WinnerSeat));
+                        }
                     }
-
-                    TryGrantDeathmatchItems();
-                    var roundEnd = _deathService?.EvaluateRoundEnd() ?? default;
-
-                    if (roundEnd.IsRoundOver)
-                        _ghostRoundEndTriggered = true;
-
-                    if (ghostKillMask != 0)
-                    {
-                        _multiPresentationInFlight = true;
-                        StartCoroutine(GhostKillDeathPresentation(ghostKillMask, roundEnd));
-                    }
-                    else if (roundEnd.IsRoundOver)
-                        StartCoroutine(HandleRoundEnd(roundEnd.IsDraw ? -1 : roundEnd.WinnerSeat));
                 }
-            }
-            else if (skillIndex == GhostSkillService.SKILL_CHILL_AURA)
-            {
-                success = _ghostSkillService.TryUseChillAura(
-                    ghostSeat, targetSeat, nState, _modifiers, roster, TurnNumber.Value);
+                else if (skillIndex == GhostSkillService.SKILL_POSSESSION)
+                {
+                    if ((ledger.PossessedMask & (1 << targetSeat)) != 0)
+                        outcome = GhostSkillRequestResult.TargetAlreadyAffected;
+                    else if (!ledger.CanUsePossession(ghostSeat, targetSeat))
+                        outcome = GhostSkillRequestResult.Unavailable;
+                    else
+                    {
+                        success = _ghostSkillService.TryUsePossession(ghostSeat, targetSeat, nState, roster);
+                        outcome = success ? GhostSkillRequestResult.Accepted
+                            : GhostSkillRequestResult.InvalidTarget;
+                        if (success)
+                        {
+                            castId = ++_nextGhostCastId;
+                            if (castId == 0) castId = ++_nextGhostCastId;
+                        }
+                    }
+                }
+                else
+                    outcome = GhostSkillRequestResult.Unavailable;
+
+                if (success && skillIndex == GhostSkillService.SKILL_POSSESSION)
+                    GhostSkillUsedClientRpc(ghostSeat, skillIndex, targetSeat, castId);
             }
 
-            if (success)
-                GhostSkillUsedClientRpc(ghostSeat, skillIndex, targetSeat);
+            RecordAndReplyGhostRequest(senderId, matchEpoch, requestId, outcome);
+        }
+
+        void RecordAndReplyGhostRequest(ulong senderId, uint epoch, uint requestId,
+            GhostSkillRequestResult result)
+        {
+            _ghostRequests.Record(senderId, requestId, result);
+            ReplyGhostSkillRequest(senderId, epoch, requestId, result);
+        }
+
+        void ReplyGhostSkillRequest(ulong senderId, uint epoch, uint requestId,
+            GhostSkillRequestResult result)
+            => GhostSkillRequestResultClientRpc(senderId, epoch, requestId, (byte)result);
+
+        [Rpc(SendTo.Everyone)]
+        void GhostSkillRequestResultClientRpc(ulong recipient, uint epoch, uint requestId, byte result)
+        {
+            if (NetworkManager == null || NetworkManager.LocalClientId != recipient) return;
+            var currentEpoch = MatchCompositionRoot.Instance?.NetworkState?.GhostMatchEpoch.Value ?? 0;
+            if (currentEpoch != epoch) return;
+            OnGhostSkillRequestResult?.Invoke(requestId, (GhostSkillRequestResult)result);
         }
 
         [Rpc(SendTo.Everyone)]
-        void GhostSkillUsedClientRpc(byte ghostSeat, byte skillIndex, byte targetSeat)
+        void GhostSkillUsedClientRpc(byte ghostSeat, byte skillIndex, byte targetSeat, uint castId)
         {
             Debug.Log($"[Ghost] Skill used: Ghost P{ghostSeat} → P{targetSeat}, skill={skillIndex}");
             OnGhostSkillUsed?.Invoke(ghostSeat, skillIndex, targetSeat);
+            OnGhostSkillUsedSequenced?.Invoke(ghostSeat, skillIndex, targetSeat, castId);
         }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
+        // Synthetic joint-group fixture only; absent from release builds and not exposed by RPC.
+        public bool DebugResolveJointDeathsForValidation()
+        {
+            if (!IsServer || !IsMulti || CurrentPhase.Value != TurnPhase.PrepPhase
+                || _deathService == null || _players == null || _players.Length != 4
+                || _players[2] == null || _players[3] == null
+                || _players[2].CurrentLifeState.Value != LifeState.Alive
+                || _players[3].CurrentLifeState.Value != LifeState.Alive
+                || _multiTerminalWinnerMask != 0 || _multiPresentationInFlight
+                || (_barrier?.IsActive ?? false)) return false;
+            int[] before = CaptureKillScores();
+            _players[2].Temperature.Value = TemperatureSystem.MIN_TEMP;
+            _players[3].Temperature.Value = TemperatureSystem.MIN_TEMP;
+            _deathService.TryKill(2, DamageSource.Create(0, DamageOrigin.Item));
+            _deathService.TryKill(3, DamageSource.Create(1, DamageOrigin.Item));
+            _deathService.FlushDeathQueue();
+            byte mask = FindNewMultiWinners(before);
+            if (mask == 0) return false;
+            LatchMultiVictory(mask);
+            _ghostInputOpen = false;
+            _multiPresentationInFlight = true;
+            StartCoroutine(GhostTerminalDeathPresentation(_deathService.ConsumeDeathMask(), 0));
+            return true;
+        }
+
+        public bool DebugForceTwoGhostsForTopUp(byte firstSeat, byte secondSeat)
+        {
+            if (!IsServer || !IsMulti || firstSeat == secondSeat || _deathService == null
+                || _players == null || firstSeat >= _players.Length || secondSeat >= _players.Length
+                || _players[firstSeat] == null || _players[secondSeat] == null
+                || _players[firstSeat].CurrentLifeState.Value != LifeState.Alive
+                || _players[secondSeat].CurrentLifeState.Value != LifeState.Alive
+                || _multiPresentationInFlight || (_barrier?.IsActive ?? false))
+                return false;
+
+            _players[firstSeat].Temperature.Value = TemperatureSystem.MIN_TEMP;
+            _players[secondSeat].Temperature.Value = TemperatureSystem.MIN_TEMP;
+            if (!_deathService.TryKill(firstSeat, DamageSource.None)
+                || !_deathService.TryKill(secondSeat, DamageSource.None))
+                return false;
+            _deathService.FlushDeathQueue();
+            byte deathMask = _deathService.ConsumeDeathMask();
+            TryGrantDeathmatchItems();
+            var roundEnd = _deathService.EvaluateRoundEnd();
+            if (roundEnd.IsRoundOver) _ghostRoundEndTriggered = true;
+            _multiPresentationInFlight = true;
+            StartCoroutine(GhostKillDeathPresentation(deathMask, roundEnd, 0));
+            Debug.Log($"[MATRIX] FORCE_TWO_GHOSTS mask={deathMask:X2}");
+            return true;
+        }
+
         public bool DebugForceGhostForVisual(byte seat)
         {
             if (!IsServer || !IsMulti || _deathService == null || _players == null
@@ -1507,7 +1563,7 @@ namespace AbsoluteZero.Core.Turn
             var roundEnd = _deathService.EvaluateRoundEnd();
             if (roundEnd.IsRoundOver) _ghostRoundEndTriggered = true;
             _multiPresentationInFlight = true;
-            StartCoroutine(GhostKillDeathPresentation(deathMask, roundEnd));
+            StartCoroutine(GhostKillDeathPresentation(deathMask, roundEnd, 0));
             Debug.Log($"[VISUAL] FORCE_GHOST seat={seat} deathMask={deathMask:X2}");
             return true;
         }
@@ -1554,6 +1610,11 @@ namespace AbsoluteZero.Core.Turn
 
         void BootstrapNewMatch(bool clearTerminalResult)
         {
+            _ghostInputOpen = false;
+            if (clearTerminalResult)
+            {
+                _ghostRequests.Clear();
+            }
             _multiRoundEndInProgress = false;
             _buffSystem.ClearAll();
             ActiveEnvironment.Value = EnvironmentType.None;
@@ -1561,16 +1622,29 @@ namespace AbsoluteZero.Core.Turn
             LastRoundWinner.Value = -1;
             _emoteWindowClosed = false;
             _ghostRoundEndTriggered = false;
-            _deathmatchGranted = false;
+            _deathmatchGrantCoordinator?.BeginRound();
             if (clearTerminalResult)
                 _multiTerminalWinnerMask = 0;
             _multiPresentationInFlight = false;
 
             if (IsMulti)
             {
-                _ghostSkillService?.ClearAll(_modifiers);
                 var nState = MatchCompositionRoot.Instance?.NetworkState;
-                nState?.ServerClearAllCooldowns();
+                if (_ghostSkillService != null && nState != null)
+                {
+                    if (clearTerminalResult)
+                    {
+                        nState.ServerBeginGhostMatch();
+                        _ghostSkillService.BeginMatch(nState, _players.Length);
+                    }
+                    else
+                    {
+                        nState.ServerBeginGhostRound();
+                        _ghostSkillService.BeginRound(nState);
+                    }
+                }
+                else
+                    nState?.ServerClearAllCooldowns();
                 if (clearTerminalResult)
                     nState?.ServerClearTerminalResult();
 
@@ -1597,33 +1671,26 @@ namespace AbsoluteZero.Core.Turn
             }
         }
 
-        void TryGrantDeathmatchItems()
+        bool TryGrantDeathmatchItems()
         {
-            if (_deathmatchGranted || !IsMulti || _gameRule == null) return;
-            if (_gameRule.DeathmatchGrantCount <= 0) return;
-
-            var mcr = MatchCompositionRoot.Instance;
-            var roster = mcr?.Roster;
-            if (roster == null) return;
-
-            int alive = roster.CountAliveForRoundEnd();
-            if (alive != 2) return;
-
-            _deathmatchGranted = true;
-            var im = ItemManager.Instance;
-            if (im == null) return;
-
-            for (int i = 0; i < _players.Length; i++)
+            if (!IsMulti || _gameRule == null || _multiTerminalWinnerMask != 0) return true;
+            var root = MatchCompositionRoot.Instance;
+            var outcome = _deathmatchGrantCoordinator?.TryGrant(root?.Roster, _players,
+                root?.ItemManager, _gameRule, root?.NetworkState, terminal: false)
+                ?? DeathmatchGrantOutcome.Faulted;
+            if (outcome == DeathmatchGrantOutcome.Faulted)
             {
-                if (_players[i] == null) continue;
-                if (_players[i].CurrentLifeState.Value != LifeState.Alive) continue;
-                im.GrantDeathmatchItems(_players[i].GetInventory(), _gameRule);
+                _ghostInputOpen = false;
+                return false;
             }
-            Debug.Log($"[TurnManager] Deathmatch top-up: 2 alive → fill random slots to {_gameRule.MaxRandomItems}");
+            if (outcome == DeathmatchGrantOutcome.Granted)
+                Debug.Log($"[TurnManager] Deathmatch top-up: 2 alive → fill random slots to {_gameRule.MaxRandomItems}");
+            return true;
         }
 
         IEnumerator StartNextRound(bool isDraw = false)
         {
+            if (IsDeathmatchGrantFaulted) yield break;
             if (_multiTerminalWinnerMask != 0)
             {
                 Debug.LogError("[TurnManager] Next round rejected because a Multi terminal winner is latched");
@@ -1721,7 +1788,7 @@ namespace AbsoluteZero.Core.Turn
         {
         }
 
-        public static event System.Action<byte, short> OnOpponentRevealed;
+        public event System.Action<byte, short> OnOpponentRevealed;
 
         [Rpc(SendTo.Everyone)]
         public void RevealOpponentItemClientRpc(byte forPlayerIndex, short opponentItemId)
@@ -1732,20 +1799,11 @@ namespace AbsoluteZero.Core.Turn
         [Rpc(SendTo.Everyone)]
         void TriggerDeathSequenceRpc(int loserIndex, bool endsMatch)
         {
-            var nm = NetworkManager.Singleton;
-            if (nm == null) return;
-            foreach (var kvp in nm.SpawnManager.SpawnedObjects)
-            {
-                var netObj = kvp.Value;
-                if (netObj == null || !netObj.IsPlayerObject) continue;
-                var ps = netObj.GetComponent<PlayerState>();
-                if (ps != null && ps.PlayerIndex == loserIndex)
-                {
-                    var visual = netObj.GetComponent<AZPlayerVisual>();
-                    if (visual != null) visual.PlayDeathSequence(endsMatch);
-                    return;
-                }
-            }
+            var registry = MatchCompositionRoot.Instance?.Registry;
+            if (registry == null || loserIndex < 0 || loserIndex >= 4
+                || !registry.TryGetByPlayerIndex((byte)loserIndex, out var binding)
+                || !binding.IsValid) return;
+            binding.State.GetComponent<AZPlayerVisual>()?.PlayDeathSequence(endsMatch);
         }
 
         [Rpc(SendTo.Everyone)]
@@ -1768,14 +1826,15 @@ namespace AbsoluteZero.Core.Turn
             OnMultiCombatResult?.Invoke(batchData);
         }
 
-        public static event System.Action<byte, bool, uint> OnMultiDeathPresentation;
-        public static event System.Action<Match.MultiMatchOutcome, byte> OnMultiMatchOutcome;
+        public static event System.Action<byte, bool, uint, uint> OnMultiDeathPresentation;
+        public event System.Action<Match.MultiMatchOutcome, byte> OnMultiMatchOutcome;
         public static event System.Action<byte, byte, byte> OnGhostSkillUsed;
+        public static event System.Action<byte, byte, byte, uint> OnGhostSkillUsedSequenced;
 
         [Rpc(SendTo.Everyone)]
-        void PresentMultiDeathsRpc(byte deathMask, bool endsRound, uint presentationId)
+        void PresentMultiDeathsRpc(byte deathMask, bool endsRound, uint presentationId, uint ghostCastId)
         {
-            OnMultiDeathPresentation?.Invoke(deathMask, endsRound, presentationId);
+            OnMultiDeathPresentation?.Invoke(deathMask, endsRound, presentationId, ghostCastId);
         }
 
         [Rpc(SendTo.Everyone)]

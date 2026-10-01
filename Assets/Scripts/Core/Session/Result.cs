@@ -11,7 +11,8 @@ namespace AbsoluteZero.Core.Session
         RelayFailed,
         NetworkStartFailed,
         Timeout,
-        Unexpected
+        Unexpected,
+        RateLimited
     }
 
     public readonly struct Unit

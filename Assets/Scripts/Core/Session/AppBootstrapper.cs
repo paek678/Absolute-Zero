@@ -1,5 +1,6 @@
 using System;
-using AbsoluteZero.Core.Network;
+using AbsoluteZero.Core.Solo;
+using Unity.Netcode;
 using UnityEngine;
 
 namespace AbsoluteZero.Core.Session
@@ -10,6 +11,8 @@ namespace AbsoluteZero.Core.Session
 
         public bool IsReady { get; private set; }
         public event Action OnReady;
+        public MatchSessionRouter SessionRouter { get; } = new();
+        public SoloSessionCoordinator SoloSession { get; private set; }
 
         void Awake()
         {
@@ -22,11 +25,11 @@ namespace AbsoluteZero.Core.Session
             }
         }
 
-        async void Start()
+        void Start()
         {
             try
             {
-                await InitializeSequenceAsync();
+                InitializeLocalServices();
             }
             catch (Exception e)
             {
@@ -36,30 +39,25 @@ namespace AbsoluteZero.Core.Session
 
         void OnDestroy()
         {
-            if (Instance == this) Instance = null;
+            if (Instance != this) return;
+            SoloSession?.Dispose();
+            Instance = null;
         }
 
-        async System.Threading.Tasks.Task InitializeSequenceAsync()
+        void InitializeLocalServices()
         {
-            Debug.Log("[AppBootstrapper] Initialization sequence starting...");
-
             var coordinator = NetworkSessionCoordinator.Instance;
-            if (coordinator == null)
+            var network = NetworkManager.Singleton;
+            if (coordinator == null || network == null)
             {
-                Debug.LogError("[AppBootstrapper] NetworkSessionCoordinator not found on Managers");
+                Debug.LogError("[AppBootstrapper] Local network components are missing");
                 return;
             }
 
-            await coordinator.InitializeAsync();
-
-            if (coordinator.State == SessionState.Failed)
-            {
-                Debug.LogError($"[AppBootstrapper] Coordinator init failed: {coordinator.LastError}");
-                return;
-            }
-
+            coordinator.Router = SessionRouter;
+            SoloSession = new SoloSessionCoordinator(SessionRouter, new NgoLocalHostRuntime(network));
             IsReady = true;
-            Debug.Log("[AppBootstrapper] Initialization complete — all systems ready");
+            Debug.Log("[AppBootstrapper] Local services ready; online services initialize on demand");
             OnReady?.Invoke();
         }
     }

@@ -100,7 +100,7 @@ namespace AbsoluteZero.Core.Combat
                 var before = inv.SlotStates[i];
                 if (before.IsEmpty || before.IsUnlimited) continue;
                 var existing = inv.GetItemData(i);
-                if (existing == null || existing.SlotType != ItemSlotType.Sub) continue;
+                if (!InventoryMutationCalculations.CanReroll(before, existing != null ? existing.SlotType : (ItemSlotType?)null)) continue;
 
                 var replacement = _dropTable.Roll();
                 short replacementId = FindItemId(replacement);
@@ -124,7 +124,7 @@ namespace AbsoluteZero.Core.Combat
                     {
                         var change = changes[i];
                         queue?.InvalidateSlot((byte)change.Index);
-                        inv.SlotStates[change.Index] = change.After;
+                        inv.SlotStates[change.Index] = inv.AssignNewCopyId(change.After);
                     }
                     Debug.Log($"[SeatInventoryMutator] Applied prepared reroll: target={targetSeat}, slots={changes.Count}");
                     return true;
@@ -146,7 +146,7 @@ namespace AbsoluteZero.Core.Combat
             for (int i = 0; i < targetInv.SlotStates.Count; i++)
             {
                 var slot = targetInv.SlotStates[i];
-                if (!slot.IsEmpty && !slot.IsUnlimited)
+                if (InventoryMutationCalculations.IsFiniteCopy(slot) && ItemAvailability.IsEnabled(targetInv.GetItemData(i)))
                     occupied.Add(i);
             }
 
@@ -160,13 +160,15 @@ namespace AbsoluteZero.Core.Combat
             int targetSlot = occupied[UnityEngine.Random.Range(0, occupied.Count)];
             var targetBefore = targetInv.SlotStates[targetSlot];
             int actorSlot = FindSlot(actorInv, targetBefore.ItemId);
+            var placement = InventoryMutationCalculations.PlaceStolen(
+                actorSlot >= 0 ? actorInv.SlotStates[actorSlot] : null,
+                targetBefore.RemainingUses, actorInv.SlotStates.Count, MaxInventorySlots);
 
-            if (actorSlot >= 0 && !actorInv.SlotStates[actorSlot].IsUnlimited)
+            if (placement.Destination == StealDestination.Stack)
             {
                 var actorBefore = actorInv.SlotStates[actorSlot];
                 var actorAfter = actorBefore;
-                actorAfter.RemainingUses = (byte)Mathf.Min(
-                    actorBefore.RemainingUses + targetBefore.RemainingUses, 254);
+                actorAfter.RemainingUses = placement.StackedUses;
                 plan = new InventoryMutationPlan(InventoryMutationType.StealFromTarget, false, () =>
                 {
                     if (actorSlot >= actorInv.SlotStates.Count
@@ -184,7 +186,7 @@ namespace AbsoluteZero.Core.Combat
                 return true;
             }
 
-            if (actorInv.SlotStates.Count >= MaxInventorySlots)
+            if (placement.Destination == StealDestination.None)
             {
                 plan = NoOpPlan(InventoryMutationType.StealFromTarget,
                     $"[SeatInventoryMutator] Prepared steal cannot fit target item: actor={actorSeat}");
@@ -199,7 +201,7 @@ namespace AbsoluteZero.Core.Combat
                     || !targetInv.SlotStates[targetSlot].Equals(targetBefore))
                     return false;
 
-                actorInv.SlotStates.Add(targetBefore);
+                actorInv.SlotStates.Add(actorInv.AssignNewCopyId(targetBefore));
                 targetInv.GetComponent<PlayerState>()?.GetActionQueue()?.InvalidateSlot((byte)targetSlot);
                 targetInv.SlotStates[targetSlot] = ItemSlotNetData.Empty;
                 Debug.Log($"[SeatInventoryMutator] Applied prepared steal: actor={actorSeat}, target={targetSeat}, slot={targetSlot}, appended={expectedActorCount}");

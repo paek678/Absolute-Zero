@@ -14,34 +14,12 @@ namespace AbsoluteZero.Core.Item.Data
 
         public override ItemEffectOutcome ComputeEffect(ItemContext ctx)
         {
-            var outcome = new ItemEffectOutcome();
-
-            if (EqualizeToUserTemp)
-            {
-                float diff = ctx.Target.Temperature.Value - ctx.User.Temperature.Value;
-                Debug.Log($"[COMBAT] AttackItem '{ItemName}': EQUALIZE mode — P{ctx.UserIndex}({ctx.User.Temperature.Value:F1}°) → P{ctx.TargetIndex}({ctx.Target.Temperature.Value:F1}°), diff={diff:F1}");
-                if (diff > 0f)
-                {
-                    outcome.TargetDamage = diff;
-                    outcome.TargetDamageFilter = AttackFilter;
-                    outcome.TargetDefenseCheck = ctx.TargetModifiers.ActiveDefense;
-                }
-                else if (diff < 0f)
-                {
-                    outcome.TargetHeal = -diff;
-                }
-                else
-                {
-                    Debug.Log($"[COMBAT] AttackItem '{ItemName}': EQUALIZE — same temp, no effect");
-                }
-                return outcome;
-            }
-
-            Debug.Log($"[COMBAT] AttackItem '{ItemName}': P{ctx.UserIndex} → P{ctx.TargetIndex}, damage={Damage}, filter={AttackFilter}");
-            outcome.TargetDamage = Damage;
-            outcome.TargetDamageFilter = AttackFilter;
-            outcome.TargetDefenseCheck = ctx.TargetModifiers.ActiveDefense;
-            return outcome;
+            Debug.Log($"[COMBAT] AttackItem '{ItemName}': P{ctx.UserIndex} → P{ctx.TargetIndex}, damage={Damage}, filter={AttackFilter}, equalize={EqualizeToUserTemp}");
+            float userTemperature = EqualizeToUserTemp ? ctx.User.Temperature.Value : 0f;
+            float targetTemperature = EqualizeToUserTemp ? ctx.Target.Temperature.Value : 0f;
+            return ItemEffectCalculations.Attack(Damage, AttackFilter, EqualizeToUserTemp,
+                userTemperature, targetTemperature,
+                !EqualizeToUserTemp || targetTemperature > userTemperature ? ctx.TargetModifiers.ActiveDefense : null);
         }
     }
 }

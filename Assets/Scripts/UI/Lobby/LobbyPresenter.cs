@@ -16,6 +16,8 @@ namespace AbsoluteZero.UI.LobbyUI
         readonly LobbyRoomView _roomView;
         readonly LobbySettingsView _settingsView;
         readonly ClosetView _closetView;
+        readonly ClosetPresenter _closet;
+        readonly SoloSelectionPresenter _solo;
 
         LobbyManager _lobbyManager;
         NetworkSessionCoordinator _coordinator;
@@ -23,19 +25,27 @@ namespace AbsoluteZero.UI.LobbyUI
         LobbyViewState _currentState;
         bool _disposed;
         string _myPlayerId;
+        MatchSessionRouter Router => _coordinator?.Router ?? AppBootstrapper.Instance?.SessionRouter;
+        bool CanReceiveOnlineEvents => !_disposed && _coordinator != null && _coordinator.OwnsOnlineSession;
+        bool CanCompleteOnlineRequest(MatchSessionLease lease)
+            => !_disposed && lease != null && _coordinator != null && ReferenceEquals(lease, _coordinator.OnlineLease)
+                && (_coordinator.IsCurrentSession(lease)
+                    || (Router?.Current == null && _coordinator.State == SessionState.Failed));
 
         public LobbyPresenter(
             LobbyMainView mainView,
             LobbyModeSelectView modeSelectView,
             LobbyRoomView roomView,
             LobbySettingsView settingsView,
-            ClosetView closetView)
+            ClosetView closetView, SoloSelectionPresenter solo = null, ClosetPresenter closet = null)
         {
             _mainView = mainView;
             _modeSelectView = modeSelectView;
             _roomView = roomView;
             _settingsView = settingsView;
             _closetView = closetView;
+            _solo = solo;
+            _closet = closet;
         }
 
         public void Initialize(LobbyManager lobbyManager, NetworkSessionCoordinator coordinator)
@@ -53,6 +63,9 @@ namespace AbsoluteZero.UI.LobbyUI
             _coordinator.OnStateChanged += OnCoordinatorStateChanged;
 
             _mainView.OnArenaClicked += HandleArenaClicked;
+            _mainView.OnSoloClicked += HandleSoloClicked;
+            if (_solo != null) _solo.Closed += HandleSoloClosed;
+            if (Router != null) Router.Changed += HandleSessionChanged;
             _mainView.OnClosetClicked += HandleClosetClicked;
             _mainView.OnSettingsClicked += HandleSettingsClicked;
             _mainView.OnNicknameEndEdit += HandleNicknameEndEdit;
@@ -73,10 +86,7 @@ namespace AbsoluteZero.UI.LobbyUI
 
             _settingsView.OnCloseClicked += HandleSettingsClose;
 
-            _closetView.OnTabChanged += HandleClosetTabChanged;
-            _closetView.OnEquipClicked += HandleClosetEquip;
-            _closetView.OnUnequipClicked += HandleClosetUnequip;
-            _closetView.OnCloseClicked += HandleClosetClose;
+            if (_closet != null) _closet.CloseCompleted += HandleClosetClose;
 
             SetState(LobbyViewState.Main);
         }
@@ -102,6 +112,9 @@ namespace AbsoluteZero.UI.LobbyUI
             }
 
             _mainView.OnArenaClicked -= HandleArenaClicked;
+            _mainView.OnSoloClicked -= HandleSoloClicked;
+            if (_solo != null) _solo.Closed -= HandleSoloClosed;
+            if (Router != null) Router.Changed -= HandleSessionChanged;
             _mainView.OnClosetClicked -= HandleClosetClicked;
             _mainView.OnSettingsClicked -= HandleSettingsClicked;
             _mainView.OnNicknameEndEdit -= HandleNicknameEndEdit;
@@ -118,17 +131,15 @@ namespace AbsoluteZero.UI.LobbyUI
 
             _settingsView.OnCloseClicked -= HandleSettingsClose;
 
-            _closetView.OnTabChanged -= HandleClosetTabChanged;
-            _closetView.OnEquipClicked -= HandleClosetEquip;
-            _closetView.OnUnequipClicked -= HandleClosetUnequip;
-            _closetView.OnCloseClicked -= HandleClosetClose;
+            if (_closet != null) _closet.CloseCompleted -= HandleClosetClose;
+            _closet?.SetActive(false);
         }
 
         #region State Machine
 
         public void SetState(LobbyViewState newState)
         {
-            if (_disposed) return;
+            if (_disposed || Router?.IsSolo == true || _solo?.IsBusy == true) return;
 
             _mainView.SetVisible(newState == LobbyViewState.Main);
             _modeSelectView.SetVisible(newState == LobbyViewState.ModeSelect);
@@ -138,8 +149,9 @@ namespace AbsoluteZero.UI.LobbyUI
 
             _currentState = newState;
 
-            if (newState == LobbyViewState.Closet)
-                RefreshClosetItems(_closetView.CurrentTab);
+            _closet?.SetActive(newState == LobbyViewState.Closet);
+            if (newState == LobbyViewState.SoloSelect) _solo?.Open();
+            else _solo?.Hide();
 
             if (newState == LobbyViewState.Room)
             {
@@ -152,15 +164,36 @@ namespace AbsoluteZero.UI.LobbyUI
 
         #region View Action Handlers
 
-        void HandleArenaClicked()
+        void HandleSessionChanged()
         {
             if (_disposed) return;
+            _mainView.SetBusy(_solo?.IsBusy == true || Router?.Current != null);
+            if (Router?.Current == null && _currentState != LobbyViewState.SoloSelect) SetState(LobbyViewState.Main);
+        }
+
+        void HandleSoloClicked()
+        {
+            if (_disposed || _currentState != LobbyViewState.Main || Router?.Current != null || _solo?.IsBusy == true) return;
+            if (_solo == null) { _mainView.SetStatus("봇 선택 화면이 연결되지 않았습니다."); return; }
+            SetState(LobbyViewState.SoloSelect);
+        }
+
+        void HandleSoloClosed()
+        {
+            if (_disposed) return;
+            SetState(LobbyViewState.Main);
+            _mainView.SetBusy(Router?.Current != null);
+        }
+
+        void HandleArenaClicked()
+        {
+            if (_disposed || Router?.Current != null) return;
             SetState(LobbyViewState.ModeSelect);
         }
 
         void HandleClosetClicked()
         {
-            if (_disposed) return;
+            if (_disposed || _currentState != LobbyViewState.Main || Router?.Current != null || _solo?.IsBusy == true) return;
             SetState(LobbyViewState.Closet);
         }
 
@@ -197,14 +230,19 @@ namespace AbsoluteZero.UI.LobbyUI
             _roomView.SetCreateInteractable(false);
             _roomView.SetStatus("로비 생성 중...");
 
-            var result = await _coordinator.CreateLobbyAsync();
-
-            if (_disposed) return;
-            if (result.IsFailure)
+            var task = _coordinator.CreateLobbyAsync();
+            var lease = _coordinator.OnlineLease;
+            try
             {
-                _roomView.SetCreateInteractable(true);
-                _roomView.SetStatus("로비 생성 실패");
+                var result = await task;
+                if (!CanCompleteOnlineRequest(lease)) return;
+                if (result.IsFailure)
+                {
+                    _roomView.SetCreateInteractable(true);
+                    _roomView.SetStatus($"로비 생성 실패: {result.ErrorMessage}");
+                }
             }
+            catch (Exception e) { if (CanCompleteOnlineRequest(lease)) OnLobbyError(e.Message); }
         }
 
         async void HandleJoinClicked(string code)
@@ -226,15 +264,20 @@ namespace AbsoluteZero.UI.LobbyUI
             _roomView.SetJoinInteractable(false);
             _roomView.SetStatus($"로비 참가 중 ({code})...");
 
-            var result = await _coordinator.JoinGameAsync(code);
-
-            if (_disposed) return;
-            if (result.IsFailure)
+            var task = _coordinator.JoinGameAsync(code);
+            var lease = _coordinator.OnlineLease;
+            try
             {
-                _roomView.SetStatus($"참가 실패: {result.ErrorMessage}");
-                _roomView.ResetJoinInput();
-                _roomView.SetJoinInteractable(true);
+                var result = await task;
+                if (!CanCompleteOnlineRequest(lease)) return;
+                if (result.IsFailure)
+                {
+                    _roomView.SetStatus($"참가 실패: {result.ErrorMessage}");
+                    _roomView.ResetJoinInput();
+                    _roomView.SetJoinInteractable(true);
+                }
             }
+            catch (Exception e) { if (CanCompleteOnlineRequest(lease)) OnLobbyError(e.Message); }
         }
 
         async void HandleStartClicked()
@@ -253,35 +296,41 @@ namespace AbsoluteZero.UI.LobbyUI
             _roomView.SetStartInteractable(false);
             _roomView.SetStatus("게임 시작 중...");
 
-            var result = await _coordinator.StartMatchAsHostAsync();
-
-            if (_disposed) return;
-            if (result.IsFailure)
+            var task = _coordinator.StartMatchAsHostAsync();
+            var lease = _coordinator.OnlineLease;
+            try
             {
-                _roomView.SetStatus($"시작 실패: {result.ErrorMessage}");
-                _roomView.SetStartInteractable(true);
+                var result = await task;
+                if (!CanCompleteOnlineRequest(lease)) return;
+                if (result.IsFailure)
+                {
+                    _roomView.SetStatus($"시작 실패: {result.ErrorMessage}");
+                    _roomView.SetStartInteractable(true);
+                }
             }
+            catch (Exception e) { if (CanCompleteOnlineRequest(lease)) OnLobbyError(e.Message); }
         }
 
         async void HandleLeaveClicked()
         {
             if (_disposed || _coordinator == null) return;
             _roomView.SetStatus("로비 퇴장 중...");
-            await _coordinator.LeaveAsync();
+            try { await _coordinator.LeaveAsync(); }
+            catch (Exception e) { if (CanReceiveOnlineEvents) OnLobbyError(e.Message); }
         }
 
         async void HandleRoomBack()
         {
             if (_disposed) return;
 
-            if (_lobbyManager != null && _lobbyManager.IsInLobby)
+            if (_coordinator != null && _coordinator.OwnsOnlineSession)
             {
                 _roomView.SetStatus("로비 퇴장 중...");
-                if (_coordinator != null)
-                    await _coordinator.LeaveAsync();
+                try { await _coordinator.LeaveAsync(); }
+                catch (Exception e) { if (CanReceiveOnlineEvents) OnLobbyError(e.Message); return; }
             }
 
-            if (_disposed) return;
+            if (_disposed || Router?.Current != null) return;
             SetState(LobbyViewState.ModeSelect);
         }
 
@@ -291,54 +340,10 @@ namespace AbsoluteZero.UI.LobbyUI
             SetState(LobbyViewState.Main);
         }
 
-        void HandleClosetTabChanged(CosmeticPart part)
+        void HandleClosetClose()
         {
-            if (_disposed) return;
-            RefreshClosetItems(part);
-        }
-
-        void HandleClosetEquip(CosmeticItemSO item)
-        {
-            if (_disposed) return;
-            var service = CosmeticProfileService.Instance;
-            if (service == null) return;
-            service.EquipState.Equip(item);
-            RefreshClosetItems(_closetView.CurrentTab);
-        }
-
-        void HandleClosetUnequip(CosmeticPart part)
-        {
-            if (_disposed) return;
-            var service = CosmeticProfileService.Instance;
-            if (service == null) return;
-            service.EquipState.Unequip(part);
-            RefreshClosetItems(_closetView.CurrentTab);
-        }
-
-        async void HandleClosetClose()
-        {
-            if (_disposed) return;
-
-            var service = CosmeticProfileService.Instance;
-            if (service != null)
-                service.EquipState.Save();
-
-            if (_lobbyManager != null && _lobbyManager.IsInLobby && service != null)
-            {
-                try { await _lobbyManager.SetPlayerCosmeticDataAsync(service.GetCompactDto()); }
-                catch (Exception e) { Debug.LogWarning($"[LobbyPresenter] SetPlayerCosmeticData failed: {e.Message}"); }
-            }
-
-            if (_disposed) return;
-            SetState(LobbyViewState.Main);
-        }
-
-        void RefreshClosetItems(CosmeticPart part)
-        {
-            var service = CosmeticProfileService.Instance;
-            if (service == null || service.Registry == null) return;
-            var items = service.Registry.GetByPart(part);
-            _closetView.RenderItems(items, service.EquipState);
+            if (!_disposed && _currentState == LobbyViewState.Closet)
+                SetState(LobbyViewState.Main);
         }
 
         async void HandleNicknameEndEdit(string raw)
@@ -370,7 +375,7 @@ namespace AbsoluteZero.UI.LobbyUI
 
         void OnLobbyEntered(LobbyModel lobby)
         {
-            if (_disposed) return;
+            if (!CanReceiveOnlineEvents) return;
 
             _myPlayerId = _lobbyManager != null ? _lobbyManager.PlayerId : null;
 
@@ -389,7 +394,7 @@ namespace AbsoluteZero.UI.LobbyUI
 
         void OnLobbyUpdated(LobbyModel lobby)
         {
-            if (_disposed) return;
+            if (!CanReceiveOnlineEvents) return;
             _roomView.RenderPlayerList(lobby, _myPlayerId);
 
             if (_coordinator != null && _coordinator.IsHostRole && _coordinator.State == SessionState.Ready)
@@ -398,7 +403,7 @@ namespace AbsoluteZero.UI.LobbyUI
 
         void OnLobbyLeft()
         {
-            if (_disposed) return;
+            if (!CanReceiveOnlineEvents) return;
             _roomView.ResetAll();
             SetState(LobbyViewState.Main);
             _mainView.SetStatus("준비 완료");
@@ -406,7 +411,7 @@ namespace AbsoluteZero.UI.LobbyUI
 
         void OnLobbyError(string error)
         {
-            if (_disposed) return;
+            if (!CanReceiveOnlineEvents) return;
 
             if (_currentState == LobbyViewState.Room)
                 _roomView.SetStatus($"오류: {error}");
@@ -419,16 +424,19 @@ namespace AbsoluteZero.UI.LobbyUI
 
         void OnCoordinatorError(string error)
         {
-            if (_disposed) return;
+            if (!CanReceiveOnlineEvents) return;
             _roomView.SetStatus($"오류: {error}");
         }
 
         void OnCoordinatorStateChanged(SessionState state, SessionOperation operation)
         {
-            if (_disposed) return;
+            if (!CanReceiveOnlineEvents) return;
 
             switch (state)
             {
+                case SessionState.Initializing:
+                    _roomView.SetStatus("온라인 서비스 연결 중...");
+                    break;
                 case SessionState.Ready:
                     _roomView.SetStatus(_coordinator.LastError ?? "연결 준비 완료");
                     _roomView.SetJoinInteractable(true);

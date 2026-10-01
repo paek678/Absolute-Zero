@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7265e6b1be5865e40908f8fd69e93ebe, type: 3}
+  m_Name: PresentationBot
+  m_EditorClassIdentifier: AbsoluteZero.Core::AbsoluteZero.Core.Solo.Configuration.BotDefinitionSO
+  configId: test.solo.presentation.bot
+  version: 1
+  displayName: T01 validation bot
+  cosmetics:
+    Head: hat_01
+    Top: 
+    Back: 
+    Bottom: 
+    Tail: 
+  graph: {fileID: -5310520695434230741, guid: 2187b9856184b7843b344e866b6cc340, type: 2}
+  baseStats: {fileID: 11400000, guid: a46037ef60e48584ab65261fc39876e2, type: 2}
+  itemUsePolicy: {fileID: 11400000, guid: 2aee666ff869f5f41adc5fbe1580ca5e, type: 2}
+  tacticalDefaults:
+    Survival: 1
+    Finish: 1
+    Counter: 1
+    Resource: 1
+    General: 1

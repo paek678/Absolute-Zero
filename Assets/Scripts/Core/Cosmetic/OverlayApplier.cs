@@ -20,7 +20,7 @@ namespace AbsoluteZero.Core.Cosmetic
                 if (sr != null && baseSr != null)
                 {
                     sr.sortingLayerID = baseSr.sortingLayerID;
-                    sr.material = baseSr.material;
+                    sr.sharedMaterial = baseSr.sharedMaterial;
                     sr.flipX = baseSr.flipX;
                     sr.flipY = baseSr.flipY;
                 }
@@ -39,7 +39,7 @@ namespace AbsoluteZero.Core.Cosmetic
                 if (baseSr != null)
                 {
                     sr.sortingLayerID = baseSr.sortingLayerID;
-                    sr.material = baseSr.material;
+                    sr.sharedMaterial = baseSr.sharedMaterial;
                     sr.flipX = baseSr.flipX;
                     sr.flipY = baseSr.flipY;
                     sr.sortingOrder = baseSr.sortingOrder + item.SortOrderOffset;

@@ -20,7 +20,6 @@ namespace AbsoluteZero.Core.Item
         [SerializeField] short catItemId = 3;
 
         ItemDropTable _dropTable;
-        ItemDropTable _multiDropTable;
 
         public override void OnNetworkSpawn()
         {
@@ -42,6 +41,7 @@ namespace AbsoluteZero.Core.Item
         public override void OnNetworkDespawn()
         {
             if (Instance == this) Instance = null;
+            _dropTable = null;
             base.OnNetworkDespawn();
         }
 
@@ -71,24 +71,21 @@ namespace AbsoluteZero.Core.Item
                 inventory.GrantRandomItems(rule.InitialRandomItems, dropTable, rule.MaxRandomItems);
         }
 
-        public void GrantDeathmatchItems(PlayerInventory inventory, IGameModeRule rule)
+        public bool TryPrepareDeathmatchItems(PlayerInventory inventory, IGameModeRule rule,
+            out PlayerInventory.RandomTopUpPlan plan)
         {
-            if (!IsServer || inventory == null || rule == null) return;
-            if (rule.DeathmatchGrantCount <= 0) return;
-
-            var dropTable = GetRuleAwareDropTable(rule);
-            if (dropTable != null)
-                inventory.FillRandomSlotsWithSeparateCopies(rule.MaxRandomItems, dropTable);
+            plan = null;
+            if (!IsServer || inventory == null || rule == null || rule.DeathmatchGrantCount <= 0)
+                return false;
+            return inventory.TryPrepareRandomTopUp(rule.MaxRandomItems,
+                GetRuleAwareDropTable(rule), out plan);
         }
 
         public ItemDropTable GetRuleAwareDropTable(IGameModeRule rule)
         {
-            if (rule == null || rule.IsTarotAllowed)
-                return _dropTable;
-            if (allItems == null || allItems.Length == 0)
-                return null;
-            return _multiDropTable ??= new ItemDropTable(allItems, item =>
-                !(item is SpecialItemDataSO sp && sp.SpecialEffect == SpecialEffectType.RevealOpponent));
+            // Retain the call boundary and serialized rule flags. The global
+            // content policy now excludes Tarot for duel, Multi and Solo alike.
+            return _dropTable;
         }
 
         public void InitializeClientRegistry(PlayerInventory inventory)

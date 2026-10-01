@@ -64,6 +64,10 @@ namespace AbsoluteZero.UI.Game
 
             _uiManager = gameObject.AddComponent<GameUIManager>();
             _uiManager.Initialize(_bridge, _commands, refs);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "--az-notification-check") >= 0)
+                gameObject.AddComponent<NotificationLifetimeProbe>();
+#endif
 
             Debug.Log("[GameUIRoot] Bridge + Commands + UIManager initialized");
         }
@@ -113,6 +117,12 @@ namespace AbsoluteZero.UI.Game
         {
             try
             {
+                var router = Core.Session.AppBootstrapper.Instance?.SessionRouter;
+                if (router?.Current != null)
+                {
+                    await router.StopAsync();
+                    return; // The active coordinator alone owns shutdown and scene return.
+                }
                 if (Core.Session.NetworkSessionCoordinator.Instance != null)
                     await Core.Session.NetworkSessionCoordinator.Instance.LeaveAsync();
                 else Unity.Netcode.NetworkManager.Singleton?.Shutdown();

@@ -33,7 +33,8 @@ namespace AbsoluteZero.Core.Item
             for (int i = 0; i < allItems.Length; i++)
             {
                 var item = allItems[i];
-                if (item != null && item.DropWeight > 0f && (filter == null || filter(item)))
+                if (ItemAvailability.IsEnabled(item) && item.DropWeight > 0f
+                    && (filter == null || filter(item)))
                 {
                     list.Add(new WeightedItem { Item = item, Weight = item.DropWeight });
                     _totalWeight += item.DropWeight;
@@ -57,6 +58,13 @@ namespace AbsoluteZero.Core.Item
             if (eligibleWeight <= 0f) return null;
 
             float roll = UnityEngine.Random.Range(0f, eligibleWeight);
+            return SelectEligible(eligibility, roll);
+        }
+
+        // Draws remain in Roll. Explicit values make selection independently
+        // characterizable without changing the global RNG stream or predicate order.
+        internal ItemDataSO SelectEligible(Predicate<ItemDataSO> eligibility, float roll)
+        {
             ItemDataSO lastEligible = null;
             for (int i = 0; i < _entries.Length; i++)
             {
@@ -74,6 +82,12 @@ namespace AbsoluteZero.Core.Item
             if (_entries.Length == 0) return null;
 
             float roll = UnityEngine.Random.Range(0f, _totalWeight);
+            return Select(roll);
+        }
+
+        internal ItemDataSO Select(float roll)
+        {
+            if (_entries.Length == 0) return null;
             float cumulative = 0f;
 
             for (int i = 0; i < _entries.Length; i++)

@@ -111,6 +111,13 @@ Docs/ACTIVE_CONTEXT.md
 Docs/RECENT_CHANGES.md
 .mcp.json
 
+# Local Obsidian vault configuration, including its API key.
+/Docs/.obsidian/
+
 # Python harness bytecode
 __pycache__/
 *.py[cod]
+
+# Local validation captures, run logs, and safety snapshots (keep authored evidence summaries in Docs).
+/output/
+/Assets/_Recovery/

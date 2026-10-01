@@ -17,11 +17,7 @@ namespace AbsoluteZero.Core.Item.Data
             Debug.Log($"[COMBAT] DefenseItem '{ItemName}': P{ctx.UserIndex} activated defense — filter={Filter}, block={BlockAmount}");
             return new ItemEffectOutcome
             {
-                SetUserDefense = new DefenseInfo
-                {
-                    Filter = this.Filter,
-                    BlockAmount = this.BlockAmount
-                }
+                SetUserDefense = ItemEffectCalculations.Defense(BlockAmount, Filter)
             };
         }
     }

@@ -22,6 +22,9 @@ namespace AbsoluteZero.Core.Combat
         public bool IsActive => State == BarrierState.Waiting;
         public bool IsComplete => State == BarrierState.Completed;
         public uint CurrentSequence => _currentSequence;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        public int DebugPendingCount => _pendingClients.Count;
+#endif
 
         public bool Begin(uint sequence, IEnumerable<ulong> expectedClientIds)
         {

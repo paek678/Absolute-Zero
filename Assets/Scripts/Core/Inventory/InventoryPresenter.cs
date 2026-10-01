@@ -6,6 +6,7 @@ using AbsoluteZero.Core.Item.Data;
 using AbsoluteZero.Core.Match;
 using AbsoluteZero.Core.Network;
 using AbsoluteZero.Core.Player;
+using AbsoluteZero.Core.Player.Identity;
 using AbsoluteZero.Core.Turn;
 using Unity.Netcode;
 using UnityEngine;
@@ -22,16 +23,38 @@ namespace AbsoluteZero.Core.Inventory
         PlayerState _opponentPlayer;
         PlayerInventory _localInventory;
         PlayerInventory _opponentInventory;
+        PlayerBinding _localBinding;
+        PlayerBinding _opponentBinding;
+        MultiInventoryReadModel _multiInventoryView;
+        bool _boundMulti;
+        BoundInventoryReader _localReader;
+        InventoryViewSnapshot _localSnapshot;
         bool _localBound;
         bool _opponentBound;
 
         // --- Local item views ---
         ItemWorldView[] _localViews;
+        readonly InventoryViewReconciler<ItemWorldView> _localReconciler = new();
+        readonly InventoryViewReconciler<GameObject> _opponentReconciler = new();
+        BoundInventoryReader _opponentReader;
         int _confirmedSlotIndex = -1;
-        int _confirmedItemId = -1;
-        int _pendingItemId = -1;
+        readonly ItemSelectionInteraction _interaction = new();
+        public ItemSelectionStage SelectionStage => _interaction.Stage;
         bool _needsLocalRebuild;
         bool _fullRedistribute;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        bool _debugFullRebuild;
+        public int DebugRebuildCreates { get; private set; }
+        public long DebugMeasureRebuildAllocations(bool full, int iterations)
+        {
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            DebugRebuildCreates = 0;
+            _debugFullRebuild = full;
+            try { for (int i = 0; i < iterations; i++) RebuildLocalViews(); }
+            finally { _debugFullRebuild = false; }
+            return GC.GetAllocatedBytesForCurrentThread() - before;
+        }
+#endif
 
         // --- Rebuild lock (E1: deadlock prevention) ---
         bool _rebuildLocked;
@@ -69,7 +92,10 @@ namespace AbsoluteZero.Core.Inventory
 
         void OnDestroy()
         {
+            DestroyLocalViews();
+            DestroyOpponentViews();
             Unbind();
+            if (_arrowRenderer != null && _arrowRenderer.sprite != null) Destroy(_arrowRenderer.sprite);
             if (_arrowTexture != null) Destroy(_arrowTexture);
             if (_selectionArrow != null) Destroy(_selectionArrow);
             if (Instance == this) Instance = null;
@@ -78,18 +104,33 @@ namespace AbsoluteZero.Core.Inventory
         void Update()
         {
             bool multi = IsMultiMode();
-            if (!_localBound || (!multi && !_opponentBound))
-                TryBindPlayers();
-
-            // E2: auto-detect opponent disconnect
-            if (!multi && _opponentBound && _opponentPlayer == null)
+            bool hasPerspective = LocalMatchPerspective.TryResolveCurrent(out var perspective);
+            if (_localBound && (!hasPerspective || !ReferenceEquals(_localBinding, perspective.HumanBinding)))
+            {
+                DestroyLocalViews();
+                DestroyOpponentViews();
+                Unbind();
+                _rebuildLocked = false;
+                _confirmedSlotIndex = -1;
+                _interaction.Reset();
+                if (_selectionArrow != null) _selectionArrow.SetActive(false);
+            }
+            else if (!multi && _opponentBound && (!hasPerspective
+                || !perspective.TryGetOpponentBinding(out var opponent)
+                || !ReferenceEquals(opponent, _opponentBinding)))
             {
                 DestroyOpponentViews();
                 UnbindOpponent();
             }
 
+            if (!_localBound || (!multi && !_opponentBound))
+                TryBindPlayers();
+
             if (_localBound)
+            {
+                SynchronizeInteraction();
                 HandleClick();
+            }
 
             if (_selectionArrow != null && _selectionArrow.activeSelf)
             {
@@ -154,36 +195,50 @@ namespace AbsoluteZero.Core.Inventory
                 && root.ActiveConfig.Mode == GameMode.Multi;
         }
 
+        int LocalCount => _localSnapshot?.Count ?? 0;
+
+        ItemSlotNetData LocalSlot(int index) => _localSnapshot != null ? _localSnapshot[index] : ItemSlotNetData.Empty;
+        ItemDataSO LocalItem(int index) => ItemManager.Instance?.GetItemData(LocalSlot(index).ItemId);
+
         void TryBindLocal()
         {
-            var localObj = NetworkManager.Singleton.SpawnManager?.GetLocalPlayerObject();
-            if (localObj == null) return;
-
-            var ps = localObj.GetComponent<PlayerState>();
-            if (ps == null) return;
+            if (!LocalMatchPerspective.TryResolveCurrent(out var perspective)) return;
+            var ps = perspective.HumanBinding.State;
 
             var inv = ps.GetInventory();
-            if (inv == null || inv.SlotStates == null || inv.SlotStates.Count == 0) return;
+            if (inv == null || inv.SlotStates == null) return;
             if (ItemManager.Instance == null) return;
+            var multiView = IsMultiMode()
+                ? MatchCompositionRoot.Instance?.NetworkState?.InventoryReadModel : null;
+            if (IsMultiMode() && (multiView == null || !multiView.HasSeat(ps.PlayerIndex)
+                || multiView.GetCount(ps.PlayerIndex) == 0)) return;
+            if (!IsMultiMode() && inv.SlotStates.Count == 0) return;
 
             if (!inv.IsRegistryReady)
                 ItemManager.Instance.InitializeClientRegistry(inv);
             if (!inv.IsRegistryReady) return;
 
             _localPlayer = ps;
+            _localBinding = perspective.HumanBinding;
             _localInventory = inv;
+            _multiInventoryView = multiView;
+            _boundMulti = multiView != null;
+            _localReader = new BoundInventoryReader(_localBinding, multiView);
+            _localReader.TryRead(out _localSnapshot);
 
             if (HoverRaycaster.Instance == null)
                 gameObject.AddComponent<HoverRaycaster>();
 
-            _localInventory.SlotStates.OnListChanged += OnLocalSlotStatesChanged;
+            if (IsMultiMode()) _multiInventoryView.Changed += OnMultiInventoryChanged;
+            else _localInventory.SlotStates.OnListChanged += OnLocalSlotStatesChanged;
             _localPlayer.HasSelectedItem.OnValueChanged += OnHasSelectedItemChanged;
             _localPlayer.IsBasicBlocked.OnValueChanged += OnBasicBlockedChanged;
+            _localPlayer.OnItemSelectionRejected += OnItemSelectionRejected;
 
             _localBound = true;
 
             // E5: snapshot — items may already exist before subscription
-            if (_localInventory.SlotStates.Count > 0)
+            if (LocalCount > 0)
                 _needsLocalRebuild = true;
 
             Debug.Log($"[InventoryPresenter] Local bound — {inv.SlotStates.Count} slots");
@@ -191,13 +246,9 @@ namespace AbsoluteZero.Core.Inventory
 
         void TryBindOpponent()
         {
-            var players = FindObjectsByType<PlayerState>(FindObjectsSortMode.None);
-            PlayerState opp = null;
-            foreach (var p in players)
-            {
-                if (p != _localPlayer) { opp = p; break; }
-            }
-            if (opp == null) return;
+            if (!LocalMatchPerspective.TryResolveCurrent(out var perspective)
+                || !perspective.TryGetOpponentBinding(out var opponent)) return;
+            var opp = opponent.State;
 
             var inv = opp.GetInventory();
             if (inv == null || inv.SlotStates == null || inv.SlotStates.Count == 0) return;
@@ -207,7 +258,9 @@ namespace AbsoluteZero.Core.Inventory
                 ItemManager.Instance.InitializeClientRegistry(inv);
 
             _opponentPlayer = opp;
+            _opponentBinding = opponent;
             _opponentInventory = inv;
+            _opponentReader = new BoundInventoryReader(opponent);
 
             _opponentInventory.SlotStates.OnListChanged += OnOpponentSlotStatesChanged;
             _opponentBound = true;
@@ -229,16 +282,40 @@ namespace AbsoluteZero.Core.Inventory
 
         void UnbindLocal()
         {
-            if (_localInventory != null && _localInventory.SlotStates != null)
+            if (_multiInventoryView != null)
+                _multiInventoryView.Changed -= OnMultiInventoryChanged;
+            else if (_localInventory != null && _localInventory.SlotStates != null)
                 _localInventory.SlotStates.OnListChanged -= OnLocalSlotStatesChanged;
 
             if (_localPlayer != null)
             {
                 _localPlayer.HasSelectedItem.OnValueChanged -= OnHasSelectedItemChanged;
                 _localPlayer.IsBasicBlocked.OnValueChanged -= OnBasicBlockedChanged;
+                _localPlayer.OnItemSelectionRejected -= OnItemSelectionRejected;
             }
 
             _localBound = false;
+            _localBinding = null;
+            _localPlayer = null;
+            _localInventory = null;
+            _needsLocalRebuild = false;
+            _boundMulti = false;
+            _multiInventoryView = null;
+            _localReader = null;
+            _localSnapshot = null;
+            _interaction.Reset();
+            _confirmedSlotIndex = -1;
+        }
+
+        void OnMultiInventoryChanged() => _needsLocalRebuild = true;
+
+        void OnItemSelectionRejected(uint copyId)
+        {
+            SynchronizeInteraction();
+            _interaction.Reject(copyId);
+            ResolveConfirmedSlotByCopyId();
+            UpdateSelectionVisuals();
+            OnSelectionChanged?.Invoke();
         }
 
         void UnbindOpponent()
@@ -247,6 +324,11 @@ namespace AbsoluteZero.Core.Inventory
                 _opponentInventory.SlotStates.OnListChanged -= OnOpponentSlotStatesChanged;
 
             _opponentBound = false;
+            _opponentBinding = null;
+            _opponentPlayer = null;
+            _opponentInventory = null;
+            _opponentReader = null;
+            _needsOpponentRebuild = false;
         }
 
         // ─── Rebuild Lock (E1) ──────────────────────────────────
@@ -260,7 +342,12 @@ namespace AbsoluteZero.Core.Inventory
         public void UnlockRebuild()
         {
             _rebuildLocked = false;
-            if (_needsLocalRebuild)
+            // Combat presentation may be destroyed after the player or match root.
+            // Releasing the lock must not rebuild from disposed network objects.
+            if (!_localBound || _localPlayer == null || !_localPlayer.IsSpawned
+                || _localInventory == null || !_localInventory.IsSpawned)
+                return;
+            if (_needsLocalRebuild && CanRebuild())
             {
                 _needsLocalRebuild = false;
                 RebuildLocalViews();
@@ -276,6 +363,8 @@ namespace AbsoluteZero.Core.Inventory
         bool CanRebuild()
         {
             if (_rebuildLocked) return false;
+            if (MatchCompositionRoot.Instance?.NetworkState?.IsDeathmatchGrantViewBlocked == true) return false;
+            if (_localInventory != null && _localInventory.TopUpCommitInProgress) return false;
             if (IceboxController.Instance != null && IceboxController.Instance.IsAnimating) return false;
             return true;
         }
@@ -311,10 +400,15 @@ namespace AbsoluteZero.Core.Inventory
 
         void HandleLocalSlotValueChange(int index)
         {
+            if (!CanRebuild()) { _needsLocalRebuild = true; return; }
             if (_localViews == null || index < 0 || index >= _localViews.Length)
                 return;
 
-            var slot = _localInventory.SlotStates[index];
+            if (_localReader == null || !_localReader.TryRead(out var snapshot)) return;
+            if (snapshot[index].CopyId != LocalSlot(index).CopyId)
+            { _needsLocalRebuild = true; return; }
+            _localSnapshot = snapshot;
+            var slot = LocalSlot(index);
 
             if (slot.IsEmpty)
             {
@@ -328,7 +422,7 @@ namespace AbsoluteZero.Core.Inventory
                 return;
             }
 
-            var itemData = _localInventory.GetItemData(index);
+            var itemData = LocalItem(index);
             string currentName = _localViews[index].gameObject.name;
             string expectedName = itemData != null ? $"Item_{index}_{itemData.ItemName}" : "";
             if (currentName != expectedName)
@@ -353,11 +447,7 @@ namespace AbsoluteZero.Core.Inventory
 
         void OnHasSelectedItemChanged(bool oldVal, bool newVal)
         {
-            if (!newVal)
-            {
-                _confirmedSlotIndex = -1;
-                _confirmedItemId = -1;
-            }
+            SynchronizeInteraction();
             UpdateSelectionVisuals();
             OnSelectionChanged?.Invoke();
         }
@@ -373,6 +463,8 @@ namespace AbsoluteZero.Core.Inventory
 
         void RebuildLocalViews()
         {
+            if (_localReader == null || !_localReader.TryRead(out var snapshot)) return;
+            _localSnapshot = snapshot;
             bool animateAll = _fullRedistribute;
             _fullRedistribute = false;
 
@@ -383,16 +475,17 @@ namespace AbsoluteZero.Core.Inventory
                     if (_localViews[i] != null) previousSlots.Add(i);
             }
 
-            DestroyLocalViews();
-
+            // Same copy keeps its object; full rebuild remains a legacy fallback.
             // E4: re-locate confirmed item by ItemId after rebuild
             _confirmedSlotIndex = -1;
-
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (_debugFullRebuild) DestroyLocalViews();
+#endif
             SpawnLocalViews();
 
             // E4: restore confirmed slot by ItemId
-            if (_confirmedItemId >= 0 && _localPlayer != null && _localPlayer.HasSelectedItem.Value)
-                ResolveConfirmedSlotByItemId();
+            if (_interaction.CopyId != 0 && _localPlayer != null && _localPlayer.HasSelectedItem.Value)
+                ResolveConfirmedSlotByCopyId();
 
             if (animateAll)
                 TriggerIceboxAnimation();
@@ -407,60 +500,64 @@ namespace AbsoluteZero.Core.Inventory
 
         void SpawnLocalViews()
         {
-            int count = _localInventory.SlotStates.Count;
-            _localViews = new ItemWorldView[count];
-
-            int randomMarker = 0;
-            int basicMarker = 0;
-
-            for (int i = 0; i < count; i++)
+            var result = _localReconciler.Reconcile(_localSnapshot,
+                (index, slot) => CreateLocalView(index, ItemManager.Instance?.GetItemData(slot.ItemId)),
+                (view, index, slot) => view.RefreshItem(index, ItemManager.Instance.GetItemData(slot.ItemId),
+                    slot.IsUnlimited ? "∞" : $"{slot.RemainingUses}", slot.IsUsable),
+                DestroyLocalView, view => view != null);
+            if (result == null)
             {
-                var slot = _localInventory.SlotStates[i];
-                if (slot.IsEmpty) continue;
-
-                var itemData = _localInventory.GetItemData(i);
-                if (itemData == null) continue;
-
-                string markerName;
-                if (itemData.Persistence == ItemPersistence.RandomConsumable)
-                {
-                    markerName = $"PlayerItem{randomMarker + 1}";
-                    randomMarker++;
-                }
-                else
-                {
-                    markerName = $"PlayerItem{9 + basicMarker}";
-                    basicMarker++;
-                }
-
-                var go = new GameObject();
-                go.transform.SetParent(transform, false);
-
-                var marker = GameObject.Find(markerName);
-                if (marker != null)
-                    go.transform.position = marker.transform.position;
-                else
-                {
-                    float totalWidth = (count - 1) * FALLBACK_SPACING;
-                    go.transform.localPosition = new Vector3(
-                        -totalWidth / 2f + i * FALLBACK_SPACING, FALLBACK_Y, 0f);
-                }
-
-                var view = go.AddComponent<ItemWorldView>();
-                view.Initialize(i, itemData.ItemName, Color.white);
-
-                string uses = slot.IsUnlimited ? "∞" : $"{slot.RemainingUses}";
-                view.UpdateDisplay(itemData.ItemName, uses, slot.IsUsable);
-
-                _localViews[i] = view;
+                DestroyLocalViews();
+                result = new ItemWorldView[LocalCount];
+                for (int i = 0; i < result.Length; i++)
+                    if (!LocalSlot(i).IsEmpty) result[i] = CreateLocalView(i, LocalItem(i));
             }
+            _localViews = result;
+            int random = 0, basic = 0;
+            for (int i = 0; i < _localViews.Length; i++)
+            {
+                var view = _localViews[i];
+                if (view == null) continue;
+                int marker = view.Item.Persistence == ItemPersistence.RandomConsumable ? random++ : 8 + basic++;
+                PositionLocalView(view.transform, marker, i, LocalCount);
+            }
+        }
+
+        ItemWorldView CreateLocalView(int index, ItemDataSO item)
+        {
+            if (item == null) return null;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            DebugRebuildCreates++;
+#endif
+            var go = new GameObject();
+            go.transform.SetParent(transform, false);
+            var view = go.AddComponent<ItemWorldView>();
+            view.InitializeItem(index, item, Color.white);
+            var slot = LocalSlot(index);
+            view.UpdateDisplay(item.ItemName, slot.IsUnlimited ? "∞" : $"{slot.RemainingUses}", slot.IsUsable);
+            return view;
+        }
+
+        void PositionLocalView(Transform target, int markerIndex, int index, int count)
+        {
+            var views = MatchViewBindings.ForScene(gameObject.scene);
+            var marker = views != null ? views.GetItemAnchor(true, markerIndex)
+                : GameObject.Find($"PlayerItem{markerIndex + 1}")?.transform;
+            if (marker != null) target.position = marker.position;
+            else target.localPosition = new Vector3(-(count - 1) * FALLBACK_SPACING / 2f + index * FALLBACK_SPACING, FALLBACK_Y, 0f);
+        }
+
+        static void DestroyLocalView(ItemWorldView view)
+        {
+            if (view == null) return;
+            view.gameObject.SetActive(false);
+            Destroy(view.gameObject);
         }
 
         void DestroyLocalViews()
         {
-            if (_localViews == null) return;
-            foreach (var v in _localViews)
-                if (v != null) Destroy(v.gameObject);
+            _localReconciler.Clear(_ => { });
+            if (_localViews != null) foreach (var view in _localViews) DestroyLocalView(view);
             _localViews = null;
         }
 
@@ -468,59 +565,38 @@ namespace AbsoluteZero.Core.Inventory
 
         void RebuildOpponentItems()
         {
-            if (_opponentInventory == null) return;
-
-            DestroyOpponentViews();
-
-            int slotCount = _opponentInventory.SlotStates.Count;
-            var activeItems = new List<GameObject>();
-
-            int randomMarker = 0;
-            int basicMarker = 0;
-
-            for (int i = 0; i < slotCount; i++)
-            {
-                var slot = _opponentInventory.SlotStates[i];
-                if (slot.IsEmpty) continue;
-
-                var itemData = _opponentInventory.GetItemData(i);
-                if (itemData == null) continue;
-
-                string markerName;
-                if (itemData.Persistence == ItemPersistence.RandomConsumable)
-                {
-                    markerName = $"EnemyItem{randomMarker + 1}";
-                    randomMarker++;
-                }
-                else
-                {
-                    markerName = $"EnemyItem{9 + basicMarker}";
-                    basicMarker++;
-                }
-
-                string itemName = itemData.ItemName;
-                var go = new GameObject($"OppItem_{i}_{itemName}");
-
-                var sr = go.AddComponent<SpriteRenderer>();
-                sr.sprite = GameSprites.GetItemSprite(itemName);
-                sr.sortingOrder = 5;
-
-                var marker = GameObject.Find(markerName);
-                if (marker != null)
-                    go.transform.position = marker.transform.position;
-
-                activeItems.Add(go);
-            }
-
-            _opponentItemObjects = activeItems.ToArray();
+            if (_opponentReader == null || !_opponentReader.TryRead(out var snapshot)) return;
+            int random = 0, basic = 0;
+            _opponentItemObjects = _opponentReconciler.Reconcile(snapshot,
+                (i, slot) => {
+                    if (ItemManager.Instance?.GetItemData(slot.ItemId) == null) return null;
+                    var go = new GameObject();
+                    go.transform.SetParent(transform, false);
+                    go.AddComponent<SpriteRenderer>().sortingOrder = 5;
+                    return go;
+                },
+                (go, i, slot) => {
+                    var item = ItemManager.Instance.GetItemData(slot.ItemId);
+                    go.name = $"OppItem_{i}_{item.ItemName}";
+                    go.GetComponent<SpriteRenderer>().sprite = GameSprites.GetItemSpriteFor(item);
+                    int markerIndex = item.Persistence == ItemPersistence.RandomConsumable ? random++ : 8 + basic++;
+                    var views = MatchViewBindings.ForScene(gameObject.scene);
+                    var marker = views != null ? views.GetItemAnchor(false, markerIndex)
+                        : GameObject.Find($"EnemyItem{markerIndex + 1}")?.transform;
+                    if (marker != null) go.transform.position = marker.position;
+                }, DestroyRemoteView, go => go != null) ?? _opponentItemObjects;
             OnOpponentInventoryChanged?.Invoke();
         }
 
+        static void DestroyRemoteView(GameObject go)
+        {
+            if (go == null) return;
+            go.SetActive(false);
+            Destroy(go);
+        }
         void DestroyOpponentViews()
         {
-            if (_opponentItemObjects == null) return;
-            foreach (var go in _opponentItemObjects)
-                if (go != null) Destroy(go);
+            _opponentReconciler.Clear(DestroyRemoteView);
             _opponentItemObjects = null;
         }
 
@@ -543,11 +619,11 @@ namespace AbsoluteZero.Core.Inventory
 
                 if (!isThisSelected)
                 {
-                    var itemData = _localInventory.GetItemData(i);
+                    var itemData = LocalItem(i);
                     bool isBanned = _localPlayer.IsBasicBlocked.Value
                                     && itemData != null
                                     && itemData.SlotType == ItemSlotType.Main;
-                    bool usable = i < _localInventory.SlotStates.Count && _localInventory.SlotStates[i].IsUsable;
+                    bool usable = LocalSlot(i).IsUsable;
                     _localViews[i].SetInteractable(!isBanned && !hasSelected && usable);
                 }
             }
@@ -611,7 +687,7 @@ namespace AbsoluteZero.Core.Inventory
             {
                 if (_localViews[i] == null) continue;
 
-                var itemData = _localInventory.GetItemData(i);
+                var itemData = LocalItem(i);
                 if (itemData == null) continue;
 
                 bool isBanned = blocked && itemData.SlotType == ItemSlotType.Main;
@@ -625,6 +701,7 @@ namespace AbsoluteZero.Core.Inventory
 
         void HandleClick()
         {
+            if (MatchCompositionRoot.Instance?.NetworkState?.IsDeathmatchGrantViewBlocked == true) return;
             if (Mouse.current == null || !Mouse.current.leftButton.wasPressedThisFrame) return;
 
             var hovered = HoverRaycaster.Instance?.CurrentHovered;
@@ -639,18 +716,19 @@ namespace AbsoluteZero.Core.Inventory
 
         bool CanSelectItem(int slotIndex)
         {
+            if (MatchCompositionRoot.Instance?.NetworkState?.IsDeathmatchGrantViewBlocked == true) return false;
             if (_localPlayer == null) return false;
-            if (_localPlayer.IsReady.Value) return false;
+            if (_localPlayer.IsReady.Value || _interaction.Stage == ItemSelectionStage.AwaitingServer) return false;
 
             if (IceboxController.Instance != null && IceboxController.Instance.IsAnimating) return false;
 
             var tm = TurnManager.Instance;
             if (tm == null || tm.CurrentPhase.Value != TurnPhase.PrepPhase) return false;
 
-            if (slotIndex < 0 || slotIndex >= _localInventory.SlotStates.Count) return false;
-            if (!_localInventory.SlotStates[slotIndex].IsUsable) return false;
+            if (slotIndex < 0 || slotIndex >= LocalCount) return false;
+            if (!LocalSlot(slotIndex).IsUsable) return false;
 
-            var itemData = _localInventory.GetItemData(slotIndex);
+            var itemData = LocalItem(slotIndex);
             if (itemData == null) return false;
 
             if (_localPlayer.IsBasicBlocked.Value && itemData.Persistence == ItemPersistence.Permanent)
@@ -660,58 +738,60 @@ namespace AbsoluteZero.Core.Inventory
             return slotIndex == _confirmedSlotIndex;
         }
 
-        // ─── Confirm Flow (E4: ItemId-based) ────────────────────
+        // Local interaction state uses physical copy identity, never ItemId or slot identity.
+        void SynchronizeInteraction()
+        {
+            var tm = TurnManager.Instance;
+            var before = _interaction.Stage;
+            _interaction.Observe(_localBinding,
+                MatchCompositionRoot.Instance?.MatchManager?.RoundNumber.Value ?? 0,
+                tm != null ? tm.TurnNumber.Value : 0,
+                tm != null && tm.CurrentPhase.Value == TurnPhase.PrepPhase,
+                _localPlayer != null && _localPlayer.HasSelectedItem.Value,
+                _localPlayer != null && _localPlayer.IsReady.Value);
+            ResolveConfirmedSlotByCopyId();
+            if (before != _interaction.Stage) UpdateSelectionVisuals();
+        }
 
         public void RequestItemConfirm(int slotIndex)
         {
-            if (_localInventory == null) return;
-            if (slotIndex < 0 || slotIndex >= _localInventory.SlotStates.Count) return;
-            _pendingItemId = _localInventory.SlotStates[slotIndex].ItemId;
-            OnItemConfirmRequested?.Invoke(slotIndex, _pendingItemId);
+            SynchronizeInteraction();
+            if (!CanSelectItem(slotIndex) || !_interaction.Aim(LocalSlot(slotIndex).CopyId)) return;
+            OnItemConfirmRequested?.Invoke(slotIndex, LocalSlot(slotIndex).ItemId);
         }
 
-        public int ResolvePendingSlotIndex()
+        public int ResolvePendingSlotIndex() => _interaction.Stage == ItemSelectionStage.Aiming
+            ? _localSnapshot?.FindCopy(_interaction.CopyId) ?? -1 : -1;
+
+        public ulong BeginItemSubmission(int slotIndex)
         {
-            if (_pendingItemId < 0 || _localInventory == null) return -1;
-            for (int i = 0; i < _localInventory.SlotStates.Count; i++)
-                if (_localInventory.SlotStates[i].ItemId == _pendingItemId)
-                    return i;
-            return -1;
+            SynchronizeInteraction();
+            return CanSelectItem(slotIndex) ? _interaction.Submit(LocalSlot(slotIndex).CopyId) : 0;
         }
 
-        public void NotifyItemConfirmed(int slotIndex)
+        public void CompleteItemSubmission(ulong generation, bool sent)
         {
-            _confirmedSlotIndex = slotIndex;
-            if (_localInventory != null && slotIndex >= 0 && slotIndex < _localInventory.SlotStates.Count)
-                _confirmedItemId = _localInventory.SlotStates[slotIndex].ItemId;
-            _pendingItemId = -1;
+            if (!sent) _interaction.DispatchFailed(generation);
+            SynchronizeInteraction();
             UpdateSelectionVisuals();
         }
 
-        public void CancelPendingItem()
+        public void NotifyMiniGameFinished(bool success)
         {
-            _pendingItemId = -1;
+            SynchronizeInteraction();
+            // The server response releases failure. Releasing here could admit a
+            // retry before the old same-CopyId rejection arrives.
+            ResolveConfirmedSlotByCopyId();
+            UpdateSelectionVisuals();
         }
 
-        public bool IsConfirmedSlot(int slotIndex)
-        {
-            return _localPlayer != null && _localPlayer.HasSelectedItem.Value
-                && slotIndex == _confirmedSlotIndex;
-        }
+        public void CancelPendingItem() => _interaction.CancelAim();
 
-        void ResolveConfirmedSlotByItemId()
-        {
-            for (int i = 0; i < _localInventory.SlotStates.Count; i++)
-            {
-                if (_localInventory.SlotStates[i].ItemId == _confirmedItemId)
-                {
-                    _confirmedSlotIndex = i;
-                    return;
-                }
-            }
-            _confirmedSlotIndex = -1;
-            _confirmedItemId = -1;
-        }
+        public bool IsConfirmedSlot(int slotIndex) => _localPlayer != null && _localPlayer.HasSelectedItem.Value
+            && !_localPlayer.IsReady.Value && slotIndex == _confirmedSlotIndex;
+
+        void ResolveConfirmedSlotByCopyId() => _confirmedSlotIndex =
+            _interaction.CopyId != 0 ? _localSnapshot?.FindCopy(_interaction.CopyId) ?? -1 : -1;
 
         // ─── Icebox Animation ───────────────────────────────────
 
@@ -757,18 +837,16 @@ namespace AbsoluteZero.Core.Inventory
 
         // ─── Accessors ──────────────────────────────────────────
 
-        public int LocalSlotCount => _localInventory?.SlotStates?.Count ?? 0;
+        public int LocalSlotCount => LocalCount;
 
         public ItemSlotNetData GetLocalSlot(int index)
         {
-            if (_localInventory == null || index < 0 || index >= _localInventory.SlotStates.Count)
-                return ItemSlotNetData.Empty;
-            return _localInventory.SlotStates[index];
+            return LocalSlot(index);
         }
 
         public ItemDataSO GetLocalItemData(int index)
         {
-            return _localInventory?.GetItemData(index);
+            return LocalItem(index);
         }
 
         public ItemWorldView GetLocalView(int index)
@@ -783,6 +861,14 @@ namespace AbsoluteZero.Core.Inventory
             foreach (var v in _localViews)
                 if (v != null && v.gameObject.name.Contains(nameFragment))
                     return v.transform;
+            return null;
+        }
+
+        public Transform FindLocalView(ItemDataSO item)
+        {
+            if (item == null || _localViews == null) return null;
+            foreach (var view in _localViews)
+                if (view != null && view.Item == item) return view.transform;
             return null;
         }
 
