@@ -100,7 +100,7 @@ MonoBehaviour:
   Graphs:
   - rid: 2503091644929671410
   m_DebugInfo: {fileID: 2812620193214149252}
-  m_WasCompileWithPlaceholderNode: 0
+  m_WasCompileWithPlaceholderNode: 1
   references:
     version: 2
     RefIds:
@@ -117,8 +117,8 @@ MonoBehaviour:
           rid: 2503091644929671411
         BlackboardGroupReferences: []
         Root:
-          rid: 2503091644929671541
-        m_VersionTimestamp: 639262465284194446
+          rid: 3734561693282598912
+        m_VersionTimestamp: 639266638176205231
     - rid: 2503091644929671411
       type: {class: BlackboardReference, ns: Unity.Behavior, asm: Unity.Behavior}
       data:
@@ -129,16 +129,14 @@ MonoBehaviour:
       type: {class: Blackboard, ns: Unity.Behavior, asm: Unity.Behavior}
       data:
         m_Variables:
-        - rid: 2503091644929671414
-    - rid: 2503091644929671414
-      type: {class: 'BlackboardVariable`1[[UnityEngine.GameObject, UnityEngine.CoreModule]]', ns: Unity.Behavior, asm: Unity.Behavior}
-      data:
-        GUID:
-          m_Value0: 1
-          m_Value1: 0
-        Name: Self
-        m_Value: {fileID: 0}
-    - rid: 2503091644929671541
+        - rid: 3734561693282598914
+        - rid: 3734561693282598915
+        - rid: 3734561693282598916
+        - rid: 3734561693282598917
+        - rid: 3734561693282598918
+        - rid: 3734561693282598919
+        - rid: 3734561693282598920
+    - rid: 3734561693282598912
       type: {class: Start, ns: Unity.Behavior, asm: Unity.Behavior}
       data:
         ID:
@@ -149,10 +147,10 @@ MonoBehaviour:
         m_Parent:
           rid: -2
         m_Child:
-          rid: 2503091644929671542
+          rid: 3734561693282598913
         Repeat: 0
         AllowMultipleRepeatsPerTick: 0
-    - rid: 2503091644929671542
+    - rid: 3734561693282598913
       type: {class: SelectorComposite, ns: Unity.Behavior, asm: Unity.Behavior}
       data:
         ID:
@@ -161,13 +159,68 @@ MonoBehaviour:
         Graph:
           rid: 2503091644929671410
         m_Parent:
-          rid: 2503091644929671541
+          rid: 3734561693282598912
         m_Children:
-        - rid: 2503091644929671543
-        - rid: 2503091644929671544
+        - rid: 3734561693282598921
         m_RegisteredObservers: []
-    - rid: 2503091644929671543
-      type: {class: SoloRetry, ns: AbsoluteZero.Core.Solo, asm: AbsoluteZero.Core}
+    - rid: 3734561693282598914
+      type: {class: 'BlackboardVariable`1[[UnityEngine.GameObject, UnityEngine.CoreModule]]', ns: Unity.Behavior, asm: Unity.Behavior}
+      data:
+        GUID:
+          m_Value0: 1
+          m_Value1: 0
+        Name: Self
+        m_Value: {fileID: 0}
+    - rid: 3734561693282598915
+      type: {class: 'BlackboardVariable`1[[System.Int32, mscorlib]]', ns: Unity.Behavior, asm: Unity.Behavior}
+      data:
+        GUID:
+          m_Value0: 16387590026185240991
+          m_Value1: 8604161192171239579
+        Name: Round
+        m_Value: 0
+    - rid: 3734561693282598916
+      type: {class: 'BlackboardVariable`1[[System.Int32, mscorlib]]', ns: Unity.Behavior, asm: Unity.Behavior}
+      data:
+        GUID:
+          m_Value0: 12557743456043678541
+          m_Value1: 15198175942916973272
+        Name: Turn
+        m_Value: 0
+    - rid: 3734561693282598917
+      type: {class: 'BlackboardVariable`1[[System.Single, mscorlib]]', ns: Unity.Behavior, asm: Unity.Behavior}
+      data:
+        GUID:
+          m_Value0: 12059739881861539470
+          m_Value1: 9989865495470712084
+        Name: Own temperature
+        m_Value: 0
+    - rid: 3734561693282598918
+      type: {class: 'BlackboardVariable`1[[System.Single, mscorlib]]', ns: Unity.Behavior, asm: Unity.Behavior}
+      data:
+        GUID:
+          m_Value0: 10425090021425787242
+          m_Value1: 17649454797532248713
+        Name: Opponent temperature
+        m_Value: 0
+    - rid: 3734561693282598919
+      type: {class: 'BlackboardVariable`1[[System.Single, mscorlib]]', ns: Unity.Behavior, asm: Unity.Behavior}
+      data:
+        GUID:
+          m_Value0: 8412946760198880259
+          m_Value1: 6971789250166759624
+        Name: Remaining seconds
+        m_Value: 0
+    - rid: 3734561693282598920
+      type: {class: 'BlackboardVariable`1[[System.String, mscorlib]]', ns: Unity.Behavior, asm: Unity.Behavior}
+      data:
+        GUID:
+          m_Value0: 160916087200712349
+          m_Value1: 18187025951826881353
+        Name: Selected copy
+        m_Value: 
+    - rid: 3734561693282598921
+      type: {class: SequenceComposite, ns: Unity.Behavior, asm: Unity.Behavior}
       data:
         ID:
           m_Value0: 2372587764802397858
@@ -175,20 +228,11 @@ MonoBehaviour:
         Graph:
           rid: 2503091644929671410
         m_Parent:
-          rid: 2503091644929671542
-        m_Child:
-          rid: 2503091644929671545
-    - rid: 2503091644929671544
-      type: {class: SoloFallback, ns: AbsoluteZero.Core.Solo, asm: AbsoluteZero.Core}
-      data:
-        ID:
-          m_Value0: 17710490821332637746
-          m_Value1: 10085012272837565467
-        Graph:
-          rid: 2503091644929671410
-        m_Parent:
-          rid: 2503091644929671542
-    - rid: 2503091644929671545
+          rid: 3734561693282598913
+        m_Children:
+        - rid: 3734561693282598922
+        m_RegisteredObservers: []
+    - rid: 3734561693282598922
       type: {class: SequenceComposite, ns: Unity.Behavior, asm: Unity.Behavior}
       data:
         ID:
@@ -197,39 +241,11 @@ MonoBehaviour:
         Graph:
           rid: 2503091644929671410
         m_Parent:
-          rid: 2503091644929671543
+          rid: 3734561693282598921
         m_Children:
-        - rid: 2503091644929671546
-        - rid: 2503091644929671547
-        - rid: 2503091644929671548
-        - rid: 2503091644929671549
-        - rid: 2503091644929671550
-        - rid: 2503091644929671551
-        - rid: 2503091644929671552
-        - rid: 2503091644929671553
-        - rid: 2503091644929671554
+        - rid: 3734561693282598923
         m_RegisteredObservers: []
-    - rid: 2503091644929671546
-      type: {class: SoloObserve, ns: AbsoluteZero.Core.Solo, asm: AbsoluteZero.Core}
-      data:
-        ID:
-          m_Value0: 13406795623073832284
-          m_Value1: 6434815517149265262
-        Graph:
-          rid: 2503091644929671410
-        m_Parent:
-          rid: 2503091644929671545
-    - rid: 2503091644929671547
-      type: {class: SoloCandidates, ns: AbsoluteZero.Core.Solo, asm: AbsoluteZero.Core}
-      data:
-        ID:
-          m_Value0: 7373974199242026593
-          m_Value1: 16105989330805612796
-        Graph:
-          rid: 2503091644929671410
-        m_Parent:
-          rid: 2503091644929671545
-    - rid: 2503091644929671548
+    - rid: 3734561693282598923
       type: {class: SelectorComposite, ns: Unity.Behavior, asm: Unity.Behavior}
       data:
         ID:
@@ -238,124 +254,9 @@ MonoBehaviour:
         Graph:
           rid: 2503091644929671410
         m_Parent:
-          rid: 2503091644929671545
-        m_Children:
-        - rid: 2503091644929671555
-        - rid: 2503091644929671556
-        - rid: 2503091644929671557
-        - rid: 2503091644929671558
-        - rid: 2503091644929671559
+          rid: 3734561693282598922
+        m_Children: []
         m_RegisteredObservers: []
-    - rid: 2503091644929671549
-      type: {class: SoloThinking, ns: AbsoluteZero.Core.Solo, asm: AbsoluteZero.Core}
-      data:
-        ID:
-          m_Value0: 10485000009095640031
-          m_Value1: 2843332016087424512
-        Graph:
-          rid: 2503091644929671410
-        m_Parent:
-          rid: 2503091644929671545
-    - rid: 2503091644929671550
-      type: {class: SoloSubmitUse, ns: AbsoluteZero.Core.Solo, asm: AbsoluteZero.Core}
-      data:
-        ID:
-          m_Value0: 6225914569692771954
-          m_Value1: 6788905092324657564
-        Graph:
-          rid: 2503091644929671410
-        m_Parent:
-          rid: 2503091644929671545
-    - rid: 2503091644929671551
-      type: {class: SoloAwaitUse, ns: AbsoluteZero.Core.Solo, asm: AbsoluteZero.Core}
-      data:
-        ID:
-          m_Value0: 17017649765604089833
-          m_Value1: 17652897204860039681
-        Graph:
-          rid: 2503091644929671410
-        m_Parent:
-          rid: 2503091644929671545
-    - rid: 2503091644929671552
-      type: {class: SoloChooseReady, ns: AbsoluteZero.Core.Solo, asm: AbsoluteZero.Core}
-      data:
-        ID:
-          m_Value0: 14052247527435253998
-          m_Value1: 16348290754825057885
-        Graph:
-          rid: 2503091644929671410
-        m_Parent:
-          rid: 2503091644929671545
-    - rid: 2503091644929671553
-      type: {class: SoloWaitReady, ns: AbsoluteZero.Core.Solo, asm: AbsoluteZero.Core}
-      data:
-        ID:
-          m_Value0: 545274711579868403
-          m_Value1: 13763577473310299491
-        Graph:
-          rid: 2503091644929671410
-        m_Parent:
-          rid: 2503091644929671545
-    - rid: 2503091644929671554
-      type: {class: SoloReady, ns: AbsoluteZero.Core.Solo, asm: AbsoluteZero.Core}
-      data:
-        ID:
-          m_Value0: 16175152954631730960
-          m_Value1: 4041286885465366919
-        Graph:
-          rid: 2503091644929671410
-        m_Parent:
-          rid: 2503091644929671545
-    - rid: 2503091644929671555
-      type: {class: SoloSurvival, ns: AbsoluteZero.Core.Solo, asm: AbsoluteZero.Core}
-      data:
-        ID:
-          m_Value0: 11898019052461303774
-          m_Value1: 4941802881237370753
-        Graph:
-          rid: 2503091644929671410
-        m_Parent:
-          rid: 2503091644929671548
-    - rid: 2503091644929671556
-      type: {class: SoloFinish, ns: AbsoluteZero.Core.Solo, asm: AbsoluteZero.Core}
-      data:
-        ID:
-          m_Value0: 18313111836004366692
-          m_Value1: 6141727842461161932
-        Graph:
-          rid: 2503091644929671410
-        m_Parent:
-          rid: 2503091644929671548
-    - rid: 2503091644929671557
-      type: {class: SoloCounter, ns: AbsoluteZero.Core.Solo, asm: AbsoluteZero.Core}
-      data:
-        ID:
-          m_Value0: 6505714050566242696
-          m_Value1: 16285245320006192314
-        Graph:
-          rid: 2503091644929671410
-        m_Parent:
-          rid: 2503091644929671548
-    - rid: 2503091644929671558
-      type: {class: SoloResource, ns: AbsoluteZero.Core.Solo, asm: AbsoluteZero.Core}
-      data:
-        ID:
-          m_Value0: 16088254474755324102
-          m_Value1: 2009543072367572629
-        Graph:
-          rid: 2503091644929671410
-        m_Parent:
-          rid: 2503091644929671548
-    - rid: 2503091644929671559
-      type: {class: SoloGeneral, ns: AbsoluteZero.Core.Solo, asm: AbsoluteZero.Core}
-      data:
-        ID:
-          m_Value0: 13647578759175313675
-          m_Value1: 8805519413527027782
-        Graph:
-          rid: 2503091644929671410
-        m_Parent:
-          rid: 2503091644929671548
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -390,7 +291,7 @@ MonoBehaviour:
   - rid: 2503091644929671439
   - rid: 2503091644929671440
   - rid: 2503091644929671441
-  m_VersionTimestamp: 639262465284194446
+  m_VersionTimestamp: 639266638176205231
   m_SerializedVersion: 3
   m_DebugInfo: {fileID: 2812620193214149252}
   m_RuntimeGraph: {fileID: -828625310525461982}
@@ -431,7 +332,7 @@ MonoBehaviour:
       m_Value1: 11024811887802974208
     Variables: []
     NamedChildren: []
-    IsPlaceholder: 0
+    IsPlaceholder: 1
   - Name: Fallback Ready without item
     Story: Fallback Ready without item
     RuntimeTypeString: AbsoluteZero.Core.Solo.SoloFallback, AbsoluteZero.Core, Version=0.0.0.0,
@@ -441,7 +342,7 @@ MonoBehaviour:
       m_Value1: 432345564227567616
     Variables: []
     NamedChildren: []
-    IsPlaceholder: 0
+    IsPlaceholder: 1
   - Name: Sequence
     Story: 
     RuntimeTypeString: Unity.Behavior.SequenceComposite, Unity.Behavior, Version=0.0.0.0,
@@ -461,7 +362,7 @@ MonoBehaviour:
       m_Value1: 72057594037927936
     Variables: []
     NamedChildren: []
-    IsPlaceholder: 0
+    IsPlaceholder: 1
   - Name: Build legal own item candidates
     Story: Build legal own item candidates
     RuntimeTypeString: AbsoluteZero.Core.Solo.SoloCandidates, AbsoluteZero.Core,
@@ -471,7 +372,7 @@ MonoBehaviour:
       m_Value1: 144115188075855872
     Variables: []
     NamedChildren: []
-    IsPlaceholder: 0
+    IsPlaceholder: 1
   - Name: Wait for bounded thinking
     Story: Wait for bounded thinking
     RuntimeTypeString: AbsoluteZero.Core.Solo.SoloThinking, AbsoluteZero.Core, Version=0.0.0.0,
@@ -481,7 +382,7 @@ MonoBehaviour:
       m_Value1: 504403158265495552
     Variables: []
     NamedChildren: []
-    IsPlaceholder: 0
+    IsPlaceholder: 1
   - Name: Submit delayed item request
     Story: Submit delayed item request
     RuntimeTypeString: AbsoluteZero.Core.Solo.SoloSubmitUse, AbsoluteZero.Core, Version=0.0.0.0,
@@ -491,7 +392,7 @@ MonoBehaviour:
       m_Value1: 216172782113783808
     Variables: []
     NamedChildren: []
-    IsPlaceholder: 0
+    IsPlaceholder: 1
   - Name: Await authoritative item result
     Story: Await authoritative item result
     RuntimeTypeString: AbsoluteZero.Core.Solo.SoloAwaitUse, AbsoluteZero.Core, Version=0.0.0.0,
@@ -501,7 +402,7 @@ MonoBehaviour:
       m_Value1: 576460752303423488
     Variables: []
     NamedChildren: []
-    IsPlaceholder: 0
+    IsPlaceholder: 1
   - Name: Choose Ready timing
     Story: Choose Ready timing
     RuntimeTypeString: AbsoluteZero.Core.Solo.SoloChooseReady, AbsoluteZero.Core,
@@ -511,7 +412,7 @@ MonoBehaviour:
       m_Value1: 288230376151711744
     Variables: []
     NamedChildren: []
-    IsPlaceholder: 0
+    IsPlaceholder: 1
   - Name: Wait for safe Ready time
     Story: Wait for safe Ready time
     RuntimeTypeString: AbsoluteZero.Core.Solo.SoloWaitReady, AbsoluteZero.Core, Version=0.0.0.0,
@@ -521,7 +422,7 @@ MonoBehaviour:
       m_Value1: 648518346341351424
     Variables: []
     NamedChildren: []
-    IsPlaceholder: 0
+    IsPlaceholder: 1
   - Name: Submit authoritative Ready
     Story: Submit authoritative Ready
     RuntimeTypeString: AbsoluteZero.Core.Solo.SoloReady, AbsoluteZero.Core, Version=0.0.0.0,
@@ -531,7 +432,7 @@ MonoBehaviour:
       m_Value1: 360287970189639680
     Variables: []
     NamedChildren: []
-    IsPlaceholder: 0
+    IsPlaceholder: 1
   - Name: Survival tactic
     Story: Survival tactic
     RuntimeTypeString: AbsoluteZero.Core.Solo.SoloSurvival, AbsoluteZero.Core, Version=0.0.0.0,
@@ -541,7 +442,7 @@ MonoBehaviour:
       m_Value1: 1152921504606846976
     Variables: []
     NamedChildren: []
-    IsPlaceholder: 0
+    IsPlaceholder: 1
   - Name: Finish tactic
     Story: Finish tactic
     RuntimeTypeString: AbsoluteZero.Core.Solo.SoloFinish, AbsoluteZero.Core, Version=0.0.0.0,
@@ -551,7 +452,7 @@ MonoBehaviour:
       m_Value1: 1224979098644774912
     Variables: []
     NamedChildren: []
-    IsPlaceholder: 0
+    IsPlaceholder: 1
   - Name: Counter tactic
     Story: Counter tactic
     RuntimeTypeString: AbsoluteZero.Core.Solo.SoloCounter, AbsoluteZero.Core, Version=0.0.0.0,
@@ -561,7 +462,7 @@ MonoBehaviour:
       m_Value1: 1297036692682702848
     Variables: []
     NamedChildren: []
-    IsPlaceholder: 0
+    IsPlaceholder: 1
   - Name: Resource tactic
     Story: Resource tactic
     RuntimeTypeString: AbsoluteZero.Core.Solo.SoloResource, AbsoluteZero.Core, Version=0.0.0.0,
@@ -571,7 +472,7 @@ MonoBehaviour:
       m_Value1: 1369094286720630784
     Variables: []
     NamedChildren: []
-    IsPlaceholder: 0
+    IsPlaceholder: 1
   - Name: General tactic
     Story: General tactic
     RuntimeTypeString: AbsoluteZero.Core.Solo.SoloGeneral, AbsoluteZero.Core, Version=0.0.0.0,
@@ -581,7 +482,7 @@ MonoBehaviour:
       m_Value1: 1441151880758558720
     Variables: []
     NamedChildren: []
-    IsPlaceholder: 0
+    IsPlaceholder: 1
   m_Blackboards: []
   m_MainBlackboardAuthoringAsset: {fileID: 4434663692253202053}
   m_CommandBuffer:
@@ -589,7 +490,7 @@ MonoBehaviour:
   m_SubgraphsInfo: []
   m_BlackboardMissingManagedRef: 0
   m_GraphMissingManagedRef: 0
-  m_HasMissingTypeInManagedRef: 0
+  m_HasMissingTypeInManagedRef: 1
   m_EnumDependencyCache:
     Entries: []
   references:
@@ -1333,8 +1234,8 @@ MonoBehaviour:
   m_Name: SoloDuelDecision Blackboard
   m_EditorClassIdentifier: Unity.Behavior.Authoring::Unity.Behavior.BehaviorBlackboardAuthoringAsset
   AssetID:
-    m_Value0: 0
-    m_Value1: 0
+    m_Value0: 15337617477470511761
+    m_Value1: 17997859087645235658
   m_Variables:
   - rid: 2503091644929671417
   - rid: 2503091644929671478
