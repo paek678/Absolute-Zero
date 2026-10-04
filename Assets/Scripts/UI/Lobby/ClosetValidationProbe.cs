@@ -16,7 +16,7 @@ namespace AbsoluteZero.UI.LobbyUI
     {
         [Serializable] sealed class Report { public bool passed; public string failure; public List<string> checks = new(); }
         string _mode, _directory, _key, _originalSave;
-        bool _hadSave;
+        bool _hadSave, _accessories;
         readonly Report _report = new();
         GameObject _copy;
         ClosetView _view;
@@ -31,6 +31,7 @@ namespace AbsoluteZero.UI.LobbyUI
             var probe = go.AddComponent<ClosetValidationProbe>();
             probe._mode = args[at + 1]; probe._directory = args[at + 2];
             probe._key = "plan037_fixture_" + args[at + 3];
+            probe._accessories = Array.IndexOf(args, "--plan042-accessories") >= 0;
         }
         IEnumerator Start()
         {
@@ -81,6 +82,7 @@ namespace AbsoluteZero.UI.LobbyUI
             {
                 Check(service.Load().Success, "Read isolated persisted key in a new process");
                 Check(service.Snapshot.Head == "hat_01", "Persisted equipped ID survived process restart");
+                if (_accessories) Check(service.Snapshot.Back == "back_03" && service.Snapshot.Tail == "tail_03", "New accessory IDs survived process restart");
             }
             else Check(!PlayerPrefs.HasKey(_key), "Fixture key is new");
             var canvas = GameObject.Find("MainUI").transform;
@@ -184,6 +186,36 @@ namespace AbsoluteZero.UI.LobbyUI
                 yield return Frames(2); yield return PreviewPixels(preview, "part-" + part);
                 binding.Unequip.onClick.Invoke();
                 Check(service.Snapshot.Get(part) == "", "Explicit unequip " + part);
+            }
+            if (_accessories)
+            {
+                binding.Tabs[(int)CosmeticPart.Head].onClick.Invoke(); yield return Frames(2);
+                binding.Content.Find("Item_hat_01").GetComponent<ClosetItemCellBindings>().Button.onClick.Invoke();
+                binding.Equip.onClick.Invoke();
+                for (int back = 1; back <= 3; back++)
+                for (int tail = 1; tail <= 3; tail++)
+                {
+                    foreach (var part in new[] { CosmeticPart.Back, CosmeticPart.Tail })
+                    {
+                        string id = (part == CosmeticPart.Back ? "back_" : "tail_") + (part == CosmeticPart.Back ? back : tail).ToString("00");
+                        binding.Tabs[(int)part].onClick.Invoke(); yield return Frames(2);
+                        var before = service.Snapshot;
+                        var card = binding.Content.Find("Item_" + id)?.GetComponent<ClosetItemCellBindings>();
+                        Check(card != null && card.Button.interactable, "New accessory card available " + id);
+                        card.Button.onClick.Invoke(); yield return Frames(2);
+                        Check(service.Snapshot.Revision == before.Revision, "Accessory selection remains draft " + id);
+                        binding.Equip.onClick.Invoke(); yield return Frames(3);
+                        Check(service.Snapshot.Get(part) == id && service.Snapshot.Head == before.Head && service.Snapshot.Top == before.Top, "Accessory equip affects only selected part " + id);
+                    }
+                    CheckFraming(preview, "accessories-" + back + "-" + tail);
+                    Check(preview.VisualRoot.GetComponentsInChildren<SpriteRenderer>().Count(r => r.enabled && r.name == "_cosmetic_atlas_layer") == 3,
+                        "Exactly hat/back/tail overlays for " + back + "/" + tail);
+                    Check(service.Save().Success, "Accessory snapshot saved");
+                    var loaded = new CosmeticEquipmentService(new CosmeticEquipState(), profile.Registry, store);
+                    Check(loaded.Load().Success && CosmeticCodec.SameIds(loaded.Snapshot.ToDto(), service.Snapshot.ToDto()), "All five parts survive accessory save/load");
+                    yield return PreviewPixels(preview, "accessories-" + back + "-" + tail);
+                }
+                yield return Capture("accessories");
             }
             binding.Tabs[0].onClick.Invoke();
             binding.Content.Find("Item_hat_01").GetComponent<ClosetItemCellBindings>().Button.onClick.Invoke();
@@ -303,6 +335,7 @@ namespace AbsoluteZero.UI.LobbyUI
         IEnumerator PreviewPixels(ClosetPreviewSurface preview, string label)
         {
             yield return new WaitForEndOfFrame();
+            if (_accessories) RenderDiagnosticPreview(preview);
             var old = RenderTexture.active;
             var texture = new Texture2D(preview.Texture.width, preview.Texture.height, TextureFormat.RGB24, false);
             try
@@ -311,14 +344,23 @@ namespace AbsoluteZero.UI.LobbyUI
                 texture.ReadPixels(new Rect(0, 0, texture.width, texture.height), 0, 0); texture.Apply();
                 var pixels = texture.GetPixels32(); var bg = pixels[0]; int changed = 0;
                 foreach (var p in pixels) if (Math.Abs(p.r - bg.r) + Math.Abs(p.g - bg.g) + Math.Abs(p.b - bg.b) > 35) changed++;
-                Check(changed > pixels.Length / 20, "Actual character pixels in private target " + label);
                 File.WriteAllBytes(Path.Combine(_directory, _mode + "-preview-" + label + ".png"), texture.EncodeToPNG());
+                Check(changed > pixels.Length / 20, "Actual character pixels in private target " + label + " pixels=" + changed + "/" + pixels.Length
+                    + " zoom=" + preview.PreviewCamera.orthographicSize + " mask=" + preview.PreviewCamera.cullingMask
+                    + " active=" + preview.VisualRoot.activeInHierarchy + " renderers=" + preview.VisualRoot.GetComponentsInChildren<SpriteRenderer>().Count(r => r.enabled));
             }
             finally { RenderTexture.active = old; Destroy(texture); }
         }
         IEnumerator Capture(string label)
         {
             yield return new WaitForEndOfFrame();
+            if (_accessories)
+            {
+                foreach (var preview in FindObjectsByType<ClosetPreviewSurface>(FindObjectsSortMode.None)) RenderDiagnosticPreview(preview);
+                AbsoluteZero.Core.Solo.SoloLaunchProbe.WriteRender(Path.Combine(_directory, _mode + "-" + label + ".png"));
+                Check(true, "Camera and Canvas diagnostic render " + label);
+                yield break;
+            }
             var texture = ScreenCapture.CaptureScreenshotAsTexture();
             try
             {
@@ -326,6 +368,16 @@ namespace AbsoluteZero.UI.LobbyUI
                 File.WriteAllBytes(Path.Combine(_directory, _mode + "-" + label + ".png"), texture.EncodeToPNG());
             }
             finally { if (texture != null) Destroy(texture); }
+        }
+        static void RenderDiagnosticPreview(ClosetPreviewSurface preview)
+        {
+            // Hidden Windows players may skip regular cameras. Keep this explicit
+            // camera render in the opt-in fixture, never in production UI behavior.
+            if (preview.PreviewCamera == null || preview.Texture == null) return;
+            if (UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline != null)
+                UnityEngine.Rendering.RenderPipeline.SubmitRenderRequest(preview.PreviewCamera,
+                    new UnityEngine.Rendering.RenderPipeline.StandardRequest { destination = preview.Texture });
+            else preview.PreviewCamera.Render();
         }
     }
 }

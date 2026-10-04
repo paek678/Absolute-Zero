@@ -8,6 +8,8 @@ namespace AbsoluteZero.Core.Solo.Configuration
     {
         [SerializeField] string displayName;
         [SerializeField] BotCosmeticIds cosmetics;
+        [SerializeField] AbsoluteZero.Core.Cosmetic.CharacterAppearanceProfileSO appearance;
+        public AbsoluteZero.Core.Cosmetic.CharacterAppearanceProfileSO Appearance => appearance;
         [SerializeField] BehaviorGraph graph;
         [SerializeField] BotStatProfileSO baseStats;
         [SerializeField] BotItemUsePolicySO itemUsePolicy;

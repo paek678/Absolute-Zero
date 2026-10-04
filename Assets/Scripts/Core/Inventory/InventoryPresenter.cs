@@ -513,13 +513,16 @@ namespace AbsoluteZero.Core.Inventory
                     if (!LocalSlot(i).IsEmpty) result[i] = CreateLocalView(i, LocalItem(i));
             }
             _localViews = result;
+            int randomCount = 0;
+            foreach (var candidate in _localViews)
+                if (candidate != null && candidate.Item.Persistence == ItemPersistence.RandomConsumable) randomCount++;
             int random = 0, basic = 0;
             for (int i = 0; i < _localViews.Length; i++)
             {
                 var view = _localViews[i];
                 if (view == null) continue;
                 int marker = view.Item.Persistence == ItemPersistence.RandomConsumable ? random++ : 8 + basic++;
-                PositionLocalView(view.transform, marker, i, LocalCount);
+                PositionLocalView(view.transform, marker, i, LocalCount, randomCount);
             }
         }
 
@@ -538,9 +541,23 @@ namespace AbsoluteZero.Core.Inventory
             return view;
         }
 
-        void PositionLocalView(Transform target, int markerIndex, int index, int count)
+        void PositionLocalView(Transform target, int markerIndex, int index, int count, int randomCount)
         {
             var views = MatchViewBindings.ForScene(gameObject.scene);
+            if (IsMultiMode() && markerIndex < 8 && randomCount > 0 && views != null)
+            {
+                var first = views.GetItemAnchor(true, 0);
+                var last = views.GetItemAnchor(true, 7);
+                if (first != null && last != null)
+                {
+                    // Preserve the designer's row endpoints. Center ordinary four
+                    // slots; a steal may fill all eight, still inside these bounds.
+                    var center = (first.position + last.position) * 0.5f;
+                    var step = (last.position - first.position) / Mathf.Max(5, randomCount - 1);
+                    target.position = center + step * (markerIndex - (randomCount - 1) * 0.5f);
+                    return;
+                }
+            }
             var marker = views != null ? views.GetItemAnchor(true, markerIndex)
                 : GameObject.Find($"PlayerItem{markerIndex + 1}")?.transform;
             if (marker != null) target.position = marker.position;
@@ -701,6 +718,7 @@ namespace AbsoluteZero.Core.Inventory
 
         void HandleClick()
         {
+            if (AbsoluteZero.Core.Common.LocalGameplayInput.IsBlocked) return;
             if (MatchCompositionRoot.Instance?.NetworkState?.IsDeathmatchGrantViewBlocked == true) return;
             if (Mouse.current == null || !Mouse.current.leftButton.wasPressedThisFrame) return;
 

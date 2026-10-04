@@ -33,6 +33,7 @@ namespace AbsoluteZero.UI.Game
 
             EnsureEventSystem();
             EnsureAudioManager();
+            gameObject.AddComponent<MatchMenu>();
         }
 
         IEnumerator Start()
@@ -65,6 +66,9 @@ namespace AbsoluteZero.UI.Game
             _uiManager = gameObject.AddComponent<GameUIManager>();
             _uiManager.Initialize(_bridge, _commands, refs);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
+            string temperatureCapture = System.Environment.GetEnvironmentVariable("AZ_TEMPERATURE_CAPTURE_DIR");
+            if (!string.IsNullOrWhiteSpace(temperatureCapture))
+                gameObject.AddComponent<TemperatureDisplayProbe>().Initialize(_bridge, refs, temperatureCapture);
             if (System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "--az-notification-check") >= 0)
                 gameObject.AddComponent<NotificationLifetimeProbe>();
 #endif

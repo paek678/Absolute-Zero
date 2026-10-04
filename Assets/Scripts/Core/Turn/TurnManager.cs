@@ -265,7 +265,7 @@ namespace AbsoluteZero.Core.Turn
                 _deathService.OnSeatKilled -= OnSeatKilledClearBuffs;
             var rosterForUnsub = MatchCompositionRoot.Instance?.Roster;
             if (rosterForUnsub != null)
-                rosterForUnsub.OnPlayerDisconnectedFromSeat -= OnSeatDisconnectedForceGhost;
+                rosterForUnsub.OnPlayerDisconnectedFromSeat -= OnSeatDeparted;
             _ghostSkillService?.Dispose();
             _ghostSkillService = null;
             _ghostInputOpen = false;
@@ -300,16 +300,19 @@ namespace AbsoluteZero.Core.Turn
             _matchManager?.RecordDisconnect(clientId);
         }
 
-        void OnSeatDisconnectedForceGhost(ulong clientId, byte seat)
+        void OnSeatDeparted(ulong clientId, byte seat)
         {
             if (!IsServer || _deathService == null) return;
             var roster = MatchCompositionRoot.Instance?.Roster;
             if (roster == null) return;
-            if (roster.GetLifeState(seat) != LifeState.Alive) return;
-
-            Debug.Log($"[TurnManager] Seat {seat} disconnected while Alive — forcing Ghost");
-            _deathService.TryKill(seat, DamageSource.None);
-            _deathService.FlushDeathQueue();
+            // Departed participants are removed, not playable ghosts. Excluding the
+            // archived seat also prevents next-round reset from resurrecting it.
+            roster.MarkTimedOut(seat);
+            Debug.Log($"[TurnManager] Seat {seat} departed — excluded from remaining match");
+            int connected = 0;
+            foreach (var entry in roster.Seats.Values)
+                if (entry.State == SeatConnectionState.Connected) connected++;
+            if (MatchDepartureController.MustEnd(_gameMode, connected)) return;
 
             if (CurrentPhase.Value == TurnPhase.RoundOver || _multiTerminalWinnerMask != 0) return;
             if (!TryGrantDeathmatchItems()) return;
@@ -513,7 +516,7 @@ namespace AbsoluteZero.Core.Turn
                     _deathService = new AuthoritativeDeathService(roster, mcr.NetworkState);
                     _deathService.SetTurnCancellation(this);
                     _deathService.OnSeatKilled += OnSeatKilledClearBuffs;
-                    roster.OnPlayerDisconnectedFromSeat += OnSeatDisconnectedForceGhost;
+                    roster.OnPlayerDisconnectedFromSeat += OnSeatDeparted;
                     if (_gameRule.EnableGhostSystem)
                     {
                         _ghostSkillService = new GhostSkillService(roster, _modifiers);

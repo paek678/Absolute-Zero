@@ -14,7 +14,7 @@ CASES = [("temperature-env", n, 0) for n in (2, 3, 4)] + [("item-delay", n, 0) f
     ("ghost", 4, 0), ("ghost", 4, 2), ("ghost", 4, 1), ("ghost", 4, 3), ("special", 3, 0), ("duel", 2, 0),
     ("disconnect-prep", 4, 0), ("disconnect-attack", 4, 0),
     ("disconnect-terminal", 4, 0), ("host-exit", 4, 0), ("host-exit", 4, 1), ("host-exit", 4, 2), ("host-exit", 4, 3), ("host-exit", 2, 0), ("init-failure", 4, 0),
-    ("inventory", 4, 0), ("inventory", 2, 0), ("rpc-guards", 4, 0), ("services", 4, 0), ("multi-round", 4, 0), ("idle", 4, 0),
+    ("inventory", 4, 0), ("inventory", 2, 0), ("layout", 4, 0), ("layout", 4, 1), ("rpc-guards", 4, 0), ("services", 4, 0), ("multi-round", 4, 0), ("idle", 4, 0),
     ("minigame-target", 4, 0), ("minigame-actor", 4, 0), ("minigame-failure", 4, 0), ("disconnect-idle", 4, 0),
     ("joint", 4, 0), ("delayed", 4, 0), ("duel-repeat", 2, 0), ("duel-mini", 2, 0),
     ("topup-transition", 4, 0), ("topup-transition", 4, 1),
@@ -34,8 +34,10 @@ def clients_observed_game(folder, names):
         for name in clients)
 
 
-def run_case(executable, root, case, port, proxy=False, delay_ms=0, loss=0, hold_uplink=0, drop_seat=3, relay=False, delay_view_ms=0, delay_descriptor_ms=0, visible=False, leak_diagnostics=False, resource_probe=False, manual_input=False, cosmetic_check=False, settings_check=False):
+def run_case(executable, root, case, port, proxy=False, delay_ms=0, loss=0, hold_uplink=0, drop_seat=3, relay=False, delay_view_ms=0, delay_descriptor_ms=0, visible=False, leak_diagnostics=False, resource_probe=False, manual_input=False, cosmetic_check=False, settings_check=False, accessory_check=False, capture=False):
+    cosmetic_check = cosmetic_check or accessory_check
     kind, count, winner = case
+    capture = capture or kind == "layout"
     folder = root / f"{kind}-{count}-w{winner}"
     folder.mkdir(parents=True, exist_ok=False)
     token = uuid.uuid4().hex
@@ -70,6 +72,13 @@ def run_case(executable, root, case, port, proxy=False, delay_ms=0, loss=0, hold
                                 "--az-cosmetic-count", str(count), "--az-cosmetic-full-set"])
             if resource_probe:
                 command.extend(["--az-resource-probe", "observe"])
+            if accessory_check:
+                peer = names.index(name)
+                command.extend(["--az-cosmetic-back", f"back_{peer % 3 + 1:02d}",
+                                "--az-cosmetic-tail", f"tail_{(peer + peer // 3) % 3 + 1:02d}",
+                                "--az-cosmetic-top", "top_01", "--az-appearance-toggle",
+                                "--az-appearance-evidence", str(folder / f"{name}.appearance.json"),
+                                "-screen-fullscreen", "0", "-screen-width", "960", "-screen-height", "540"])
             if settings_check:
                 command.extend(["--az-settings-probe", str(names.index(name))])
             if leak_diagnostics:
@@ -77,10 +86,15 @@ def run_case(executable, root, case, port, proxy=False, delay_ms=0, loss=0, hold
             if visible:
                 command.extend(["-screen-fullscreen", "0", "-screen-width", "960", "-screen-height", "540",
                                 "--az-matrix-visible", "1"])
+            if capture:
+                command.extend(["--az-matrix-capture", "1", "-screen-fullscreen", "0",
+                                "-screen-width", "960", "-screen-height", "540"])
             if relay:
                 profile = f"azm-{'h' if name == 'host' else name[-1]}-{token[:8]}"
                 command.extend(["--az-relay-flow", "1", "--az-services-profile", profile,
                                 "--az-coordination-file", str(coordination)])
+                if accessory_check:
+                    command.extend(["--plan037-lobby-publication", "1"])
             if delay_view_ms > 0 and name != "host":
                 command.extend(["--az-delay-inventory-view-ms", str(delay_view_ms)])
             if delay_descriptor_ms > 0 and name != "host":
@@ -168,9 +182,60 @@ def run_case(executable, root, case, port, proxy=False, delay_ms=0, loss=0, hold
             results[name]['errors'].extend(re.findall(r"^.*\[COSMETIC\] FAIL.*$", text, re.M))
     active = [v for v in results.values() if not v["intentionally_terminated"]]
     passed = failure is None and len(results) == joined and all(v["exit"] == 0 and len(v["passes"]) == 1 and not v["errors"] for v in active)
+    layout_verified = None
+    if kind == "layout":
+        layout_verified = True
+        item_count = 12 if winner == 1 else 8
+        signatures, seats = [], []
+        for name, result in results.items():
+            log = (folder / f"{name}.log").read_text(errors="replace")
+            match = re.search(r"\[MATRIX\] LAYOUT_READY local=(\d+)", log)
+            path = folder / f"seat{match.group(1)}.layout.json" if match else None
+            try:
+                evidence = json.loads(path.read_text(encoding="utf-8-sig")) if path and path.exists() else {}
+            except (OSError, ValueError):
+                evidence = {}
+            result["layout"] = evidence
+            signatures.append(evidence.get("signature"))
+            seats.append(evidence.get("localSeat"))
+            views = evidence.get("views", [])
+            screenshot = folder / evidence.get("screenshot", "missing-layout-capture")
+            layout_verified = layout_verified and (
+                evidence.get("run") == token and evidence.get("scene") == "GameScene_Multi"
+                and evidence.get("localViewCount") == item_count and evidence.get("remoteViewCount") == 3 * item_count
+                and len(evidence.get("seats", [])) == 4
+                and all(len(seat.get("items", [])) == item_count for seat in evidence.get("seats", []))
+                and sum(view.get("role") == "local-item" for view in views) == item_count
+                and sum(view.get("role") == "remote-item" for view in views) == 3 * item_count
+                and sum(view.get("role") == "remote-character" for view in views) == 3
+                and screenshot.is_file() and screenshot.stat().st_size > 0)
+        layout_verified = bool(layout_verified and sorted(seat for seat in seats if seat is not None) == list(range(4))
+                               and len(signatures) == 4 and signatures[0]
+                               and all(signature == signatures[0] for signature in signatures))
+        passed = passed and layout_verified
     if cosmetic_check:
         signatures = [v.get('cosmetic', []) for v in active]
-        passed = passed and len(signatures) == count and len(signatures[0]) == 1 and all(s == signatures[0] for s in signatures)
+        passed = passed and len(signatures) == len(active) and bool(signatures) and len(signatures[0]) == 1 and all(s == signatures[0] for s in signatures)
+    if accessory_check:
+        for name, result in results.items():
+            if result['intentionally_terminated']:
+                continue
+            path = folder / f"{name}.appearance.json"
+            evidence = json.loads(path.read_text(encoding='utf-8-sig')) if path.exists() else {}
+            result['appearance'] = evidence
+            passed = passed and evidence.get('samples', 0) > 0 and not evidence.get('failures', ['missing'])
+            if relay:
+                log = (folder / f"{name}.log").read_text(errors='replace')
+                result['publication_verified'] = '[MATRIX] LOBBY_PUBLICATION_PASS' in log
+                passed = passed and result['publication_verified']
+            # Every peer must render all other seats, with the fixture's distinct full IDs.
+            for peer in range(count):
+                if peer == names.index(name):
+                    continue
+                marker = f'"head":"hat_0{peer + 1}"'
+                matched = [line for line in evidence.get('observations', []) if marker in line]
+                expected = [f'"back":"back_{peer % 3 + 1:02d}"', f'"tail":"tail_{(peer + peer // 3) % 3 + 1:02d}"']
+                passed = passed and any(all(value in line for value in expected) and 'layers=3' in line for line in matched)
     if settings_check:
         for index, name in enumerate(names):
             settings_path = folder / f"{name}.settings.json"
@@ -190,7 +255,7 @@ def run_case(executable, root, case, port, proxy=False, delay_ms=0, loss=0, hold
         host_text = (folder / "host.log").read_text(errors="replace")
         passed = passed and "Mini-game SUCCESS: Hug T-shirt" in host_text
         passed = passed and all("DUEL_MINIGAME_ROUND2" in v["passes"][0] for v in active if v["passes"])
-    if visible:
+    if visible or capture:
         passed = passed and all(len(v["screenshots"]) >= 2 for v in active)
         if kind == "duel-mini":
             passed = passed and any("minigame-active" in name for name in results["host"]["screenshots"])
@@ -249,7 +314,8 @@ def run_case(executable, root, case, port, proxy=False, delay_ms=0, loss=0, hold
                   transport="unity-relay" if relay else "local-utp", relay_verified=relay_verified,
                   delay_view_ms=delay_view_ms, delay_descriptor_ms=delay_descriptor_ms,
                   ordering_verified=ordering_verified,
-                  visible_capture=visible, proxy_healthy=proxy_healthy, leak_diagnostics=leak_diagnostics, resource_probe=resource_probe, manual_input=manual_input)
+                  visible_capture=visible, direct_capture=capture, layout_verified=layout_verified,
+                  proxy_healthy=proxy_healthy, leak_diagnostics=leak_diagnostics, resource_probe=resource_probe, manual_input=manual_input)
     (folder / "report.json").write_text(json.dumps(report, indent=2))
     print(f"{folder.name}: {'PASS' if passed else 'FAIL'}", flush=True)
     return report
@@ -266,6 +332,7 @@ if __name__ == "__main__":
     parser.add_argument("--proxy", action="store_true")
     parser.add_argument("--relay", action="store_true")
     parser.add_argument("--visible", action="store_true")
+    parser.add_argument("--capture", action="store_true", help="Render the camera and root UI canvases without showing player windows; automatic for layout")
     parser.add_argument("--leak-diagnostics", action="store_true")
     parser.add_argument("--resource-probe", action="store_true")
     parser.add_argument("--manual-input", action="store_true")
@@ -276,7 +343,7 @@ if __name__ == "__main__":
     parser.add_argument("--hold-uplink", type=float, default=0)
     parser.add_argument("--drop-seat", type=int, choices=[1, 2, 3], default=3)
     parser.add_argument("--limit", type=int, default=0)
-    parser.add_argument("--variant", type=int, default=None,
+    parser.add_argument("--variant", "--winner", dest="variant", type=int, default=None,
                         help="Run only cases with this scenario variant index")
     args = parser.parse_args()
     if args.manual_input and (args.filter != "idle" or not args.visible):
@@ -300,7 +367,7 @@ if __name__ == "__main__":
     if not cases:
         parser.error("No scenarios matched; an empty selection cannot pass validation")
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as pool:
-        futures = [pool.submit(run_case, args.executable.resolve(), args.output.resolve(), case, args.port_base + i, args.proxy, args.delay_ms, args.loss, args.hold_uplink, args.drop_seat, args.relay, args.delay_view_ms, args.delay_descriptor_ms, args.visible, args.leak_diagnostics, args.resource_probe, args.manual_input) for i, case in enumerate(cases)]
+        futures = [pool.submit(run_case, args.executable.resolve(), args.output.resolve(), case, args.port_base + i, args.proxy, args.delay_ms, args.loss, args.hold_uplink, args.drop_seat, args.relay, args.delay_view_ms, args.delay_descriptor_ms, args.visible, args.leak_diagnostics, args.resource_probe, args.manual_input, capture=args.capture) for i, case in enumerate(cases)]
         reports = [future.result() for future in futures]
     (args.output / "matrix.json").write_text(json.dumps(reports, indent=2))
     raise SystemExit(0 if all(r["passed"] for r in reports) else 1)

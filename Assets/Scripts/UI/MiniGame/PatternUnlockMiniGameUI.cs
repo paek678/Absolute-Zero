@@ -102,6 +102,7 @@ namespace AbsoluteZero.UI.MiniGame
 
         void HandlePointer(PointerEventData eventData)
         {
+            if (Core.Common.LocalGameplayInput.IsBlocked) { ResetChain(); return; }
             if (Finished) return;
             if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
                     _grid, eventData.position, eventData.pressEventCamera, out Vector2 local))

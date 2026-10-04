@@ -61,6 +61,7 @@ namespace AbsoluteZero.UI.Game.Bridge
 
         public bool TrySelectItemWithTarget(byte slotIndex, byte targetSeat, uint displayedCopyId)
         {
+            if (Core.Common.LocalGameplayInput.IsBlocked) return false;
             if (MatchCompositionRoot.Instance?.NetworkState?.IsDeathmatchGrantViewBlocked == true)
                 return false;
             if (!HasCurrentLocalHuman())
@@ -85,6 +86,7 @@ namespace AbsoluteZero.UI.Game.Bridge
 
         public bool TryCancelSelection()
         {
+            if (Core.Common.LocalGameplayInput.IsBlocked) return false;
             if (MatchCompositionRoot.Instance?.NetworkState?.IsDeathmatchGrantViewBlocked == true)
                 return false;
             if (!HasCurrentLocalHuman() || _localPlayer.IsReady.Value || !_localPlayer.HasSelectedItem.Value)
@@ -98,6 +100,7 @@ namespace AbsoluteZero.UI.Game.Bridge
 
         public void PressReady()
         {
+            if (Core.Common.LocalGameplayInput.IsBlocked) return;
             if (MatchCompositionRoot.Instance?.NetworkState?.IsDeathmatchGrantViewBlocked == true)
                 return;
             if (!HasCurrentLocalHuman())
@@ -113,6 +116,7 @@ namespace AbsoluteZero.UI.Game.Bridge
 
         public void UseGhostSkill(byte skillIndex, byte targetSeat, uint requestId)
         {
+            if (Core.Common.LocalGameplayInput.IsBlocked) return;
             if (!HasCurrentLocalHuman()) return;
             if (MatchCompositionRoot.Instance?.NetworkState?.IsDeathmatchGrantViewBlocked == true)
                 return;
@@ -132,6 +136,8 @@ namespace AbsoluteZero.UI.Game.Bridge
             var match = MatchCompositionRoot.Instance;
             if (_disposed || match == null || !match.IsSessionCurrent
                 || !ReferenceEquals(match.Registry, _registry)) return;
+            var departure = match.GetComponent<MatchDepartureController>();
+            if (departure != null) { await departure.LeaveAsync(); return; }
             var router = AppBootstrapper.Instance?.SessionRouter;
             if (router?.Current != null)
             {

@@ -116,7 +116,7 @@ namespace AbsoluteZero.UI.Game.Presenters
 
             for (int i = 0; i < remoteSeats.Count && i < _bars.Count; i++)
             {
-                int slot = AZPlayerVisual.GetRemoteVisualSlot(remoteSeats[i], localSeat);
+                int slot = AZPlayerVisual.GetRemoteVisualSlot(remoteSeats[i], localSeat, _bridge.CurrentMatch.Mode == Core.Network.GameMode.Multi);
                 if (slot < 0 || slot >= _bars.Count) continue;
                 _seatToBar[remoteSeats[i]] = slot;
                 TryResolveTarget(slot, remoteSeats[i], players);

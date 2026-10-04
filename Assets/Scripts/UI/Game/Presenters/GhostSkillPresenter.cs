@@ -289,6 +289,8 @@ namespace AbsoluteZero.UI.Game.Presenters
             }
         }
 
+        public void CancelAimForMenu() { if (_selectingTarget) CancelTargetSelection(); }
+
         void CancelTargetSelection()
         {
             _selectingTarget = false;
@@ -310,7 +312,7 @@ namespace AbsoluteZero.UI.Game.Presenters
                 }
             }
 
-            if (!_selectingTarget) return;
+            if (Core.Common.LocalGameplayInput.IsBlocked || !_selectingTarget) return;
             if (_panel == null || !_panel.activeInHierarchy) return;
 
             if (UnityEngine.InputSystem.Keyboard.current != null

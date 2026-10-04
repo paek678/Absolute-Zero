@@ -70,6 +70,9 @@ namespace AbsoluteZero.Core.Solo
             _report.matchTimeoutSeconds = timeoutIndex >= 0 ? Mathf.Clamp(int.Parse(args[timeoutIndex + 1]), 30, 600) : 300;
             _humanRandom = new System.Random(_report.seed);
             if (Array.IndexOf(args, "--plan036-corpus") >= 0) _cycles = 1;
+            int cyclesIndex = Array.IndexOf(args, "--plan036-cycles");
+            if (cyclesIndex >= 0 && cyclesIndex + 1 < args.Length)
+                _cycles = Mathf.Clamp(int.Parse(args[cyclesIndex + 1]), 1, 4);
             _deadline = _startedAt + _cycles * _report.matchTimeoutSeconds + 120;
             Application.logMessageReceived += Log; TurnManager.OnCombatResult += Combat;
             try { await Run(); _report.passed = _report.errors.Count == 0; }
@@ -80,6 +83,16 @@ namespace AbsoluteZero.Core.Solo
         {
             await Until(() => AppBootstrapper.Instance?.IsReady == true && Button("SoloBtn") != null, 15, "main lobby");
             var app = AppBootstrapper.Instance;
+            if (Array.IndexOf(Environment.GetCommandLineArgs(), "--plan042-human-accessories") >= 0)
+            {
+                var profile = CosmeticProfileService.Instance;
+                foreach (var id in new[] { "hat_01", "top_01", "back_03", "tail_03" })
+                {
+                    var item=profile.Registry.GetById(id);
+                    Check(item!=null, "Solo fixture item exists " + id);
+                    profile.EquipState.Equip(item); // Session memory only; never Save.
+                }
+            }
             string cosmetics = CosmeticProfileService.Instance?.GetCompactDto();
             string nickname = CosmeticProfileService.Instance?.Nickname;
             Check(UnityServices.State == ServicesInitializationState.Uninitialized, "fresh lobby starts without UGS");

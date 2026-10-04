@@ -61,36 +61,24 @@ namespace AbsoluteZero.Core.Combat
                 : (!string.IsNullOrEmpty(itemData.OpponentAnimTrigger) ? itemData.OpponentAnimTrigger : itemData.AnimTrigger);
 
             bool fullyBlocked = mainEffects.Count > 0;
+            bool recipientDefending = false;
             foreach (var evt in mainEffects)
+            {
                 fullyBlocked &= CombatVFXManager.IsFullyBlockedImpact(evt.Flags);
+                recipientDefending |= (evt.Flags & CombatImpactFlags.Defense) != 0;
+            }
+            var contact = ItemPresentation.GetChoreography(itemData);
+            bool isContact = contact == ItemChoreography.Hug || contact == ItemChoreography.Feed;
             System.Action impact = () =>
             {
                 ApplyMultiEventTemps(mainEffects);
                 PlayMultiImpactReactions(actorSeat, isAttack, isRecovery,
-                    isLocalUser, 0, mainEffects, nm);
+                    isLocalUser, 0, mainEffects, nm, isContact);
             };
 
-            if (ItemPresentation.GetChoreography(itemData) == ItemChoreography.Hug)
+            if (isContact)
             {
-                GameAudioManager.Instance?.PlayItemSfxFor(itemData.AnimTrigger, itemData);
-                yield return Run(_contact.PlayHugSequence(actorSeat, targetSeat,
-                    actorVisual, targetVisual, itemData, isLocalUser, impact, !fullyBlocked));
-                actorVisual.ReturnToIdle();
-                targetVisual?.ReturnToIdle();
-                Context.Fps?.ReturnToIdle();
-                yield break;
-            }
-
-            bool isFeed = ItemPresentation.GetChoreography(itemData) == ItemChoreography.Feed;
-            if (isFeed && !fullyBlocked && targetVisual != null)
-            {
-                if (!isLocalUser) actorVisual.PlayCombatAnimation(userTrigger);
-                if (isLocalUser)
-                    Context.Fps?.PlayFPSItemAnimation(itemData.AnimTrigger, itemData);
-                GameAudioManager.Instance?.PlayItemSfxFor(itemData.AnimTrigger, itemData);
-                yield return Run(_contact.PlayFeedReaction(targetVisual, targetSeat, itemData, impact));
-                actorVisual.ReturnToIdle();
-                Context.Fps?.ReturnToIdle();
+                yield return Run(PlayContact(contact, itemData, userTrigger, impact, !fullyBlocked, recipientDefending));
                 yield break;
             }
 
@@ -195,7 +183,7 @@ namespace AbsoluteZero.Core.Combat
 
         void PlayMultiImpactReactions(int actorSeat, bool isAttack, bool isRecovery,
             bool isLocalUser, int hitIndex, IReadOnlyList<CombatEventNetData> events,
-            NetworkManager nm)
+            NetworkManager nm, bool preserveTargetPose = false)
         {
             foreach (var evt in events)
             {
@@ -212,7 +200,7 @@ namespace AbsoluteZero.Core.Combat
                     PlayDefenseReaction(targetVisual, evt.DefenseItemId);
                 if (!targetDamaged) continue;
 
-                targetVisual.PlayDamageFlash(preserveCombatAnimation: targetDefending);
+                targetVisual.PlayDamageFlash(preserveCombatAnimation: targetDefending || preserveTargetPose);
                 if (!isLocalUser)
                 {
                     _services.Hit(GetPlayerWorldPos(targetSeat));
@@ -231,6 +219,18 @@ namespace AbsoluteZero.Core.Combat
                 _services.Hit(GetPlayerWorldPos(actorSeat));
                 if (hitIndex == 0) ScreenVFXManager.Instance.PlayRecoveryVFX();
             }
+        }
+
+        IEnumerator PlayContact(ItemChoreography choreography, ItemDataSO itemData, string userTrigger,
+            System.Action impact, bool contactAllowed, bool recipientDefending)
+        {
+            if (choreography == ItemChoreography.Hug)
+                yield return _contact.PlayHugSequence(_services.Item.ActorSeat, _services.Item.TargetSeat,
+                    _services.Item.Actor, _services.Item.Target, itemData,
+                    _services.Item.Actor != null && _services.Item.Actor.IsLocalHuman, impact, contactAllowed);
+            else
+                // One receiving pose: even partial defense must not interrupt a just-started feed/use.
+                yield return _contact.PlayFeedSequence(itemData, userTrigger, impact, contactAllowed && !recipientDefending);
         }
 
         void PlayDefenseReaction(AZPlayerVisual targetVisual, short defenseItemId)
@@ -287,6 +287,28 @@ namespace AbsoluteZero.Core.Combat
             bool hasUserAnim = userVisual != null && !string.IsNullOrEmpty(userTrigger);
 
             Debug.Log($"[CombatVFX] PlayItemSequence: P{userIdx} '{itemData.ItemName}' trigger='{userTrigger}' (1P='{itemData.AnimTrigger}' 3P='{itemData.OpponentAnimTrigger}') isLocal={isLocalUser} cat={itemData.Category}");
+
+            var contact = ItemPresentation.GetChoreography(itemData);
+            if (contact == ItemChoreography.Hug || contact == ItemChoreography.Feed)
+            {
+                yield return Run(PlayContact(contact, itemData, userTrigger, () =>
+                {
+                    ApplyEventTemps(userIdx, result);
+                    if (targetVisual == null) return;
+                    if (targetDefending) PlayDefenseReaction(targetVisual, defenseItemId);
+                    if (!targetDamaged) return;
+                    targetVisual.PlayDamageFlash(preserveCombatAnimation: true);
+                    if (targetVisual.IsLocalHuman)
+                    {
+                        _services.Hit(GetPlayerWorldPos(targetIdx));
+                        ScreenVFXManager.Instance.PlayHitVFX();
+                        CameraShake.Instance?.Shake(0.15f, 0.1f);
+                        _services.IceBreak(GetPlayerWorldPos(targetIdx));
+                    }
+                    GameAudioManager.Instance?.PlayDamaged();
+                }, !fullyBlocked, targetDefending));
+                yield break;
+            }
 
             if (hasUserAnim)
             {
@@ -458,20 +480,11 @@ namespace AbsoluteZero.Core.Combat
             bool isTargetOpponent = isLocalUser;
             var choreography = ItemPresentation.GetChoreography(itemData);
 
-            if ((choreography == ItemChoreography.Feed)
-                && !fullyBlocked && targetVisual != null)
-            {
-                yield return Run(_contact.PlayFeedReaction(targetVisual, targetIdx, itemData));
-            }
-            else if (choreography == ItemChoreography.RedCard && targetVisual != null && !isTargetOpponent)
+            if (choreography == ItemChoreography.RedCard && targetVisual != null && !isTargetOpponent)
             {
                 targetVisual.PlayCombatAnimation("disappoint");
                 yield return _waitDamageReact;
                 targetVisual.ReturnToIdle();
-            }
-            else if (choreography == ItemChoreography.Hug)
-            {
-                yield return Run(_contact.PlayHugSequence(userIdx, targetIdx, userVisual, targetVisual, itemData, isLocalUser));
             }
 
             Debug.Log($"[CombatVFX] PlayItemSequence DONE: P{userIdx} '{itemData.ItemName}'");

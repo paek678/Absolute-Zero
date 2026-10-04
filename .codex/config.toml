@@ -2,3 +2,8 @@
 [mcp_servers.unity]
 command = "C:\\Users\\paek6\\AppData\\Local\\Unity\\bin\\unity.exe"
 args = ["mcp","--project-path","C:\\Users\\paek6\\Absolute Zero"]
+
+[mcp_servers.obsidian]
+url = "http://127.0.0.1:27123/mcp/"
+http_headers_helper = 'python "C:\Users\paek6\Absolute Zero\.codex\scripts\obsidian_mcp_headers.py"'
+enabled = true

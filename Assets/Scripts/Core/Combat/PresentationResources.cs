@@ -1,9 +1,44 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace AbsoluteZero.Core.Combat
 {
+    // Keep part ordering and cosmetic overlays together during a close-up.
+    internal sealed class PresentationSortingLease : IDisposable
+    {
+        readonly SortingGroup _group;
+        readonly bool _enabled;
+        readonly int _order;
+        bool _released;
+
+        public PresentationSortingLease(Transform root, int order)
+        {
+            _group = root.GetComponent<SortingGroup>();
+            if (_group == null)
+            {
+                _group = root.gameObject.AddComponent<SortingGroup>();
+                _group.enabled = false;
+            }
+            _enabled = _group.enabled;
+            _order = _group.sortingOrder;
+            _group.sortingOrder = Mathf.Max(order, _order);
+            _group.enabled = true;
+        }
+
+        public void Dispose()
+        {
+            if (_released) return;
+            _released = true;
+            if (_group == null) return;
+            _group.sortingOrder = _order;
+            _group.enabled = _enabled;
+            // Retain a disabled runtime component: deferred Destroy could remove
+            // a new borrow of this root in the same frame. The root owns its life.
+        }
+    }
+
     // One ledger per presentation manager. A late lease cannot restore a newer owner's pose.
     internal sealed class PresentationTransforms
     {
@@ -23,11 +58,12 @@ namespace AbsoluteZero.Core.Combat
             readonly PresentationTransforms _ledger;
             readonly Transform _target;
             readonly Vector3 _position;
+            readonly Quaternion _rotation;
             public object Owner { get; }
             bool _released;
 
             internal Lease(PresentationTransforms ledger, Transform target, object owner)
-            { _ledger = ledger; _target = target; Owner = owner; _position = target.position; }
+            { _ledger = ledger; _target = target; Owner = owner; _position = target.position; _rotation = target.rotation; }
 
             public void Dispose()
             {
@@ -36,7 +72,7 @@ namespace AbsoluteZero.Core.Combat
                 if (!_ledger._leases.TryGetValue(_target, out var current)
                     || !ReferenceEquals(current, this)) return;
                 _ledger._leases.Remove(_target);
-                if (_target != null) _target.position = _position;
+                if (_target != null) _target.SetPositionAndRotation(_position, _rotation);
             }
         }
     }

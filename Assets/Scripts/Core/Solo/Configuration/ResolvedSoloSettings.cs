@@ -34,6 +34,7 @@ namespace AbsoluteZero.Core.Solo.Configuration
         public GameModeRuleSnapshot RuleSnapshot { get; }
         public BehaviorGraph Graph { get; }
         public BotCosmeticIds Cosmetics { get; }
+        public AbsoluteZero.Core.Cosmetic.CharacterAppearanceSnapshot Appearance { get; }
         public float StartingTemperature => TemperatureSystem.MAX_TEMP;
         public float FanBaseline => TemperatureSystem.DEFAULT_FAN_SPEED;
         // This is a delegation policy, not an empty replacement loadout or the rule SO's
@@ -62,6 +63,7 @@ namespace AbsoluteZero.Core.Solo.Configuration
             SharedOneVsOneRule = encounter.SharedOneVsOneRule;
             RuleSnapshot = GameModeRuleSnapshot.From(SharedOneVsOneRule);
             Graph = bot.Graph; Cosmetics = bot.Cosmetics;
+            if (bot.Appearance != null && bot.Appearance.TrySnapshot(out var appearance, out _)) Appearance = appearance;
             MinimumThinkSeconds = difficulty.MinimumThinkSeconds; MaximumThinkSeconds = difficulty.MaximumThinkSeconds;
             ReadyPolicy = difficulty.ReadyPolicy; ReadyReserveSeconds = difficulty.ReadyReserveSeconds;
             TacticalWeights = difficulty.OverrideTacticalWeights ? difficulty.TacticalWeights : bot.TacticalDefaults;

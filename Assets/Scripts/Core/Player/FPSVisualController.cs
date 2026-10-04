@@ -13,6 +13,12 @@ namespace AbsoluteZero.Core.Player
     {
         public static FPSVisualController Instance { get; private set; }
 
+        // Authored Duel framing for existing FPS clips. Contact sequences borrow
+        // this camera-relative pose; wide-table scene anchors remain unchanged.
+        [SerializeField] Vector3 contactCameraPosition = new(-0.025f, 0.1f, 0.71f);
+        [SerializeField] Vector3 contactCameraEuler = new(14f, 0f, 0f);
+        public Pose GetContactCameraPose() => new(contactCameraPosition, Quaternion.Euler(contactCameraEuler));
+
         Animator _animator;
         SpriteRenderer _itemRenderer;
         bool _initialized;
@@ -65,6 +71,8 @@ namespace AbsoluteZero.Core.Player
             _cosmetics.ApplyFromDto(json, registry);
         }
         readonly Dictionary<string, Sprite> _spriteCache = new();
+        readonly Dictionary<string, float> _clipDurations = new();
+        RuntimeAnimatorController _durationController;
 
         const string IdleState = "New State";
 
@@ -270,6 +278,35 @@ namespace AbsoluteZero.Core.Player
 
         public void PlayFPSItemAnimation(string trigger, ItemDataSO item)
             => PlayAnimation(trigger, GameSprites.GetItemSpriteFor(item), item?.ItemName);
+
+        public float GetClipDuration(string trigger, float fallback)
+        {
+            var controller = _animator != null ? _animator.runtimeAnimatorController : null;
+            if (controller == null || string.IsNullOrEmpty(trigger)) return fallback;
+
+            if (_durationController != controller)
+            {
+                _durationController = controller;
+                _clipDurations.Clear();
+                foreach (var clip in controller.animationClips)
+                    if (clip != null) _clipDurations[clip.name] = clip.length;
+
+                // Overrides may have different asset names; retain the authored
+                // state's clip name as an alias for its effective duration.
+                if (controller is AnimatorOverrideController overrides)
+                {
+                    var pairs = new List<KeyValuePair<AnimationClip, AnimationClip>>(overrides.overridesCount);
+                    overrides.GetOverrides(pairs);
+                    foreach (var pair in pairs)
+                        if (pair.Key != null)
+                            _clipDurations[pair.Key.name] = (pair.Value != null ? pair.Value : pair.Key).length;
+                }
+            }
+
+            string clipName = trigger == "use" ? "FPS_useItem" : "FPS_" + trigger;
+            return _clipDurations.TryGetValue(clipName, out float duration) && duration > 0f
+                ? duration : fallback;
+        }
 
         void PlayAnimation(string trigger, Sprite itemSprite, string itemName)
         {

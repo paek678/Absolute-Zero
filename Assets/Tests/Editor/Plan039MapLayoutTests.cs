@@ -50,9 +50,9 @@ namespace AbsoluteZero.Tests
             Assert.That(multi.Length, Is.EqualTo(4));
             var expected = new[] { new Vector3(-3,0,0), new Vector3(3,0,0), new Vector3(-3,0,6), new Vector3(3,0,6) };
             for (int seat = 0; seat < expected.Length; seat++) Assert.That(multi[seat].position, Is.EqualTo(expected[seat]));
-            Assert.That(layout.GetAnchor(MapLayoutMode.Multi, MapAnchorRole.RemoteVisual, 0).VisualPosition, Is.EqualTo(new Vector3(-4.35f, 1.6f, 4.45f)));
-            Assert.That(layout.GetAnchor(MapLayoutMode.Multi, MapAnchorRole.RemoteVisual, 1).VisualPosition, Is.EqualTo(new Vector3(0, 1.6f, 7.85f)));
-            Assert.That(layout.GetAnchor(MapLayoutMode.Multi, MapAnchorRole.RemoteVisual, 2).VisualPosition, Is.EqualTo(new Vector3(4.35f, 1.6f, 4.45f)));
+            Assert.That(layout.GetAnchor(MapLayoutMode.Multi, MapAnchorRole.RemoteVisual, 0).VisualPosition, Is.EqualTo(new Vector3(-4.8f, 1.6f, 5.1f)));
+            Assert.That(layout.GetAnchor(MapLayoutMode.Multi, MapAnchorRole.RemoteVisual, 1).VisualPosition, Is.EqualTo(new Vector3(0, 1.6f, 8.8f)));
+            Assert.That(layout.GetAnchor(MapLayoutMode.Multi, MapAnchorRole.RemoteVisual, 2).VisualPosition, Is.EqualTo(new Vector3(4.8f, 1.6f, 5.1f)));
         }
 
         [Test]
@@ -131,7 +131,7 @@ namespace AbsoluteZero.Tests
             {
                 if (remote == local) { Assert.That(AZPlayerVisual.GetRemoteVisualSlot(remote, local), Is.EqualTo(-1)); continue; }
                 int slot = AZPlayerVisual.GetRemoteVisualSlot(remote, local);
-                Assert.That(slot < local ? slot : slot + 1, Is.EqualTo(remote));
+                Assert.That((local + slot + 1) % 4, Is.EqualTo(remote));
             }
         }
     }

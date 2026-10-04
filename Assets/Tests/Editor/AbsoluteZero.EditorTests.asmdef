@@ -9,7 +9,8 @@
         "Unity.Networking.Transport",
         "Unity.Services.Lobbies",
         "Unity.Services.Core",
-        "Unity.Behavior"
+        "Unity.Behavior",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [
         "Editor"

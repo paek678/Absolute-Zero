@@ -29,9 +29,9 @@ namespace AbsoluteZero.Core.Inventory
 
         static readonly Vector3[] RemotePlayerPositions =
         {
-            new(-4.35f, 1.60f, 4.45f),
-            new(0f, 1.60f, 7.85f),
-            new(4.35f, 1.60f, 4.45f)
+            new(-4.8f, 1.60f, 5.1f),
+            new(0f, 1.60f, 8.8f),
+            new(4.8f, 1.60f, 5.1f)
         };
 
         readonly Dictionary<byte, RemoteInventoryBinding> _bindings = new();
@@ -43,9 +43,14 @@ namespace AbsoluteZero.Core.Inventory
         bool _visualSlotsPositioned;
         bool _localIceboxPositioned;
         MapCharacterLayout _mapLayout;
+        Quaternion _inventoryFacing = Quaternion.identity;
 
         // Centered behind the local item row so the Ready control and arrow tail stay visible.
-        static readonly Vector3 LocalIceboxPosition = new(0f, 0.05f, 3.75f);
+        static readonly Vector3 LocalIceboxPosition = new(0f, 0.05f, 2.4f);
+        static readonly Vector3 InventoryFloorOffset = new(0f, 0.85f, -3.4f);
+        const float RemoteIconSize = 0.54f;
+        const float RemoteColumnSpacing = 0.72f;
+        const float RemoteRowSpacing = 0.76f;
 
         void Update()
         {
@@ -118,6 +123,10 @@ namespace AbsoluteZero.Core.Inventory
             var views = MatchViewBindings.ForScene(gameObject.scene);
             if (views != null) _mapLayout = views.MapLayout;
             else MapCharacterLayout.TryFind(gameObject.scene, out _mapLayout);
+            // Capture the seating camera before combat close-ups. A delayed inventory
+            // snapshot must not permanently rotate its grid to an animation camera.
+            var camera = views != null ? views.GameplayCamera : Camera.main;
+            if (camera != null) _inventoryFacing = camera.transform.rotation;
             int found = 0;
             for (int slot = 0; slot < RemotePlayerPositions.Length; slot++)
             {
@@ -128,6 +137,7 @@ namespace AbsoluteZero.Core.Inventory
                     if (!_mapLayout.TryApplyRemoteVisual(MapLayoutMode.Multi, slot, visual.transform)) continue;
                 }
                 else visual.transform.position = RemotePlayerPositions[slot];
+                if (visual.GetComponent<PlayerSeatMarker>()?.Player == null) visual.SetActive(false);
                 found++;
             }
 
@@ -144,6 +154,7 @@ namespace AbsoluteZero.Core.Inventory
             spawnPoint.position = LocalIceboxPosition;
             var icebox = IceboxController.Instance;
             if (icebox == null || !icebox.TrySetPresentationPosition(LocalIceboxPosition)) return;
+            if (!icebox.TrySetPresentationScale(0.55f)) return;
             _localIceboxPositioned = true;
             Debug.Log($"[MultiLayout] Local icebox positioned south-center at {LocalIceboxPosition}");
         }
@@ -218,16 +229,28 @@ namespace AbsoluteZero.Core.Inventory
                 (go, i, state) => {
                     var item = ItemManager.Instance.GetItemData(state.ItemId);
                     go.name = $"RemoteSeat{binding.Player.PlayerIndex}_Item{i}_{item.ItemName}";
-                    go.transform.position = ItemPosition(slot, visibleIndex++);
-                    var anchor = _mapLayout != null ? _mapLayout.GetAnchor(MapLayoutMode.Multi, MapAnchorRole.RemoteVisual, slot) : null;
-                    go.transform.rotation = (anchor != null ? anchor.transform.rotation : Quaternion.identity)
-                        * Quaternion.Euler(0f, 0f, ItemRotation(slot));
-                    var renderer = go.GetComponent<SpriteRenderer>();
+                    // Two rows on the sides, one row in front of the north seat so
+                    // the south-center icebox has room to open. Stolen items may
+                    // exceed the normal eight: fit extra columns inside the same area.
+                    int columns = slot == 1 ? Mathf.Max(8, snapshot.Count) : Mathf.Max(4, Mathf.CeilToInt(snapshot.Count / 2f));
+                    float fit = (slot == 1 ? 8f : 4f) / columns;
+                    go.transform.position = ItemPosition(slot, visibleIndex++, columns, fit);
+                    go.transform.rotation = _inventoryFacing;
+                    go.transform.localScale = Vector3.one;
+                    var renderer = go.GetComponentInChildren<SpriteRenderer>();
                     renderer.sprite = GameSprites.GetItemSpriteFor(item);
-                    Vector2 size = renderer.sprite != null ? renderer.sprite.bounds.size : Vector2.zero;
+                    var art = VisibleSpriteBounds(renderer.sprite);
+                    Vector2 size = art.size;
                     float largestSide = Mathf.Max(size.x, size.y);
-                    go.transform.localScale = Vector3.one * (largestSide > 0f ? 0.72f / largestSide : 0.38f);
-                    go.GetComponentInChildren<TextMesh>().text = state.IsUnlimited ? "--" : state.RemainingUses.ToString();
+                    float scale = largestSide > 0f ? RemoteIconSize * fit / largestSide : 1f;
+                    renderer.transform.localScale = Vector3.one * scale;
+                    // Imported pivots differ. Center the icon inside its cell while
+                    // keeping text size and the cell's transform independent of art.
+                    renderer.transform.localPosition = -art.center * scale;
+                    var label = go.GetComponentInChildren<TextMesh>();
+                    label.transform.localPosition = new Vector3(0f, -0.35f * fit, -0.01f);
+                    label.characterSize = 0.07f * fit;
+                    label.text = state.IsUnlimited ? "--" : state.RemainingUses.ToString();
                 }, DestroyView, go => go != null);
         }
 
@@ -236,13 +259,15 @@ namespace AbsoluteZero.Core.Inventory
             if (ItemManager.Instance?.GetItemData(itemId) == null) return null;
             var go = new GameObject();
             go.transform.SetParent(transform, false);
-            go.AddComponent<SpriteRenderer>().sortingOrder = 8;
+            var icon = new GameObject("Icon");
+            icon.transform.SetParent(go.transform, false);
+            icon.AddComponent<SpriteRenderer>().sortingOrder = 8;
             var label = new GameObject("Uses");
             label.transform.SetParent(go.transform, false);
-            label.transform.localPosition = new Vector3(0f, -0.72f, -0.01f);
+            label.transform.localPosition = new Vector3(0f, -0.35f, -0.01f);
             var text = label.AddComponent<TextMesh>();
             text.fontSize = 24;
-            text.characterSize = 0.06f;
+            text.characterSize = 0.07f;
             text.anchor = TextAnchor.MiddleCenter;
             text.alignment = TextAlignment.Center;
             text.color = Color.white;
@@ -250,33 +275,29 @@ namespace AbsoluteZero.Core.Inventory
             return go;
         }
 
-        Vector3 ItemPosition(int slot, int index)
+        Vector3 ItemPosition(int slot, int index, int columns, float fit)
         {
-            int column = index % 4;
-            int row = index / 4;
-            float across = (column - 1.5f) * 0.62f;
-            float inward = row * 0.72f;
-
-            var position = slot switch
-            {
-                0 => new Vector3(-3.20f + inward, 0.72f, 4.45f + across),
-                1 => new Vector3(across, 0.72f, 6.55f - inward),
-                2 => new Vector3(3.20f - inward, 0.72f, 4.45f - across),
-                _ => Vector3.zero
-            };
+            int column = index % columns;
+            int row = index / columns;
+            float across = (column - (columns - 1) * 0.5f) * RemoteColumnSpacing * fit;
+            float down = slot == 1 ? 0f : (0.5f - row) * RemoteRowSpacing;
             var anchor = _mapLayout != null ? _mapLayout.GetAnchor(MapLayoutMode.Multi, MapAnchorRole.RemoteVisual, slot) : null;
-            return anchor != null
-                ? anchor.VisualPosition + anchor.transform.rotation * (position - RemotePlayerPositions[slot])
-                : position;
+            var floor = anchor != null ? anchor.transform.position : RemotePlayerPositions[slot] - Vector3.up * 1.6f;
+            var orientation = anchor != null ? anchor.transform.rotation : Quaternion.identity;
+            return floor + orientation * InventoryFloorOffset + _inventoryFacing * new Vector3(across, down, 0f);
         }
 
-        static float ItemRotation(int slot) => slot switch
+        static Bounds VisibleSpriteBounds(Sprite sprite)
         {
-            0 => -90f,
-            1 => 180f,
-            2 => 90f,
-            _ => 0f
-        };
+            if (sprite == null) return new Bounds(Vector3.zero, Vector3.one);
+            // Tight sprite vertices exclude the atlas's transparent padding. The
+            // full 256px rect makes small artwork (e.g. tea) nearly invisible.
+            var vertices = sprite.vertices;
+            if (vertices.Length == 0) return sprite.bounds;
+            var bounds = new Bounds(vertices[0], Vector3.zero);
+            foreach (var vertex in vertices) bounds.Encapsulate(vertex);
+            return bounds;
+        }
 
         static GameObject FindSceneObject(string objectName)
         {

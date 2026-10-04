@@ -116,6 +116,7 @@ namespace AbsoluteZero.Core.Match
             }
 
             Instance = this;
+            gameObject.AddComponent<MatchDepartureController>();
             _registry = new PlayerRegistry();
             ValidateSceneReferences();
             SubscribeNetworkState();

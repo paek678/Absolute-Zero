@@ -109,9 +109,9 @@ namespace AbsoluteZero.Tests
                 {
                     int slot = AZPlayerVisual.GetRemoteVisualSlot(remote, local);
                     if (remote == local) { Assert.That(slot, Is.EqualTo(-1)); continue; }
-                    Assert.That(slot, Is.InRange(0, count - 2));
+                    Assert.That(slot, Is.InRange(0, 2));
                     Assert.That(used.Add(slot), Is.True);
-                    Assert.That(slot, Is.EqualTo(remote < local ? remote : remote - 1));
+                    Assert.That((local + slot + 1) % 4, Is.EqualTo(remote));
                 }
                 Assert.That(used.Count, Is.EqualTo(count - 1));
             }

@@ -85,6 +85,7 @@ namespace AbsoluteZero.UI.MiniGame
 
         void HandleDrag(PointerEventData eventData)
         {
+            if (Core.Common.LocalGameplayInput.IsBlocked) { _dragging = false; return; }
             if (!_dragging || _currentScrew >= SCREW_COUNT) return;
             if (!TryGetPointerAngle(eventData, out float angle)) return;
 

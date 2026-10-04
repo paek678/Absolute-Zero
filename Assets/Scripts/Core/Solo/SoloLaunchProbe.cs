@@ -182,7 +182,7 @@ namespace AbsoluteZero.Core.Solo
             }
             catch (Exception error) { completion.SetException(error); }
         }
-        internal static void WriteRender(string path)
+        public static void WriteRender(string path)
         {
             // Explicit visible-player validation captures the actual final frame,
             // including the URP camera stack and overlay UI, without re-rendering it.

@@ -140,7 +140,8 @@ namespace AbsoluteZero.Core.Match
             if (binding?.IsValid != true || !LocalMatchPerspective.TryResolveCurrent(out var perspective)
                 || !perspective.TryGetBinding(binding.Identity.PlayerIndex, out var current)
                 || !ReferenceEquals(binding, current)) return null;
-            var visual = GetRemoteVisual(AZPlayerVisual.GetRemoteVisualSlot(binding.Identity.PlayerIndex, perspective.HumanSeat));
+            var visual = GetRemoteVisual(AZPlayerVisual.GetRemoteVisualSlot(binding.Identity.PlayerIndex, perspective.HumanSeat,
+                MatchCompositionRoot.Instance.ActiveConfig.Mode == Network.GameMode.Multi));
             return visual != null && visual.GetComponent<PlayerSeatMarker>()?.Player == binding.State ? visual : null;
         }
 

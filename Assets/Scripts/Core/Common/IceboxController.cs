@@ -12,6 +12,7 @@ namespace AbsoluteZero.Core.Common
         [SerializeField] GameObject _iceboxPrefab;
 
         GameObject _iceboxInstance;
+        Transform _iceboxPresentationRoot;
         Animator _iceboxAnimator;
         ParticleSystem _iceboxParticle;
         Transform _boxSpawnPoint;
@@ -117,6 +118,7 @@ namespace AbsoluteZero.Core.Common
         void OnDestroy()
         {
             if (Instance == this) Instance = null;
+            if (_iceboxPresentationRoot != null) Destroy(_iceboxPresentationRoot.gameObject);
         }
 
         /// <summary>
@@ -133,7 +135,9 @@ namespace AbsoluteZero.Core.Common
             }
 
             _boxSpawnPoint.position = worldPosition;
-            if (_iceboxInstance != null)
+            if (_iceboxPresentationRoot != null)
+                _iceboxPresentationRoot.position = worldPosition;
+            else if (_iceboxInstance != null)
                 _iceboxInstance.transform.position = worldPosition;
             return true;
         }
@@ -142,6 +146,22 @@ namespace AbsoluteZero.Core.Common
         {
             var views = MatchViewBindings.ForScene(gameObject.scene);
             return views != null ? views.IceboxSpawn : GameObject.Find("BoxSpawnPoint")?.transform;
+        }
+
+        public bool TrySetPresentationScale(float multiplier)
+        {
+            if (_iceboxInstance == null || multiplier <= 0f) return false;
+            if (_iceboxPresentationRoot == null)
+            {
+                // The open/close clips animate the instance's root scale. Keep the
+                // map-specific size outside that Animator so it survives every use.
+                _iceboxPresentationRoot = new GameObject("IceboxPresentation").transform;
+                _iceboxPresentationRoot.position = _iceboxInstance.transform.position;
+                _iceboxPresentationRoot.SetParent(transform, true);
+                _iceboxInstance.transform.SetParent(_iceboxPresentationRoot, true);
+            }
+            _iceboxPresentationRoot.localScale = Vector3.one * multiplier;
+            return true;
         }
 
         public void PlayDistribution(Transform[] itemTransforms)
@@ -163,10 +183,12 @@ namespace AbsoluteZero.Core.Common
             Debug.Log($"[Icebox] DistributionRoutine START: {items.Length} items, boxPos={boxPos}");
 
             var targets = new Vector3[items.Length];
+            var scales = new Vector3[items.Length];
             for (int i = 0; i < items.Length; i++)
             {
                 if (items[i] == null) continue;
                 targets[i] = items[i].position;
+                scales[i] = items[i].localScale;
                 items[i].position = boxPos;
                 items[i].localScale = Vector3.zero;
             }
@@ -187,7 +209,7 @@ namespace AbsoluteZero.Core.Common
             for (int i = 0; i < items.Length; i++)
             {
                 if (items[i] == null) continue;
-                StartCoroutine(ArcMoveTo(items[i], boxPos, targets[i]));
+                StartCoroutine(ArcMoveTo(items[i], boxPos, targets[i], scales[i]));
                 yield return _waitItemDelay;
             }
 
@@ -207,7 +229,7 @@ namespace AbsoluteZero.Core.Common
             Debug.Log("[Icebox] DistributionRoutine DONE — box closed");
         }
 
-        IEnumerator ArcMoveTo(Transform item, Vector3 from, Vector3 to)
+        IEnumerator ArcMoveTo(Transform item, Vector3 from, Vector3 to, Vector3 targetScale)
         {
             float elapsed = 0f;
             while (elapsed < ARC_DURATION)
@@ -221,13 +243,13 @@ namespace AbsoluteZero.Core.Common
 
                 if (item == null) yield break;
                 item.position = pos;
-                item.localScale = Vector3.Lerp(Vector3.zero, Vector3.one, Mathf.Min(t * 3f, 1f));
+                item.localScale = Vector3.Lerp(Vector3.zero, targetScale, Mathf.Min(t * 3f, 1f));
                 yield return null;
             }
 
             if (item == null) yield break;
             item.position = to;
-            item.localScale = Vector3.one;
+            item.localScale = targetScale;
         }
     }
 }

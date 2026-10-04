@@ -1,11 +1,14 @@
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
 using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using AbsoluteZero.Core.Common;
 using AbsoluteZero.Core.Combat;
 using AbsoluteZero.Core.Item;
+using AbsoluteZero.Core.Inventory;
 using AbsoluteZero.Core.Match;
 using AbsoluteZero.Core.Player;
 using AbsoluteZero.Core.Session;
@@ -25,6 +28,10 @@ namespace AbsoluteZero.Core.Solo
         uint _settled, _visible, _vote;
         bool _seeded, _done, _acted, _ready, _sawGame, _voted, _disconnectRecovered;
         bool _visibleCapture, _visibleStartCaptured;
+        bool _directCapture;
+        int _inputCaptureIndex, _layoutStableFrames;
+        float _layoutReadyAt;
+        LayoutEvidence _layoutEvidence;
         bool _notificationPassed;
         bool _duelMiniRoundEndSeeded;
         float _phaseTime, _nextLog, _caseStart;
@@ -65,7 +72,8 @@ namespace AbsoluteZero.Core.Solo
             probe._case = scenario;
             probe._role = Arg("--az-role", "client");
             probe._token = Arg("--az-run", "matrix");
-            probe._visibleCapture = Arg("--az-matrix-visible", "0") == "1";
+            probe._directCapture = Arg("--az-matrix-capture", "0") == "1";
+            probe._visibleCapture = probe._directCapture || Arg("--az-matrix-visible", "0") == "1";
             if (Arg("--az-manual-input", "0") == "1") Time.timeScale = 0.1f;
             probe._count = int.Parse(Arg("--az-count", "4"));
             probe._winner = int.Parse(Arg("--az-winner", "0"));
@@ -94,6 +102,10 @@ namespace AbsoluteZero.Core.Solo
         void Logged(string message, string stack, LogType type)
         {
             if (message.StartsWith("[NOTIFICATIONS] PASS")) _notificationPassed = true;
+            // The UI assembly owns the input probe. Observe its actual pointer event
+            // instead of introducing a reverse assembly dependency or a second input path.
+            if (_directCapture && _case == "input" && message.StartsWith("[INPUT] SNAP "))
+                CaptureVisible("input-aim-" + (++_inputCaptureIndex));
             if (_case == "input" && message.StartsWith("[INPUT] PASS")) Pass("INPUT_FLOW");
             const string prefix = "[MatchResult] Visible seq=";
             if (message.StartsWith(prefix)) uint.TryParse(message.Substring(prefix.Length).Split(' ')[0], out _visible);
@@ -179,8 +191,257 @@ namespace AbsoluteZero.Core.Solo
             string path = System.IO.Path.Combine(
                 System.IO.Path.GetDirectoryName(Application.consoleLogPath) ?? Application.persistentDataPath,
                 peer + "." + label + ".png");
-            ScreenCapture.CaptureScreenshot(path);
-            Debug.Log("[MATRIX] CAPTURE " + path);
+            if (_directCapture) StartCoroutine(CaptureVisibleFrame(path));
+            else
+            {
+                ScreenCapture.CaptureScreenshot(path);
+                Debug.Log("[MATRIX] CAPTURE " + path);
+            }
+        }
+        IEnumerator CaptureVisibleFrame(string path)
+        {
+            // WaitForEndOfFrame does not resume in batch-mode players. This explicit
+            // render works with hidden windows and restores the camera/canvas state.
+            yield return null;
+            WriteMatrixRender(path);
+        }
+        bool WriteMatrixRender(string path)
+        {
+            try
+            {
+                SoloLaunchProbe.WriteRender(path);
+                Debug.Log("[MATRIX] CAPTURE " + path);
+                return true;
+            }
+            catch (Exception error)
+            {
+                Debug.LogError("[MATRIX] FAIL capture " + error);
+                _done = true;
+                Application.Quit(2);
+                return false;
+            }
+        }
+
+        [Serializable]
+        sealed class LayoutEvidence
+        {
+            public string run, scene, scenePath, localClientId, signature, contentSignature, screenshot, captureMethod;
+            public int localSeat, width, height, itemCount, localViewCount, remoteViewCount;
+            public uint revision;
+            public LayoutSeat[] seats;
+            public LayoutView[] views;
+        }
+        [Serializable]
+        sealed class LayoutSeat
+        {
+            public int seat, relativeSlot;
+            public string ownerClientId;
+            public LayoutItem[] items;
+        }
+        [Serializable]
+        sealed class LayoutItem
+        {
+            public int itemId, remainingUses, flags;
+            public uint copyId;
+        }
+        [Serializable]
+        sealed class LayoutView
+        {
+            public string role, name;
+            public int seat, itemIndex;
+            public uint copyId;
+            public Vector3 position, scale;
+            public float[] screenBounds, colliderScreenBounds;
+            public bool hasRenderer, fullyInside;
+        }
+
+        string EvidenceDirectory => Path.GetDirectoryName(Application.consoleLogPath) ?? Application.persistentDataPath;
+        string LayoutPath(int seat) => Path.Combine(EvidenceDirectory, "seat" + seat + ".layout.json");
+        int LayoutItemCount => _winner == 1 ? 12 : 8;
+
+        void RunLayoutFixture(MatchCompositionRoot root, TurnManager tm, PlayerState[] players, PlayerState local)
+        {
+            if (_count != 4) { Fail("layout requires four players"); return; }
+            if (_winner < 0 || _winner > 1) { Fail("layout variant must be zero or one"); return; }
+            if (_layoutReadyAt == 0) _layoutReadyAt = Time.unscaledTime;
+            if (Time.unscaledTime - _layoutReadyAt > 45) { Fail("layout views or peer evidence did not become ready"); return; }
+            if (players.Length != 4 || tm.CurrentPhase.Value != TurnPhase.PrepPhase) return;
+            if (_nm.IsServer && !_seeded)
+            {
+                // Keep the actual four basic items, then add a repeatable full random
+                // row. Rotate its order by seat to make mistaken seat binding visible.
+                string[] randomNames = { "Hand Fan", "Hug T-shirt", "Ice Cream", "Hot Pack" };
+                var catalog = ItemManager.Instance?.GetAllItems();
+                if (catalog == null || players.Any(p => p.GetInventory().SlotStates.Count < 4)) return;
+                var ids = randomNames.Select(name => (short)Array.FindIndex(catalog, item => item != null && item.ItemName == name)).ToArray();
+                if (ids.Any(id => id < 0)) { Fail("layout fixture items missing"); return; }
+                foreach (var player in players)
+                {
+                    var inventory = player.GetInventory();
+                    while (inventory.SlotStates.Count > 4) inventory.SlotStates.RemoveAt(inventory.SlotStates.Count - 1);
+                    if (inventory.GetRandomSlotCount() != 0) { Fail("layout fixture expected four basic items"); return; }
+                    for (int i = 0; i < 4; i++)
+                        if (!inventory.GrantSpecificItem(ids[(i + player.PlayerIndex) % 4]))
+                        { Fail("layout fixture grant failed"); return; }
+                    if (_winner == 1)
+                    {
+                        // Explicit geometry stress only: preserve the normal w0 grant,
+                        // then represent extra stolen copies without changing mode rules.
+                        // AssignNewCopyId keeps duplicate item types as distinct objects.
+                        for (int i = 0; i < 4; i++)
+                            inventory.SlotStates.Add(inventory.AssignNewCopyId(inventory.SlotStates[4 + i]));
+                    }
+                    player.FanSpeed.Value = 0;
+                    if (inventory.SlotStates.Count != LayoutItemCount || inventory.GetRandomSlotCount() != LayoutItemCount - 4)
+                    { Fail("layout fixture inventory count differs from the requested variant"); return; }
+                }
+                _seeded = true;
+                Debug.Log("[MATRIX] LAYOUT_FIXTURE basic=4 random=" + (LayoutItemCount - 4) + " seats=4 variant=" + _winner);
+            }
+
+            if (_layoutEvidence == null)
+            {
+                if (!TryReadLayout(root, players, local, out var evidence)) { _layoutStableFrames = 0; return; }
+                // Allow LateUpdate reconciliation and distribution's last transform
+                // update to finish before recording geometry and rendering the camera.
+                if (++_layoutStableFrames < 4) return;
+                evidence.screenshot = "seat" + local.PlayerIndex + ".layout-full.png";
+                if (!WriteMatrixRender(Path.Combine(EvidenceDirectory, evidence.screenshot))) return;
+                string path = LayoutPath(local.PlayerIndex);
+                File.WriteAllText(path + ".tmp", JsonUtility.ToJson(evidence, true));
+                File.Move(path + ".tmp", path);
+                _layoutEvidence = evidence;
+                Debug.Log("[MATRIX] LAYOUT_READY local=" + local.PlayerIndex + " signature=" + evidence.signature + " evidence=" + path);
+            }
+
+            // A shared, run-scoped evidence barrier keeps early peers connected while
+            // the slowest peer verifies its own replicated state and rendered views.
+            for (int seat = 0; seat < 4; seat++)
+            {
+                string path = LayoutPath(seat);
+                if (!File.Exists(path)) return;
+                var peer = JsonUtility.FromJson<LayoutEvidence>(File.ReadAllText(path));
+                if (peer == null || peer.run != _token || peer.localSeat != seat) return;
+                if (peer.signature != _layoutEvidence.signature) { Fail("layout inventory differs across peers"); return; }
+            }
+            Pass("LAYOUT_FULL local=" + local.PlayerIndex + " localViews=" + LayoutItemCount + " remoteViews=" + (3 * LayoutItemCount) + " peers=4");
+        }
+
+        bool TryReadLayout(MatchCompositionRoot root, PlayerState[] players, PlayerState local, out LayoutEvidence evidence)
+        {
+            evidence = null;
+            var model = root.NetworkState.InventoryReadModel;
+            var presenter = InventoryPresenter.Instance;
+            var camera = Camera.main;
+            var bindings = root.ViewBindings;
+            if (model == null || model.IsFaulted || root.NetworkState.IsDeathmatchGrantViewBlocked
+                || presenter == null || presenter.LocalSlotCount != LayoutItemCount || camera == null || bindings == null
+                || IceboxController.Instance == null || IceboxController.Instance.IsAnimating
+                || FindObjectsByType<Canvas>(FindObjectsSortMode.None).Any(c => c.name == "LoadingScreenCanvas" && c.isActiveAndEnabled)) return false;
+            var records = new List<LayoutView>();
+            var seats = new List<LayoutSeat>();
+            var signature = new StringBuilder();
+            var contentSignature = new StringBuilder();
+            var remoteRoots = FindObjectsByType<Transform>(FindObjectsSortMode.None)
+                .Where(t => t.gameObject.activeInHierarchy && t.gameObject.scene == local.gameObject.scene
+                    && t.name.StartsWith("RemoteSeat", StringComparison.Ordinal)).ToArray();
+            int remoteCount = 0;
+            foreach (var player in players)
+            {
+                int seat = player.PlayerIndex;
+                var source = player.GetInventory().SlotStates;
+                if (model.GetCount(seat) != LayoutItemCount || source.Count != LayoutItemCount) return false;
+                var items = new LayoutItem[LayoutItemCount];
+                signature.Append(seat).Append(':');
+                contentSignature.Append(seat).Append(':');
+                for (int i = 0; i < LayoutItemCount; i++)
+                {
+                    var item = model.GetSlot(seat, i);
+                    if (item.IsEmpty || !item.Equals(source[i])) return false;
+                    items[i] = new LayoutItem { itemId = item.ItemId, copyId = item.CopyId,
+                        remainingUses = item.RemainingUses, flags = item.Flags };
+                    signature.Append(item.ItemId).Append('/').Append(item.CopyId).Append('/').Append(item.RemainingUses).Append('/').Append(item.Flags).Append(',');
+                    contentSignature.Append(item.ItemId).Append('/').Append(item.RemainingUses).Append('/').Append(item.Flags).Append(',');
+                    Transform transform;
+                    if (seat == local.PlayerIndex)
+                    {
+                        var view = presenter.GetLocalView(i);
+                        if (view == null || !view.gameObject.activeInHierarchy || !presenter.GetLocalSlot(i).Equals(item)) return false;
+                        transform = view.transform;
+                    }
+                    else
+                    {
+                        string prefix = "RemoteSeat" + seat + "_Item" + i + "_";
+                        var matches = remoteRoots.Where(t => t.name.StartsWith(prefix, StringComparison.Ordinal)).ToArray();
+                        if (matches.Length != 1) return false;
+                        var sprite = matches[0].GetComponentInChildren<SpriteRenderer>();
+                        if (sprite == null || !sprite.enabled || sprite.sprite == null) return false;
+                        transform = matches[0];
+                        remoteCount++;
+                    }
+                    var record = DescribeLayoutView(camera, transform, seat == local.PlayerIndex ? "local-item" : "remote-item", seat, i);
+                    record.copyId = item.CopyId;
+                    if (!record.hasRenderer) return false;
+                    records.Add(record);
+                }
+                signature.Append(';');
+                contentSignature.Append(';');
+                seats.Add(new LayoutSeat { seat = seat, relativeSlot = AZPlayerVisual.GetRemoteVisualSlot(seat, local.PlayerIndex),
+                    ownerClientId = player.OwnerClientId.ToString(), items = items });
+                if (seat != local.PlayerIndex)
+                {
+                    var target = bindings.GetTarget((byte)seat);
+                    if (target == null || !target.gameObject.activeInHierarchy) return false;
+                    records.Add(DescribeLayoutView(camera, target, "remote-character", seat, -1));
+                }
+            }
+            if (remoteCount != 3 * LayoutItemCount || remoteRoots.Length != 3 * LayoutItemCount) return false;
+            for (int i = 0; i < 12; i++)
+            {
+                var anchor = bindings.GetItemAnchor(true, i);
+                if (anchor != null) records.Add(DescribeLayoutView(camera, anchor, "local-anchor", local.PlayerIndex, i));
+            }
+            evidence = new LayoutEvidence { run = _token, scene = local.gameObject.scene.name, scenePath = local.gameObject.scene.path,
+                localSeat = local.PlayerIndex, localClientId = _nm.LocalClientId.ToString(), width = Screen.width, height = Screen.height,
+                revision = model.Revision, signature = signature.ToString(), contentSignature = contentSignature.ToString(),
+                seats = seats.ToArray(), views = records.ToArray(),
+                itemCount = LayoutItemCount, localViewCount = LayoutItemCount, remoteViewCount = remoteCount,
+                captureMethod = "camera-and-root-canvases-render-texture" };
+            return true;
+        }
+
+        static LayoutView DescribeLayoutView(Camera camera, Transform target, string role, int seat, int itemIndex)
+        {
+            var renderers = target.GetComponentsInChildren<Renderer>(false).Where(r => r.enabled).ToArray();
+            var bounds = new Bounds(target.position, Vector3.zero);
+            if (renderers.Length > 0)
+            {
+                bounds = renderers[0].bounds;
+                foreach (var renderer in renderers.Skip(1)) bounds.Encapsulate(renderer.bounds);
+            }
+            var screen = LayoutScreenBounds(camera, bounds);
+            var collider = target.GetComponentInChildren<Collider>();
+            return new LayoutView { role = role, name = target.name, seat = seat, itemIndex = itemIndex,
+                position = target.position, scale = target.lossyScale, screenBounds = screen,
+                colliderScreenBounds = collider != null ? LayoutScreenBounds(camera, collider.bounds) : Array.Empty<float>(),
+                hasRenderer = renderers.Length > 0,
+                fullyInside = screen[0] >= 0 && screen[1] >= 0 && screen[2] <= Screen.width && screen[3] <= Screen.height && screen[4] > 0 };
+        }
+
+        // [left, bottom, right, top, nearestDepth], in the rendered player's pixels.
+        static float[] LayoutScreenBounds(Camera camera, Bounds bounds)
+        {
+            float left = float.PositiveInfinity, bottom = float.PositiveInfinity, right = float.NegativeInfinity,
+                top = float.NegativeInfinity, depth = float.PositiveInfinity;
+            for (int x = 0; x < 2; x++) for (int y = 0; y < 2; y++) for (int z = 0; z < 2; z++)
+            {
+                var world = new Vector3(x == 0 ? bounds.min.x : bounds.max.x, y == 0 ? bounds.min.y : bounds.max.y,
+                    z == 0 ? bounds.min.z : bounds.max.z);
+                var point = camera.WorldToScreenPoint(world);
+                left = Mathf.Min(left, point.x); bottom = Mathf.Min(bottom, point.y);
+                right = Mathf.Max(right, point.x); top = Mathf.Max(top, point.y); depth = Mathf.Min(depth, point.z);
+            }
+            return new[] { left, bottom, right, top, depth };
         }
         IEnumerator ExitLater()
         {
@@ -195,7 +456,8 @@ namespace AbsoluteZero.Core.Solo
                     yield break;
                 }
             }
-            yield return new WaitForSecondsRealtime(_role == "host" ? 5f : 2f);
+            bool recordTemperature = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("AZ_TEMPERATURE_CAPTURE_DIR"));
+            yield return new WaitForSecondsRealtime(recordTemperature ? (_role == "host" ? 6f : 4f) : (_role == "host" ? 5f : 2f));
             Application.Quit(0);
         }
         void Update()
@@ -273,6 +535,12 @@ namespace AbsoluteZero.Core.Solo
                 RunDelayedItemRules(tm, players, local);
                 return;
             }
+            if (_case == "layout")
+            {
+                RunLayoutFixture(root, tm, players, local);
+                return;
+            }
+            if (_case == "menu" || _case == "contact") return; // Explicit fixture probes own inputs and exit.
             if (_case == "input")
             {
                 if (_nm.IsServer && !_seeded && players.Length == _count && tm.CurrentPhase.Value == TurnPhase.PrepPhase)

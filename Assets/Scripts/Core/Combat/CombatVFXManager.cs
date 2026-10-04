@@ -32,6 +32,9 @@ namespace AbsoluteZero.Core.Combat
         public static event System.Action<uint> OnPresentationSettled;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         public static event System.Action<uint> OnGhostImpactSignaled;
+        public static event System.Action<int, int, string, string> OnContactCue;
+        internal void SignalContactCue(int actor, int target, string item, string stage)
+            => OnContactCue?.Invoke(actor, target, item, stage);
 #endif
 
         readonly Dictionary<int, float> _displayTemperatures = new();

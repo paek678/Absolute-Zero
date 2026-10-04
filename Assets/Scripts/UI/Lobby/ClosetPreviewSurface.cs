@@ -38,7 +38,12 @@ namespace AbsoluteZero.UI.LobbyUI
                 if (_visual == null) Create();
                 if (_applied == null || !CosmeticCodec.SameIds(_applied.ToDto(), snapshot.ToDto()))
                 {
-                    if (!_visual.Apply(snapshot)) throw new InvalidOperationException("Invalid preview outfit.");
+                    if (!_visual.Apply(snapshot))
+                    {
+                        _view.PreviewHint.text = "선택한 모습을 표시하지 못했습니다\n이전 미리보기를 유지합니다";
+                        _view.PreviewHint.gameObject.SetActive(true);
+                        return false;
+                    }
                     _applied = snapshot;
                 }
                 _failed = false;
@@ -70,7 +75,9 @@ namespace AbsoluteZero.UI.LobbyUI
                 {
                     if (item == null) continue;
                     var dto = new CosmeticDto(); CosmeticCodec.SetPart(dto, part, item.Id);
-                    if (_visual.Apply(new CosmeticSnapshot(dto, 0))) IncludeBounds(ref found);
+                    if (!_visual.Apply(new CosmeticSnapshot(dto, 0)))
+                        throw new InvalidOperationException("Invalid preview catalog item: " + item.Id);
+                    IncludeBounds(ref found);
                 }
             if (!found) throw new InvalidOperationException("Preview has no visible sprites.");
             var cameraObject = new GameObject("ClosetPreview_Camera");

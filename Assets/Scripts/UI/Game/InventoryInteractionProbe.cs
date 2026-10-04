@@ -70,6 +70,10 @@ namespace AbsoluteZero.UI.Game
                 InputSystem.QueueStateEvent(_keyboard, new KeyboardState(Key.Escape)); yield return Frames(2);
                 InputSystem.QueueStateEvent(_keyboard, new KeyboardState()); yield return Frames(2);
                 Check(_inventory.SelectionStage == ItemSelectionStage.Idle, "escape cancels aim");
+                Check(_ui.GetComponent<MatchMenu>()?.IsOpen == true, "escape also opens match menu");
+                InputSystem.QueueStateEvent(_keyboard, new KeyboardState(Key.Escape)); yield return Frames(2);
+                InputSystem.QueueStateEvent(_keyboard, new KeyboardState()); yield return Frames(2);
+                Check(_ui.GetComponent<MatchMenu>()?.IsOpen == false, "second escape closes match menu");
                 yield return ClickItem(0); yield return Click(MouseButton.Right);
                 Check(_inventory.SelectionStage == ItemSelectionStage.Idle, "right button cancels aim");
                 yield return ClickItem(0); yield return ClickItem(0);

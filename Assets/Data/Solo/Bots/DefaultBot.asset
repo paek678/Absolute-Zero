@@ -21,6 +21,7 @@ MonoBehaviour:
     Back: 
     Bottom: 
     Tail: 
+  appearance: {fileID: 11400000, guid: babd55c027f898240b275b87940f94c9, type: 2}
   graph: {fileID: -828625310525461982, guid: 91e27365d529dad4ca59a1c47b3dc5f9, type: 2}
   baseStats: {fileID: 11400000, guid: acdeb473ac4a50840bcc64261a86411a, type: 2}
   itemUsePolicy: {fileID: 11400000, guid: 94bb2338a7d36a343bf36df9a9d811fd, type: 2}

@@ -23,7 +23,8 @@ namespace AbsoluteZero.UI.Game.Presenters
 
         readonly Dictionary<byte, float?> _tempOverrides = new();
 
-        const float HP_LERP_SPEED = 6f;
+        const float DAMAGE_DISPLAY_SPEED = 6f;
+        const float RECOVERY_DISPLAY_SPEED = DAMAGE_DISPLAY_SPEED * 2.5f;
 
         static readonly Color HP_COLOR_GREEN = new(0.39f, 0.78f, 0.31f, 1f);
         static readonly Color HP_COLOR_PINK = new(0.90f, 0.47f, 0.59f, 1f);
@@ -52,7 +53,7 @@ namespace AbsoluteZero.UI.Game.Presenters
             if (_bridge.TryGetSeat(localSeat, out var mySeat))
             {
                 float myTarget = GetOverrideOrActual(localSeat, mySeat.Temperature);
-                _displayedMyTemp = Mathf.MoveTowards(_displayedMyTemp, myTarget, HP_LERP_SPEED * deltaTime);
+                _displayedMyTemp = MoveDisplayedTemperature(_displayedMyTemp, myTarget, deltaTime);
                 _myTempText.text = $"{_displayedMyTemp:F0}°";
                 if (_myHpSlider != null)
                     _myHpSlider.value = Mathf.Clamp01(_displayedMyTemp / 37f);
@@ -62,7 +63,7 @@ namespace AbsoluteZero.UI.Game.Presenters
 
             for (byte oppSeat = 0; oppSeat < 4; oppSeat++)
             {
-                int i = AZPlayerVisual.GetRemoteVisualSlot(oppSeat, localSeat);
+                int i = AZPlayerVisual.GetRemoteVisualSlot(oppSeat, localSeat, _bridge.CurrentMatch.Mode == Core.Network.GameMode.Multi);
                 if (i < 0 || i >= _oppBars.Count) continue;
                 var bar = _oppBars[i];
                 if (!_bridge.TryGetSeat(oppSeat, out var oppSnapshot))
@@ -72,7 +73,7 @@ namespace AbsoluteZero.UI.Game.Presenters
                     _displayedOppTemps[i] = 37f;
 
                 float oppTarget = GetOverrideOrActual(oppSeat, oppSnapshot.Temperature);
-                float displayed = Mathf.MoveTowards(_displayedOppTemps[i], oppTarget, HP_LERP_SPEED * deltaTime);
+                float displayed = MoveDisplayedTemperature(_displayedOppTemps[i], oppTarget, deltaTime);
                 _displayedOppTemps[i] = displayed;
 
                 if (bar.TempText != null)
@@ -84,18 +85,28 @@ namespace AbsoluteZero.UI.Game.Presenters
             }
         }
 
-        public void SnapTempDisplay()
+        static float MoveDisplayedTemperature(float current, float target, float deltaTime)
         {
+            float speed = target > current ? RECOVERY_DISPLAY_SPEED : DAMAGE_DISPLAY_SPEED;
+            return Mathf.MoveTowards(current, target, speed * deltaTime);
+        }
+
+        public void ReconcilePrepTemperature()
+        {
+            // Keep existing damage settlement, but let recovery finish smoothly across Prep entry.
             byte localSeat = _bridge.LocalSeatIndex;
             if (_bridge.TryGetSeat(localSeat, out var mySeat))
-                _displayedMyTemp = mySeat.Temperature;
+                _displayedMyTemp = Mathf.Min(_displayedMyTemp, mySeat.Temperature);
 
             for (byte seat = 0; seat < 4; seat++)
             {
-                int i = AZPlayerVisual.GetRemoteVisualSlot(seat, localSeat);
+                int i = AZPlayerVisual.GetRemoteVisualSlot(seat, localSeat, _bridge.CurrentMatch.Mode == Core.Network.GameMode.Multi);
                 if (i < 0 || i >= _oppBars.Count) continue;
                 if (_bridge.TryGetSeat(seat, out var oppSnapshot))
-                    _displayedOppTemps[i] = oppSnapshot.Temperature;
+                {
+                    float current = _displayedOppTemps.TryGetValue(i, out var displayed) ? displayed : 37f;
+                    _displayedOppTemps[i] = Mathf.Min(current, oppSnapshot.Temperature);
+                }
             }
         }
 

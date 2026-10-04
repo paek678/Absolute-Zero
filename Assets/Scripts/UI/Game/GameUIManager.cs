@@ -134,6 +134,7 @@ namespace AbsoluteZero.UI.Game
         {
             if (!_initialized) return;
             _tempPresenter.Tick(Time.deltaTime);
+            if (LocalGameplayInput.IsBlocked) return;
 
             if (_waitingForTarget)
             {
@@ -148,7 +149,7 @@ namespace AbsoluteZero.UI.Game
         void HandlePhaseChanged(TurnPhase oldPhase, TurnPhase newPhase)
         {
             if (newPhase == TurnPhase.PrepPhase)
-                _tempPresenter.SnapTempDisplay();
+                _tempPresenter.ReconcilePrepTemperature();
 
             if (_waitingForTarget)
                 CancelTargetSelection();
@@ -156,6 +157,7 @@ namespace AbsoluteZero.UI.Game
 
         void OnItemClicked(int slotIndex)
         {
+            if (LocalGameplayInput.IsBlocked) return;
             if (MiniGameHub.IsRunning) return;
             if (_inventoryPresenter == null) return;
 
@@ -251,6 +253,12 @@ namespace AbsoluteZero.UI.Game
             {
                 _matchHudPresenter.SetStatusText("선택 실패");
             }
+        }
+
+        public void CancelAimForMenu()
+        {
+            if (_waitingForTarget) CancelTargetSelection();
+            _ghostSkillPresenter?.CancelAimForMenu();
         }
 
         void CancelTargetSelection()

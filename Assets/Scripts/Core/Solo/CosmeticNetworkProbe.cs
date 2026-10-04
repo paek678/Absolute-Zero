@@ -12,6 +12,7 @@ namespace AbsoluteZero.Core.Solo
     {
         string _id;
         string _topId;
+        string _backId, _tailId;
         int _count = 4;
         bool _fullSet;
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -26,6 +27,10 @@ namespace AbsoluteZero.Core.Solo
             probe._id = args[at + 1];
             int topAt = Array.IndexOf(args, "--az-cosmetic-top");
             if (topAt >= 0 && topAt + 1 < args.Length) probe._topId = args[topAt + 1];
+            int backAt = Array.IndexOf(args, "--az-cosmetic-back");
+            if (backAt >= 0 && backAt + 1 < args.Length) probe._backId = args[backAt + 1];
+            int tailAt = Array.IndexOf(args, "--az-cosmetic-tail");
+            if (tailAt >= 0 && tailAt + 1 < args.Length) probe._tailId = args[tailAt + 1];
             int countAt = Array.IndexOf(args, "--az-cosmetic-count");
             if (countAt >= 0 && countAt + 1 < args.Length && int.TryParse(args[countAt + 1], out int count) && count >= 2 && count <= 4)
                 probe._count = count;
@@ -55,6 +60,15 @@ namespace AbsoluteZero.Core.Solo
                 service.EquipState.Equip(top);
             }
             var expectedLocal = service.Equipment.Snapshot;
+            foreach (var selection in new[] { (CosmeticPart.Back, _backId), (CosmeticPart.Tail, _tailId) })
+            {
+                if (string.IsNullOrEmpty(selection.Item2)) continue;
+                var accessory = service.Registry.GetById(selection.Item2);
+                if (accessory == null || accessory.Part != selection.Item1)
+                { Debug.LogError("[COSMETIC] FAIL invalid accessory " + selection.Item2); yield break; }
+                service.EquipState.Equip(accessory);
+            }
+            expectedLocal = service.Equipment.Snapshot;
             Debug.Log("[COSMETIC] EQUIPPED " + _id);
             while (Time.realtimeSinceStartup < deadline)
             {
@@ -65,8 +79,10 @@ namespace AbsoluteZero.Core.Solo
                 {
                     var dto = JsonUtility.FromJson<CosmeticDto>(player.CosmeticDataNV.Value.ToString());
                     if (_topId != null && service.Registry.GetById(dto.top)?.Part != CosmeticPart.Top) { ready = false; break; }
-                    if (_fullSet && (dto.top != expectedLocal.Top || dto.back != expectedLocal.Back
-                        || dto.bottom != expectedLocal.Bottom || dto.tail != expectedLocal.Tail)) { ready = false; break; }
+                    if (_fullSet && (dto.top != expectedLocal.Top || (_backId == null && dto.back != expectedLocal.Back)
+                        || dto.bottom != expectedLocal.Bottom || (_tailId == null && dto.tail != expectedLocal.Tail))) { ready = false; break; }
+                    if ((_backId != null && service.Registry.GetById(dto.back)?.Part != CosmeticPart.Back)
+                        || (_tailId != null && service.Registry.GetById(dto.tail)?.Part != CosmeticPart.Tail)) { ready = false; break; }
                     var equipped = service.Registry.GetById(dto.head);
                     if (equipped?.Atlas == null) { ready = false; break; }
                     if (player.IsOwner)
@@ -80,12 +96,14 @@ namespace AbsoluteZero.Core.Solo
                         { ready = false; break; }
                         continue;
                     }
-                    var root = player.GetComponent<AZPlayerVisual>().GetVisualRoot();
+                    var visual = player.GetComponent<AZPlayerVisual>();
+                    var root = visual.GetVisualRoot();
                     var expected = equipped.Atlas.Bindings.First(b => b.Replacement != null).Replacement;
                     if (root == null || !root.GetComponentsInChildren<SpriteRenderer>(true)
-                            .Any(r => r.gameObject.name == "_cosmetic_atlas_layer" && r.sprite == expected && r.enabled))
+                            .Any(r => r.gameObject.name == "_cosmetic_atlas_layer" && r.gameObject.activeSelf
+                                && r.sprite == expected && (r.enabled || visual.IsGhost)))
                     { ready = false; break; }
-                    if ((_fullSet || _topId != null) && !MatchesSuppliedMappings(root, dto, service.Registry, CosmeticView.Character))
+                    if ((_fullSet || _topId != null) && !MatchesSuppliedMappings(root, dto, service.Registry, CosmeticView.Character, visual.IsGhost))
                     { ready = false; break; }
                 }
                 if (ready)
@@ -108,7 +126,7 @@ namespace AbsoluteZero.Core.Solo
             }
             Debug.LogError("[COSMETIC] FAIL timed out waiting for " + _count + " replicated and rendered outfits");
         }
-        static bool MatchesSuppliedMappings(Transform root, CosmeticDto dto, CosmeticRegistrySO registry, CosmeticView view)
+        static bool MatchesSuppliedMappings(Transform root, CosmeticDto dto, CosmeticRegistrySO registry, CosmeticView view, bool hidden = false)
         {
             var snapshot = new CosmeticSnapshot(dto, 0);
             foreach (CosmeticPart part in Enum.GetValues(typeof(CosmeticPart)))
@@ -124,7 +142,7 @@ namespace AbsoluteZero.Core.Solo
                     {
                         if (binding.Source != null && target.sprite != binding.Source) continue;
                         if (!target.GetComponentsInChildren<SpriteRenderer>().Any(r => r != target
-                            && r.enabled && r.sprite == binding.Replacement)) return false;
+                            && r.enabled != hidden && r.sprite == binding.Replacement)) return false;
                     }
                     else if (target.sprite == binding.Source && binding.Source != binding.Replacement) return false;
                 }

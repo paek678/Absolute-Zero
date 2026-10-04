@@ -100,6 +100,8 @@ namespace AbsoluteZero.Core.Solo.Configuration
             if (string.IsNullOrWhiteSpace(bot.DisplayName)) issues.Add("Bot display name is required.");
             if (!HasCompiledRoot(bot.Graph)) issues.Add("Bot graph requires a compiled root with no placeholder nodes.");
             CheckCosmetics(bot.Cosmetics, context.CosmeticRegistry, issues);
+            if (bot.Appearance != null && !bot.Appearance.TrySnapshot(out _, out var appearanceError))
+                issues.Add("Bot appearance: " + appearanceError);
             CheckWeights(bot.TacticalDefaults, "Bot tactical defaults", issues);
             CheckWeights(difficulty.TacticalWeights, "Difficulty tactical weights", issues);
             CheckNonNegative(difficulty.MinimumThinkSeconds, "Minimum think delay", issues);

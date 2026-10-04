@@ -20,6 +20,7 @@ namespace AbsoluteZero.Core.Cosmetic
             Root.SetActive(false);
             CopyVisual(sourceVisual, Root.transform);
             _visual.BindCharacter(Root.transform);
+            _visual.Synchronize = Isolate;
             Isolate();
         }
         void CopyVisual(Transform source, Transform target)
@@ -53,9 +54,7 @@ namespace AbsoluteZero.Core.Cosmetic
         public bool Apply(CosmeticSnapshot snapshot)
         {
             if (Root == null || snapshot == null || !CosmeticCodec.TryEncode(snapshot.ToDto(), _registry, out var json)) return false;
-            _visual.ApplyFromDto(json, _registry);
-            Isolate(); // New atlas/overlay children inherit the private camera layer explicitly.
-            return true;
+            return _visual.ApplyFromDto(json, _registry).Success;
         }
         public void Isolate()
         {

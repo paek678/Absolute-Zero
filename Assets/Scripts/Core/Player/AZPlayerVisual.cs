@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using AbsoluteZero.Core.Audio;
 using AbsoluteZero.Core.Combat;
 using AbsoluteZero.Core.Common;
@@ -8,6 +9,7 @@ using AbsoluteZero.Core.Match;
 using AbsoluteZero.Core.Maps;
 using AbsoluteZero.Core.Network;
 using AbsoluteZero.Core.Player.Identity;
+using AbsoluteZero.Core.Session;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -82,6 +84,8 @@ namespace AbsoluteZero.Core.Player
         ParticleSystem _finalBreakParticle;
 
         CosmeticVisualController _cosmeticController;
+        PlayerBinding _appearanceBinding;
+        public AppearanceApplyReport AppearanceReport => _cosmeticController?.LastReport;
 
         readonly WaitForSeconds _waitFlashEnd = new(0.5f);
         readonly WaitForSeconds _waitAnimEnd = new(0.6f);
@@ -133,6 +137,7 @@ namespace AbsoluteZero.Core.Player
             }
             _cosmeticController?.Clear();
             _cosmeticController = null;
+            _appearanceBinding = null;
             ClearSeatMarker();
             _visualRoot = null;
             _animator = null;
@@ -229,15 +234,19 @@ namespace AbsoluteZero.Core.Player
             if (_playerState == null || !LocalMatchPerspective.TryResolveCurrent(out var perspective)
                 || !perspective.TryGetBinding(_playerState.PlayerIndex, out var binding)
                 || !ReferenceEquals(binding.State, _playerState)) return -1;
-            return GetRemoteVisualSlot(binding.Identity.PlayerIndex, perspective.HumanSeat);
+            return GetRemoteVisualSlot(binding.Identity.PlayerIndex, perspective.HumanSeat,
+                MatchCompositionRoot.Instance.ActiveConfig.Mode == GameMode.Multi);
         }
 
         // Stable seats retain their visual slot even while other seats spawn/despawn.
-        public static int GetRemoteVisualSlot(int seat, int localSeat)
+        public static int GetRemoteVisualSlot(int seat, int localSeat, bool multi = true)
         {
             if (seat < 0 || seat >= 4 || localSeat < 0 || localSeat >= 4 || seat == localSeat)
                 return -1;
-            return seat < localSeat ? seat : seat - 1;
+            if (!multi) return seat < 2 && localSeat < 2 ? 0 : -1;
+            // Local south -> next seat west -> opposite north -> previous seat east.
+            // Use the fixed four-seat ring even after a departure; never compact holes.
+            return (seat - localSeat + 4) % 4 - 1;
         }
 
         GameObject FindSceneVisual(string slotName)
@@ -357,6 +366,9 @@ namespace AbsoluteZero.Core.Player
             var col = _visualRoot.GetComponent<BoxCollider>();
             if (col != null)
                 col.enabled = false;
+            // The authored scene visual is not the despawned network object.
+            // Hide only the visual still owned by this participant.
+            _visualRoot.gameObject.SetActive(false);
         }
 
         void BuildFreezeObject(Transform visual)
@@ -717,6 +729,8 @@ namespace AbsoluteZero.Core.Player
 
         void SetCharacterRenderersVisible(bool visible)
         {
+            var atlas = _visualRoot != null ? _visualRoot.GetComponent<CosmeticAtlasRenderer>() : null;
+            if (atlas != null) atlas.LayersVisible = visible;
             if (_spriteRenderers == null) return;
             foreach (var renderer in _spriteRenderers)
             {
@@ -860,9 +874,57 @@ namespace AbsoluteZero.Core.Player
 
         void InitCosmeticController(Transform root)
         {
+            _cosmeticController?.Clear();
             _cosmeticController = new CosmeticVisualController();
+            CharacterAppearanceSnapshot profile = null;
+            if (LocalMatchPerspective.TryResolveCurrent(out var perspective)
+                && perspective.TryGetBinding(_playerState.PlayerIndex, out var binding)
+                && ReferenceEquals(binding.State, _playerState))
+            {
+                _appearanceBinding = binding;
+                var match = MatchCompositionRoot.Instance;
+                var launch = AppBootstrapper.Instance?.SessionRouter.LaunchContext;
+                if (_playerState.IsBotControlled && match?.ActiveConfig?.Mode == GameMode.Solo
+                    && launch?.Mode == GameMode.Solo && binding.Participant != null
+                    && match.Generation == binding.Participant.Generation
+                    && launch.Generation == binding.Participant.Generation)
+                    profile = launch.Solo?.Appearance;
+            }
+            _cosmeticController.BindCharacter(root, CosmeticView.Character, profile);
+            _cosmeticController.IsCurrent = IsAppearanceCurrent;
+            _cosmeticController.Synchronize = SynchronizeAppearance;
+            root.GetComponent<CosmeticAtlasRenderer>().Reactivated = ResumeAppearance;
+        }
 
-            _cosmeticController.BindCharacter(root);
+        bool IsAppearanceCurrent() => IsSpawned && isActiveAndEnabled && _visualRoot != null
+            && _appearanceBinding?.IsValid == true && LocalMatchPerspective.TryResolveCurrent(out var perspective)
+            && perspective.TryGetBinding(_playerState.PlayerIndex, out var current)
+            && ReferenceEquals(current, _appearanceBinding);
+
+        void SynchronizeAppearance()
+        {
+            RefreshRendererCache();
+            var atlas = _visualRoot != null ? _visualRoot.GetComponent<CosmeticAtlasRenderer>() : null;
+            if (atlas != null) atlas.LayersVisible = _ghostPlaceholder == null || !_ghostPlaceholder.activeSelf;
+            if (_playerState == null || _spriteRenderers == null) return;
+            var tint = Color.Lerp(new Color(.7f, .85f, 1f), Color.white, Mathf.Clamp01(_playerState.Temperature.Value / 37f));
+            tint.a = _ghostAlpha;
+            foreach (var renderer in _spriteRenderers)
+                if (renderer != null && renderer != _ghostPlaceholderRenderer) renderer.color = tint;
+        }
+
+        void OnDisable() => _cosmeticController?.Suspend();
+        void OnEnable()
+        {
+            ResumeAppearance();
+        }
+
+        void ResumeAppearance()
+        {
+            if (!IsSpawned || _cosmeticController == null) return;
+            if (!IsAppearanceCurrent()) { _cosmeticController.Clear(); _cosmeticController = null; return; }
+            _cosmeticController.Resume();
+            ApplyRemoteCosmetic(_playerState.CosmeticDataNV.Value.ToString());
         }
 
         public void ApplyRemoteCosmetic(string json)
@@ -873,18 +935,21 @@ namespace AbsoluteZero.Core.Player
             var service = CosmeticProfileService.Instance;
             if (service != null && service.Registry != null)
             {
-                _cosmeticController.ApplyFromDto(json, service.Registry);
-                RefreshRendererCache();
+                var report = _cosmeticController.ApplyFromDto(json, service.Registry);
+                if (!report.Success && isActiveAndEnabled)
+                    Debug.LogWarning($"[Appearance] seat={_playerState.PlayerIndex} stage={report.Stage}: {report.Error}");
             }
         }
 
         void RefreshRendererCache()
         {
             if (_visualRoot == null) return;
-            _spriteRenderers = _visualRoot.GetComponentsInChildren<SpriteRenderer>(true);
+            _spriteRenderers = _visualRoot.GetComponentsInChildren<SpriteRenderer>(true)
+                .Where(r => r.name != "_cosmetic_atlas_layer" || r.gameObject.activeSelf).ToArray();
             _cachedMaterials = new Material[_spriteRenderers.Length];
             for (int i = 0; i < _spriteRenderers.Length; i++)
-                _cachedMaterials[i] = _spriteRenderers[i].material;
+                _cachedMaterials[i] = _spriteRenderers[i].name == "_cosmetic_atlas_layer"
+                    ? _spriteRenderers[i].sharedMaterial : _spriteRenderers[i].material;
         }
     }
 }

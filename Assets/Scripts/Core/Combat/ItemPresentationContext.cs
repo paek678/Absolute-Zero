@@ -45,5 +45,11 @@ namespace AbsoluteZero.Core.Combat
         public void Temperature(int seat, float value) => _owner.ShowTemperature(seat, value);
         public void Hit(Vector3 position) => _owner.PlayHitAt(position);
         public void IceBreak(Vector3 position) => _owner.PlayIceBreakAt(position);
+        public void ContactCue(string stage)
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            _owner.SignalContactCue(Item.ActorSeat, Item.TargetSeat, Item.Item.ItemName, stage);
+#endif
+        }
     }
 }
