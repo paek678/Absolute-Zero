@@ -208,10 +208,15 @@ namespace AbsoluteZero.Core.Solo
 
         static async Task ReturnToLobbyAsync()
         {
+            if (!ApplicationLifetime.CanNavigate) return;
             if (SceneManager.GetActiveScene().name == "LobbyScene") return;
             var operation = SceneManager.LoadSceneAsync("LobbyScene", LoadSceneMode.Single);
             if (operation == null) throw new InvalidOperationException("Lobby scene could not load.");
-            while (!operation.isDone) await Task.Delay(20);
+            while (!operation.isDone)
+            {
+                if (!ApplicationLifetime.CanNavigate) return;
+                await Task.Delay(20);
+            }
         }
 
         void SetState(SoloSessionState state) { State = state; StateChanged?.Invoke(state); }

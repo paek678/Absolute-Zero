@@ -207,9 +207,16 @@ namespace AbsoluteZero.Core.Solo
             bool temporaryCamera = camera == null;
             if (temporaryCamera) camera = new GameObject("Capture camera").AddComponent<Camera>();
             var canvases = FindObjectsByType<Canvas>(FindObjectsSortMode.None)
-                .Where(x => x.isRootCanvas && x.isActiveAndEnabled && x.renderMode == RenderMode.ScreenSpaceOverlay).ToArray();
+                .Where(x => x.isRootCanvas && x.isActiveAndEnabled && x.renderMode == RenderMode.ScreenSpaceOverlay
+                    && Mathf.Abs(x.transform.lossyScale.x) > .0001f && Mathf.Abs(x.transform.lossyScale.y) > .0001f).ToArray();
             var oldCameras = canvases.Select(x => x.worldCamera).ToArray();
             var oldDistances = canvases.Select(x => x.planeDistance).ToArray();
+            // Switching Canvas render modes drives its RectTransform. A diagnostic
+            // capture must not reveal zero-scale design boards or change later input.
+            var oldPositions = canvases.Select(x => x.transform.localPosition).ToArray();
+            var oldRotations = canvases.Select(x => x.transform.localRotation).ToArray();
+            var oldScales = canvases.Select(x => x.transform.localScale).ToArray();
+            var oldSizes = canvases.Select(x => ((RectTransform)x.transform).sizeDelta).ToArray();
             var target = RenderTexture.GetTemporary(Screen.width, Screen.height, 24, RenderTextureFormat.ARGB32);
             var previousTarget = camera.targetTexture;
             var previousActive = RenderTexture.active;
@@ -233,7 +240,14 @@ namespace AbsoluteZero.Core.Solo
             {
                 camera.targetTexture = previousTarget; RenderTexture.active = previousActive;
                 for (int i = 0; i < canvases.Length; i++)
-                { canvases[i].renderMode = RenderMode.ScreenSpaceOverlay; canvases[i].worldCamera = oldCameras[i]; canvases[i].planeDistance = oldDistances[i]; }
+                {
+                    canvases[i].renderMode = RenderMode.ScreenSpaceOverlay;
+                    canvases[i].worldCamera = oldCameras[i]; canvases[i].planeDistance = oldDistances[i];
+                    canvases[i].transform.localPosition = oldPositions[i];
+                    canvases[i].transform.localRotation = oldRotations[i];
+                    canvases[i].transform.localScale = oldScales[i];
+                    ((RectTransform)canvases[i].transform).sizeDelta = oldSizes[i];
+                }
                 RenderTexture.ReleaseTemporary(target); Destroy(texture);
                 if (temporaryCamera) Destroy(camera.gameObject);
             }

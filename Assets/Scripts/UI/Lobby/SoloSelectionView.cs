@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using AbsoluteZero.UI.Common;
 using UnityEngine.Events;
 using UnityEngine.UI;
 
@@ -43,7 +44,7 @@ namespace AbsoluteZero.UI.LobbyUI
                 if (i >= titles.Count) continue;
                 button.GetComponentInChildren<TMP_Text>().text = titles[i];
                 button.interactable = canSelect;
-                button.GetComponent<Image>().color = i == selected ? new Color(.25f, .48f, .45f) : new Color(.22f, .26f, .30f);
+                CasualUiSkin.Button(button, i == selected ? CasualUiSkin.Mint : CasualUiSkin.Cream, true);
             }
             _bindings.Details.text = details;
             _bindings.Status.text = status;

@@ -20,6 +20,7 @@ namespace AbsoluteZero.UI.LobbyUI
         public event Action<string> OnNicknameEndEdit;
 
         public GameObject Root => _root;
+        public string NicknameText => _nicknameInput != null ? _nicknameInput.text : "";
 
         public LobbyMainView(GameObject root)
         {
@@ -76,7 +77,7 @@ namespace AbsoluteZero.UI.LobbyUI
 
         public void SetNicknameText(string text)
         {
-            if (_nicknameInput != null) _nicknameInput.text = text;
+            if (_nicknameInput != null) _nicknameInput.SetTextWithoutNotify(text);
         }
     }
 }

@@ -381,6 +381,20 @@ namespace AbsoluteZero.Core.Solo
 
         IEnumerator CapturePossessionCue()
         {
+            yield return new WaitForSecondsRealtime(0.12f);
+            var actor = CurrentPlayers().FirstOrDefault(p => p.PlayerIndex == 2);
+            var visual = actor != null ? actor.GetComponent<AZPlayerVisual>() : null;
+            var animator = visual != null ? visual.GetAnimator() : null;
+            var clips = animator != null ? animator.GetCurrentAnimatorClipInfo(0) : Array.Empty<AnimatorClipInfo>();
+            bool recipientClip = clips.Any(c => c.clip != null && c.clip.name == "playerA_feed");
+            // The local human's third-person rig is hidden in first-person view.
+            bool valid = visual != null && (visual.IsLocalHuman
+                ? animator == null && FPSVisualController.Instance != null
+                    && !FPSVisualController.Instance.GetComponentsInChildren<SpriteRenderer>(true)
+                        .Any(r => r.gameObject.name == "item" && r.sprite != null)
+                : visual.DebugLastCombatTrigger == "feed" && recipientClip);
+            Debug.Log($"[VISUAL] POSSESSION_MOTION local={_localSeat} valid={valid} trigger={visual?.DebugLastCombatTrigger} clips={string.Join(",", clips.Select(c => c.clip.name))}");
+            if (!valid) Fail("Suppressed use did not play the food recipient reaction");
             yield return new WaitForEndOfFrame();
             Capture("possession-cue");
         }

@@ -47,7 +47,8 @@ namespace AbsoluteZero.Core.Solo
             yield return null;
             Debug.Log("[RESOURCE] source=" + (type?.Assembly.FullName ?? "unavailable")
                 + " releaseAtQuit=" + _releaseAtQuit);
-            bool standalone = Arg("--az-matrix").Length == 0 && Arg("--az-visual-flow").Length == 0;
+            bool standalone = Arg("--az-matrix").Length == 0 && Arg("--az-visual-flow").Length == 0
+                && Array.IndexOf(Environment.GetCommandLineArgs(), "--plan036-mode-transitions") < 0;
             float duration = float.TryParse(Arg("--az-resource-seconds", "30"), out float value) ? value : 30f;
             while (true)
             {

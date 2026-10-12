@@ -22,7 +22,7 @@ MonoBehaviour:
   DropWeight: 10
   IsFreeAction: 0
   AnimTrigger: feed
-  OpponentAnimTrigger: feed
+  OpponentAnimTrigger: attack
   AnimDuration: 1.5
   EffectDelay: 0.75
   EffectHitCount: 1

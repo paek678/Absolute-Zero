@@ -34,7 +34,7 @@ namespace AbsoluteZero.Tests
             {
                 new Vector3(-3, 0, 0), new Vector3(3, 0, 0), new Vector3(-3, 0, 6), new Vector3(3, 0, 6)
             }), "Presentation placement must not move authoritative spawn seats.");
-            var expected = new[] { new Vector3(-4.8f, 0, 5.1f), new Vector3(0, 0, 8.8f), new Vector3(4.8f, 0, 5.1f) };
+            var expected = new[] { new Vector3(-7.2f, 0, 4.2f), new Vector3(0, 0, 9.2f), new Vector3(7.2f, 0, 4.2f) };
             for (int slot = 0; slot < expected.Length; slot++)
             {
                 var anchor = layout.GetAnchor(MapLayoutMode.Multi, MapAnchorRole.RemoteVisual, slot);

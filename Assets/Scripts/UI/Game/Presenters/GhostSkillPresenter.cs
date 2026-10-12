@@ -285,7 +285,7 @@ namespace AbsoluteZero.UI.Game.Presenters
             {
                 string skillName = skillIndex == GhostSkillService.SKILL_GRUDGE
                     ? "귀신의 한" : "빙의";
-                _statusText.text = $"{skillName} — click a target";
+                _statusText.text = $"{skillName} — 대상을 선택하세요";
             }
         }
 
@@ -296,7 +296,7 @@ namespace AbsoluteZero.UI.Game.Presenters
             _selectingTarget = false;
             _pendingSkill = byte.MaxValue;
             if (_statusText != null)
-                _statusText.text = "Ghost Mode — select a skill";
+                _statusText.text = "";
         }
 
         void Update()

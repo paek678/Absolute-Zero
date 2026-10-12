@@ -30,9 +30,23 @@ namespace AbsoluteZero.Core.Combat
         public event System.Action<int, float> OnPlayerTempOverride;
         public static event System.Action<int> OnAttackerChanged;
         public static event System.Action<uint> OnPresentationSettled;
+        readonly CombatPresentationHudState _hudState = new();
+        public CombatPresentationHudSnapshot CurrentHud => _hudState.Current;
+        public event System.Action<CombatPresentationHudSnapshot> HudChanged
+        { add => _hudState.Changed += value; remove => _hudState.Changed -= value; }
+
+        void PresentActor(PresentationExecution execution, int seat)
+        {
+            if (!ReferenceEquals(_execution, execution) || !execution.CanContinue) return;
+            _hudState.Action(execution, seat);
+            OnAttackerChanged?.Invoke(seat);
+        }
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         public static event System.Action<uint> OnGhostImpactSignaled;
         public static event System.Action<int, int, string, string> OnContactCue;
+        public static event System.Action<int, int, string, string> OnItemPresentationCue;
+        internal void SignalItemPresentationCue(int actor, int target, string item, string stage)
+            => OnItemPresentationCue?.Invoke(actor, target, item, stage);
         internal void SignalContactCue(int actor, int target, string item, string stage)
             => OnContactCue?.Invoke(actor, target, item, stage);
 #endif
@@ -42,6 +56,36 @@ namespace AbsoluteZero.Core.Combat
             => _displayTemperatures.TryGetValue(seat, out value);
 
         PresentationExecution _execution;
+        ItemPresentationContext _visibleItem;
+
+        // Read-only presentation identity. Never infer a target from selection after consumption.
+        public bool TryGetItemParticipants(out AZPlayerVisual actor, out AZPlayerVisual target)
+        {
+            actor = target = null;
+            var item = _visibleItem;
+            if (!isActiveAndEnabled || item == null || !item.IsCurrent || item.Item == null
+                || item.Item.GetTargetMode() == TargetMode.Self || item.ActorSeat == item.TargetSeat) return false;
+            actor = item.Actor; target = item.Target;
+            return actor != null && target != null;
+        }
+
+        IEnumerator WithItemParticipants(ItemPresentationContext context, IEnumerator routine)
+        {
+            _visibleItem = context;
+            void Clear() { if (ReferenceEquals(_visibleItem, context)) _visibleItem = null; }
+            context.Execution.Resources.OnRelease(Clear);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            SignalItemPresentationCue(context.ActorSeat, context.TargetSeat, context.Item?.ItemName ?? "", "item-start");
+#endif
+            try { yield return routine; }
+            finally
+            {
+                Clear();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                SignalItemPresentationCue(context.ActorSeat, context.TargetSeat, context.Item?.ItemName ?? "", "item-end");
+#endif
+            }
+        }
         uint _lastCompletedDuelSequence;
         Coroutine _multiPresentationQueueRoutine;
         uint _lastCompletedMultiSequence;
@@ -131,6 +175,7 @@ namespace AbsoluteZero.Core.Combat
             execution = new PresentationExecution(sequence, context, resources,
                 () => ReferenceEquals(_execution, execution) && (context == null || context.IsCurrent));
             _execution = execution;
+            _hudState.Begin(execution, context?.Human?.Identity.Generation ?? 0, sequence);
             return execution;
         }
 
@@ -167,7 +212,7 @@ namespace AbsoluteZero.Core.Combat
         {
             var context = new ItemPresentationContext(execution, actor, 1 - actor, itemId);
             var family = new ItemPresentationSequence(new ItemPresentationServices(this, context));
-            return RunChoreography(family.PlayDuel(actor, itemId, context.Match.Network, flags, defense, result),
+            return RunChoreography(WithItemParticipants(context, family.PlayDuel(actor, itemId, context.Match.Network, flags, defense, result)),
                 execution, () => context.IsCurrent);
         }
 
@@ -177,7 +222,7 @@ namespace AbsoluteZero.Core.Combat
             var target = events.Count > 0 ? events[0].TargetSeat : actor;
             var context = new ItemPresentationContext(execution, actor, target, itemId);
             var family = new ItemPresentationSequence(new ItemPresentationServices(this, context));
-            return RunChoreography(family.PlayMulti(actor, itemId, context.Match.Network, events.AsReadOnly()),
+            return RunChoreography(WithItemParticipants(context, family.PlayMulti(actor, itemId, context.Match.Network, events.AsReadOnly())),
                 execution, () => context.IsCurrent);
         }
 
@@ -205,6 +250,7 @@ namespace AbsoluteZero.Core.Combat
                 }
             }
             IsPlaying = false;
+            _hudState.Clear(execution);
             if (!current) return;
             try { ClearDisplayTemperatures(); }
             catch (System.Exception e) { Debug.LogException(e); }
@@ -458,7 +504,7 @@ namespace AbsoluteZero.Core.Combat
                 {
                     GetImpactData(result, firstIdx, out byte impactFlags, out short defenseItemId);
                     Debug.Log($"[CombatVFX] Playing FIRST item sequence: P{firstIdx} item={firstItemId}, flags={impactFlags}");
-                    OnAttackerChanged?.Invoke(firstIdx);
+                    PresentActor(execution, firstIdx);
                     yield return PlayDuelItem(execution, firstIdx, firstItemId, impactFlags, defenseItemId, result);
                 }
 
@@ -478,7 +524,7 @@ namespace AbsoluteZero.Core.Combat
                 {
                     GetImpactData(result, secondIdx, out byte impactFlags, out short defenseItemId);
                     Debug.Log($"[CombatVFX] Playing SECOND item sequence: P{secondIdx} item={secondItemId}, flags={impactFlags}");
-                    OnAttackerChanged?.Invoke(secondIdx);
+                    PresentActor(execution, secondIdx);
                     yield return PlayDuelItem(execution, secondIdx, secondItemId, impactFlags, defenseItemId, result);
                 }
 
@@ -531,17 +577,24 @@ namespace AbsoluteZero.Core.Combat
                     id => execution.Context.Items?.GetItemData(id)?.AnimDuration ?? 0f,
                     id => execution.Context.Items?.GetItemData(id)?.Category == ItemCategory.Defense);
 
-                yield return _waitIntro;
-
+                // Defense suppression belongs to the opening beat, before any attack.
+                // Reuse that existing wait so the server's presentation budget is unchanged.
+                yield return null; // Let all result observers receive the batch before its cue.
+                var suppressedDefenders = new HashSet<byte>();
                 for (int e = 0; e < batch.EventCount; e++)
                 {
                     var evt = batch.Events[e];
                     if ((CombatEventType)evt.EventType != CombatEventType.SuppressedItemUse)
                         continue;
                     var item = execution.Context.Items?.GetItemData(evt.ItemId);
-                    if (item != null && item.Category == ItemCategory.Defense)
-                        OnSuppressedItemCue?.Invoke(evt.ActorSeat);
+                    if (item != null && item.Category == ItemCategory.Defense
+                        && suppressedDefenders.Add(evt.ActorSeat))
+                        BeginSuppressedItemReaction(execution, evt.ActorSeat);
                 }
+
+                yield return _waitIntro;
+                foreach (byte seat in suppressedDefenders)
+                    EndSuppressedItemReaction(execution, seat);
 
                 for (int orderIdx = 0; orderIdx < batch.SeatCount; orderIdx++)
                 {
@@ -566,7 +619,7 @@ namespace AbsoluteZero.Core.Combat
                     bool actionExecuted = schedule.HasAction(actorSeat);
                     if (!actionExecuted) continue;
 
-                    OnAttackerChanged?.Invoke(actorSeat);
+                    PresentActor(execution, actorSeat);
                     Debug.Log($"[CombatVFX-Multi] Action {orderIdx}: P{actorSeat} item={mainItemId} effects={mainEffects.Count} deaths={deathEvents.Count}");
 
                     float actionStart = Time.time;
@@ -574,7 +627,9 @@ namespace AbsoluteZero.Core.Combat
                         (CombatEventType)evt.EventType == CombatEventType.SuppressedItemUse);
                     if (suppressed)
                     {
-                        OnSuppressedItemCue?.Invoke((byte)actorSeat);
+                        BeginSuppressedItemReaction(execution, (byte)actorSeat);
+                        yield return _waitSuppressedReaction;
+                        EndSuppressedItemReaction(execution, actorSeat);
                     }
                     else
                         yield return PlayMultiItem(execution, actorSeat, mainItemId, mainEffects);
@@ -614,6 +669,28 @@ namespace AbsoluteZero.Core.Combat
 
                 CompletePresentationSequence(execution);
             }
+        }
+
+        static readonly WaitForSeconds _waitSuppressedReaction = new(0.7f);
+
+        void BeginSuppressedItemReaction(PresentationExecution execution, byte actorSeat)
+        {
+            var visual = execution.Context.GetVisual(actorSeat);
+            if (visual != null && !visual.IsDead)
+            {
+                // Reuse the food recipient's gesture, without food, contact or item effects.
+                visual.ClearItemSprite();
+                if (visual.GetAnimator() != null) visual.PlayCombatAnimation("feed");
+                if (visual.IsLocalHuman) execution.Context.Fps?.ReturnToIdle();
+            }
+            OnSuppressedItemCue?.Invoke(actorSeat);
+        }
+
+        void EndSuppressedItemReaction(PresentationExecution execution, int actorSeat)
+        {
+            if (!execution.CanContinue) return;
+            var visual = execution.Context.GetVisual(actorSeat);
+            if (visual != null && !visual.IsDead) visual.ReturnToIdle();
         }
 
         public static bool IsFullyBlockedImpact(byte flags)

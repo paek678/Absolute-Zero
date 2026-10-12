@@ -72,6 +72,9 @@ namespace AbsoluteZero.EditorTools
                     view.Tabs[i] = Button(tabs, "Tab_" + (AbsoluteZero.Core.Cosmetic.CosmeticPart)i, labels[i], Teal);
                     var layout = view.Tabs[i].gameObject.AddComponent<UnityEngine.UI.LayoutElement>();
                     layout.minWidth = 70; layout.flexibleWidth = 1;
+                    // Keep serialized part indices stable; only the displayed category is hidden.
+                    if ((AbsoluteZero.Core.Cosmetic.CosmeticPart)i == AbsoluteZero.Core.Cosmetic.CosmeticPart.Bottom)
+                        view.Tabs[i].gameObject.SetActive(false);
                 }
                 var scroll = Rect(catalog, "Scroll");
                 Stretch(scroll, Vector2.zero, new Vector2(0, -84));

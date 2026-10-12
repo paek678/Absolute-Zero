@@ -6,7 +6,19 @@ namespace AbsoluteZero.Core.Item
     {
         public static void Apply(ItemContext ctx, in ItemEffectOutcome outcome)
         {
-            if (outcome.Blocked) return;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            using var balanceAction = Solo.PlaytestTelemetry.BeginItem(ctx.UserIndex, ctx.TargetIndex, ctx.UserSlot.ItemId, ctx.UserSlot.CopyId);
+            using var observation = Solo.PlaytestTelemetry.Observe(ctx.User, "effect_apply:item=" + ctx.UserSlot.ItemId + ";target=" + ctx.TargetIndex, ctx.UserSlot.CopyId);
+#endif
+            if (outcome.Blocked)
+            {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                observation.Verdict("Blocked");
+                Solo.PlaytestTelemetry.Current?.Balance("item_result", new Solo.BalanceObservation {
+                    action = Solo.PlaytestTelemetry.Current.CurrentBalanceAction, reason = "Blocked", target = ctx.TargetIndex });
+#endif
+                return;
+            }
 
             if (outcome.UserHeal > 0f)
                 ctx.TempSystem.ApplyHeal(ctx.User, outcome.UserHeal);
@@ -48,6 +60,11 @@ namespace AbsoluteZero.Core.Item
                     ctx.UserInventory.StealRandomItem(ctx.TargetInventory);
                     break;
             }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            observation.Verdict("Applied");
+            Solo.PlaytestTelemetry.Current?.Balance("item_result", new Solo.BalanceObservation {
+                action = Solo.PlaytestTelemetry.Current.CurrentBalanceAction, reason = "Applied", target = ctx.TargetIndex });
+#endif
         }
     }
 }

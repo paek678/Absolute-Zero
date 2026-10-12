@@ -40,6 +40,9 @@ namespace AbsoluteZero.Core.Combat
             float before = player.Temperature.Value;
             float newTemp = TemperatureCalculations.FanTick(before, player.FanSpeed.Value, fanSpeedMultiplier);
             player.Temperature.Value = newTemp;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Solo.PlaytestTelemetry.Current?.Temperature("fan", player.PlayerIndex, before, newTemp, -player.FanSpeed.Value * fanSpeedMultiplier);
+#endif
             Debug.Log($"[TEMP] FanTick: P{player.PlayerIndex} {before:F1}→{newTemp:F1}° (speed={player.FanSpeed.Value}×{fanSpeedMultiplier:F1})");
         }
 
@@ -50,6 +53,9 @@ namespace AbsoluteZero.Core.Combat
             float before = player.Temperature.Value;
             float newTemp = TemperatureCalculations.RecoveryTick(before, recoveryRate, recoveryMultiplier);
             player.Temperature.Value = newTemp;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Solo.PlaytestTelemetry.Current?.Temperature("recovery", player.PlayerIndex, before, newTemp, recoveryRate * recoveryMultiplier);
+#endif
             Debug.Log($"[TEMP] RecoveryTick: P{player.PlayerIndex} {before:F1}→{newTemp:F1}° (rate={recoveryRate}×{recoveryMultiplier:F1})");
         }
 
@@ -78,6 +84,13 @@ namespace AbsoluteZero.Core.Combat
             }
 
             target.Temperature.Value = Mathf.Max(MIN_TEMP, target.Temperature.Value - actualDamage);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (Solo.PlaytestTelemetry.Current != null)
+                Solo.PlaytestTelemetry.Current.Balance("impact", Solo.PlaytestTelemetry.Impact(
+                    Solo.PlaytestTelemetry.Current.CurrentBalanceAction, target.PlayerIndex, beforeTemp,
+                    target.Temperature.Value, -rawDamage, rawDamage - actualDamage, activeDefense?.ItemId ?? -1));
+            Solo.PlaytestTelemetry.Current?.Temperature("damage", target.PlayerIndex, beforeTemp, target.Temperature.Value, -rawDamage);
+#endif
             Debug.Log($"[COMBAT] ApplyDamage: P{target.PlayerIndex} temp {beforeTemp:F1} → {target.Temperature.Value:F1} (raw={rawDamage}, actual={actualDamage}, filter={attackFilter})");
             return actualDamage;
         }
@@ -86,6 +99,13 @@ namespace AbsoluteZero.Core.Combat
         {
             float beforeTemp = target.Temperature.Value;
             target.Temperature.Value = Mathf.Min(MAX_TEMP, target.Temperature.Value + amount);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (Solo.PlaytestTelemetry.Current != null)
+                Solo.PlaytestTelemetry.Current.Balance("impact", Solo.PlaytestTelemetry.Impact(
+                    Solo.PlaytestTelemetry.Current.CurrentBalanceAction, target.PlayerIndex, beforeTemp,
+                    target.Temperature.Value, amount));
+            Solo.PlaytestTelemetry.Current?.Temperature("heal", target.PlayerIndex, beforeTemp, target.Temperature.Value, amount);
+#endif
             Debug.Log($"[COMBAT] ApplyHeal: P{target.PlayerIndex} temp {beforeTemp:F1} → {target.Temperature.Value:F1} (heal={amount})");
         }
 

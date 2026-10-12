@@ -12,6 +12,7 @@ namespace AbsoluteZero.UI.Game.Presenters
         readonly List<OppBarEntry> _bars = new();
         readonly Dictionary<byte, int> _seatToBar = new();
         readonly Dictionary<int, Transform> _barTargets = new();
+        readonly Dictionary<int, SpriteRenderer> _barHeads = new();
         int _lastRemoteCount;
         byte _lastLocalSeat = byte.MaxValue;
         Transform _barRoot;
@@ -20,6 +21,33 @@ namespace AbsoluteZero.UI.Game.Presenters
 
         static readonly Vector3 WORLD_OFFSET = new(0f, 2.2f, 0f);
 
+        void OnEnable() => Core.Combat.DuelSpriteFacing.ArtworkAligned += AlignRenderedBars;
+        void OnDisable() => Core.Combat.DuelSpriteFacing.ArtworkAligned -= AlignRenderedBars;
+
+        void AlignRenderedBars(Camera camera)
+        {
+            if (!_initialized || camera.gameObject.scene != gameObject.scene) return;
+            // The art root borrows a camera-facing pose only while rendering. Follow
+            // its rendered head, rather than the pre-render head from LateUpdate.
+            foreach (var pair in _barTargets)
+                if (pair.Value != null && pair.Key < _bars.Count && _bars[pair.Key].Canvas != null
+                    && _bars[pair.Key].Canvas.gameObject.activeInHierarchy)
+                    AlignBar(pair.Key, pair.Value, camera);
+        }
+
+        void AlignBar(int index, Transform target, Camera camera)
+        {
+            var position = target.position + WORLD_OFFSET;
+            if (_bridge.CurrentMatch.Mode == Core.Network.GameMode.Multi
+                && _barHeads.TryGetValue(index, out var head) && head != null && head.sprite != null)
+            {
+                var screenPosition = camera.WorldToScreenPoint(position);
+                screenPosition.x = camera.WorldToScreenPoint(head.bounds.center).x;
+                position = camera.ScreenToWorldPoint(screenPosition);
+            }
+            _bars[index].Canvas.transform.SetPositionAndRotation(position, camera.transform.rotation);
+        }
+
         public void Initialize(IGameDataBridge bridge, GameHudRefs refs)
         {
             _bridge = bridge;
@@ -27,6 +55,7 @@ namespace AbsoluteZero.UI.Game.Presenters
             _bars.AddRange(refs.OppBars);
             _seatToBar.Clear();
             _barTargets.Clear();
+            _barHeads.Clear();
             _lastRemoteCount = 0;
             _initialized = true;
 
@@ -39,7 +68,7 @@ namespace AbsoluteZero.UI.Game.Presenters
             }
         }
 
-        void Update()
+        void LateUpdate()
         {
             if (!_initialized) return;
 
@@ -71,13 +100,13 @@ namespace AbsoluteZero.UI.Game.Presenters
                     if (target == null)
                     {
                         _barTargets.Remove(i);
+                        _barHeads.Remove(i);
                     }
                     else
                     {
                         bar.Canvas.gameObject.SetActive(true);
                         bar.Canvas.worldCamera = cam;
-                        bar.Canvas.transform.position = target.position + WORLD_OFFSET;
-                        bar.Canvas.transform.rotation = cam.transform.rotation;
+                        AlignBar(i, target, cam);
                         continue;
                     }
                 }
@@ -105,6 +134,7 @@ namespace AbsoluteZero.UI.Game.Presenters
         {
             _seatToBar.Clear();
             _barTargets.Clear();
+            _barHeads.Clear();
 
             var remoteSeats = new List<byte>();
             foreach (var ps in players)
@@ -136,6 +166,12 @@ namespace AbsoluteZero.UI.Game.Presenters
                         if (vRoot != null)
                         {
                             _barTargets[barIndex] = vRoot;
+                            foreach (var renderer in vRoot.GetComponentsInChildren<SpriteRenderer>(true))
+                                if (renderer.name == "head")
+                                {
+                                    _barHeads[barIndex] = renderer;
+                                    break;
+                                }
                             return;
                         }
                     }

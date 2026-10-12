@@ -32,7 +32,8 @@ namespace AbsoluteZero.Core.Solo
             var items = ItemManager.Instance.GetAllItems();
             short itemId = (short)Array.FindIndex(items, x => x != null && x.ItemName == "Ice Cream");
             short fanId = (short)Array.FindIndex(items, x => x != null && x.ItemName == "Fan");
-            var table = new ItemDropTable(new[] { items[itemId] });
+            var table = new ItemDropTable(items.Where(x => x != null
+                && x.Persistence == ItemPersistence.RandomConsumable && x.MaxUses > 0).ToArray());
             try
             {
                 inventory.SlotStates.Clear();
@@ -40,11 +41,16 @@ namespace AbsoluteZero.Core.Solo
                 int total = 0;
                 for (int i = 0; i < 3; i++)
                 {
+                    var previous = Enumerable.Range(0, inventory.SlotStates.Count)
+                        .Select(slot => inventory.SlotStates[slot]).ToArray();
                     actor.Temperature.Value = new[] { 30f, 20f, 10f }[i];
                     temperature.CheckThresholds(actor, inventory, flags, table, _count > 2);
                     total += _count > 2 ? 1 : i + 1;
-                    Require(flags.Take(i + 1).All(x => x) && inventory.SlotStates.Count == 1
-                        && inventory.SlotStates[0].RemainingUses == total * items[itemId].MaxUses,
+                    Require(flags.Take(i + 1).All(x => x) && inventory.SlotStates.Count == total
+                        && Enumerable.Range(0, total).All(slot => inventory.SlotStates[slot].CopyId != 0
+                            && inventory.SlotStates[slot].RemainingUses == inventory.GetItemData(slot).MaxUses)
+                        && Enumerable.Range(0, total).Select(slot => inventory.SlotStates[slot].CopyId).Distinct().Count() == total
+                        && previous.Select((copy, slot) => copy.Equals(inventory.SlotStates[slot])).All(equal => equal),
                         "threshold grant count and inclusive boundary index=" + i);
                     uint fingerprint = inventory.CurrentFingerprint();
                     temperature.CheckThresholds(actor, inventory, flags, table, _count > 2);

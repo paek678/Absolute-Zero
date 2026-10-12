@@ -10,8 +10,6 @@ namespace AbsoluteZero.Core.Combat
 {
     public sealed class SeatInventoryMutator : ISeatInventoryMutator
     {
-        const int MaxInventorySlots = 12;
-
         readonly struct PreparedSlotChange
         {
             public readonly int Index;
@@ -95,6 +93,9 @@ namespace AbsoluteZero.Core.Combat
             if (inv == null) return false;
 
             var changes = new List<PreparedSlotChange>();
+            var snapshot = new List<ItemSlotNetData>();
+            for (int i = 0; i < inv.SlotStates.Count; i++) snapshot.Add(inv.SlotStates[i]);
+            var staged = new List<ItemSlotNetData>(snapshot);
             for (int i = 0; i < inv.SlotStates.Count; i++)
             {
                 var before = inv.SlotStates[i];
@@ -102,22 +103,20 @@ namespace AbsoluteZero.Core.Combat
                 var existing = inv.GetItemData(i);
                 if (!InventoryMutationCalculations.CanReroll(before, existing != null ? existing.SlotType : (ItemSlotType?)null)) continue;
 
-                var replacement = _dropTable.Roll();
+                var replacement = _dropTable.Roll(candidate => inv.CanGenerate(candidate, staged, i));
                 short replacementId = FindItemId(replacement);
-                if (replacement == null || replacementId < 0) return false;
-                changes.Add(new PreparedSlotChange(i, before, MakeSlot(replacementId, replacement)));
+                if (replacement == null || replacementId < 0) continue;
+                staged[i] = MakeSlot(replacementId, replacement);
+                changes.Add(new PreparedSlotChange(i, before, staged[i]));
             }
 
             plan = new InventoryMutationPlan(InventoryMutationType.RerollTarget,
                 changes.Count == 0, () =>
                 {
-                    for (int i = 0; i < changes.Count; i++)
-                    {
-                        var change = changes[i];
-                        if (change.Index >= inv.SlotStates.Count
-                            || !inv.SlotStates[change.Index].Equals(change.Before))
-                            return false;
-                    }
+                    // Eligibility depended on every copy, including untouched slots.
+                    if (!inv.IsServer || inv.SlotStates.Count != snapshot.Count) return false;
+                    for (int i = 0; i < snapshot.Count; i++)
+                        if (!inv.SlotStates[i].Equals(snapshot[i])) return false;
 
                     var queue = inv.GetComponent<PlayerState>()?.GetActionQueue();
                     for (int i = 0; i < changes.Count; i++)
@@ -157,36 +156,10 @@ namespace AbsoluteZero.Core.Combat
                 return true;
             }
 
-            int targetSlot = occupied[UnityEngine.Random.Range(0, occupied.Count)];
+            int targetSlot = occupied[Common.GameplayRandom.Range("multi-steal", 0, occupied.Count)];
             var targetBefore = targetInv.SlotStates[targetSlot];
-            int actorSlot = FindSlot(actorInv, targetBefore.ItemId);
-            var placement = InventoryMutationCalculations.PlaceStolen(
-                actorSlot >= 0 ? actorInv.SlotStates[actorSlot] : null,
-                targetBefore.RemainingUses, actorInv.SlotStates.Count, MaxInventorySlots);
-
-            if (placement.Destination == StealDestination.Stack)
-            {
-                var actorBefore = actorInv.SlotStates[actorSlot];
-                var actorAfter = actorBefore;
-                actorAfter.RemainingUses = placement.StackedUses;
-                plan = new InventoryMutationPlan(InventoryMutationType.StealFromTarget, false, () =>
-                {
-                    if (actorSlot >= actorInv.SlotStates.Count
-                        || targetSlot >= targetInv.SlotStates.Count
-                        || !actorInv.SlotStates[actorSlot].Equals(actorBefore)
-                        || !targetInv.SlotStates[targetSlot].Equals(targetBefore))
-                        return false;
-
-                    actorInv.SlotStates[actorSlot] = actorAfter;
-                    targetInv.GetComponent<PlayerState>()?.GetActionQueue()?.InvalidateSlot((byte)targetSlot);
-                    targetInv.SlotStates[targetSlot] = ItemSlotNetData.Empty;
-                    Debug.Log($"[SeatInventoryMutator] Applied prepared steal: actor={actorSeat}, target={targetSeat}, slot={targetSlot}, stacked={actorSlot}");
-                    return true;
-                });
-                return true;
-            }
-
-            if (placement.Destination == StealDestination.None)
+            int actorSlot = actorInv.FindAvailableCopySlot();
+            if (actorSlot < 0)
             {
                 plan = NoOpPlan(InventoryMutationType.StealFromTarget,
                     $"[SeatInventoryMutator] Prepared steal cannot fit target item: actor={actorSeat}");
@@ -197,14 +170,19 @@ namespace AbsoluteZero.Core.Combat
             plan = new InventoryMutationPlan(InventoryMutationType.StealFromTarget, false, () =>
             {
                 if (actorInv.SlotStates.Count != expectedActorCount
+                    || actorInv.FindAvailableCopySlot() != actorSlot
                     || targetSlot >= targetInv.SlotStates.Count
                     || !targetInv.SlotStates[targetSlot].Equals(targetBefore))
                     return false;
 
-                actorInv.SlotStates.Add(actorInv.AssignNewCopyId(targetBefore));
+                if (!actorInv.TryReceiveSeparateCopy(targetBefore, out int destination)) return false;
                 targetInv.GetComponent<PlayerState>()?.GetActionQueue()?.InvalidateSlot((byte)targetSlot);
                 targetInv.SlotStates[targetSlot] = ItemSlotNetData.Empty;
-                Debug.Log($"[SeatInventoryMutator] Applied prepared steal: actor={actorSeat}, target={targetSeat}, slot={targetSlot}, appended={expectedActorCount}");
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                Solo.PlaytestTelemetry.Current?.Transfer(targetSeat, actorSeat, targetBefore.ItemId, targetBefore.CopyId,
+                    actorInv.SlotStates[destination].CopyId, targetBefore.RemainingUses, 0, actorInv.SlotStates[destination].RemainingUses);
+#endif
+                Debug.Log($"[SeatInventoryMutator] Applied prepared steal: actor={actorSeat}, target={targetSeat}, slot={targetSlot}, separate={destination}");
                 return true;
             });
             return true;
@@ -226,14 +204,6 @@ namespace AbsoluteZero.Core.Combat
             if (registry == null) return -1;
             for (short i = 0; i < registry.Length; i++)
                 if (registry[i] == item) return i;
-            return -1;
-        }
-
-        static int FindSlot(PlayerInventory inventory, short itemId)
-        {
-            for (int i = 0; i < inventory.SlotStates.Count; i++)
-                if (!inventory.SlotStates[i].IsEmpty && inventory.SlotStates[i].ItemId == itemId)
-                    return i;
             return -1;
         }
 

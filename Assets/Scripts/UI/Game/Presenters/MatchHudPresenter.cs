@@ -20,23 +20,14 @@ namespace AbsoluteZero.UI.Game.Presenters
         TextMeshProUGUI _phaseText;
         TextMeshProUGUI _timerText;
         TextMeshProUGUI _statusText;
-        TextMeshProUGUI _scoreText;
+        TextMeshProUGUI _roundText;
 
         Image _timerFillImage;
         Image _timerSliderImage;
         RectTransform _clockHandRT;
-        GameObject _timeAlarmObj;
-        Image _timeAlarmImage;
-        bool _alarmShaking;
-        OwnedPositionOffset _alarmOffset, _summerOffset;
+        bool _countdownWarningActive;
+        OwnedPositionOffset _summerOffset;
         LocalSettingsService _settings;
-        readonly System.Random _visualRandom = new();
-        float _nextAlarmJitter;
-
-        Image[] _nameBoxes;
-        TextMeshProUGUI _crownText;
-        static readonly Color BOX_NORMAL = new(0.15f, 0.15f, 0.2f, 0.8f);
-        static readonly Color BOX_ACTIVE = new(0.35f, 0.35f, 0.55f, 0.9f);
 
         Canvas _readyCanvas;
         Button _readyButton;
@@ -64,16 +55,12 @@ namespace AbsoluteZero.UI.Game.Presenters
             _phaseText = refs.PhaseText;
             _timerText = refs.TimerText;
             _statusText = refs.StatusText;
-            _scoreText = refs.ScoreText;
+            _roundText = refs.RoundText;
             _timerFillImage = refs.TimerFillImage;
             _timerSliderImage = refs.TimerSliderImage;
             _clockHandRT = refs.ClockHandRT;
-            _timeAlarmObj = refs.TimeAlarmObj;
-            _timeAlarmImage = refs.TimeAlarmImage;
             _timerContainerRT = refs.TimerContainerRT;
             if (_timerContainerRT != null) _summerOffset = OwnedPositionOffset.ForRectTransform(_timerContainerRT);
-            var alarmRect = _timeAlarmObj != null ? _timeAlarmObj.GetComponent<RectTransform>() : null;
-            if (alarmRect != null) _alarmOffset = OwnedPositionOffset.ForRectTransform(alarmRect);
             _settings = LocalSettingsRuntime.Instance?.Service;
             if (_settings != null) _settings.Changed += OnSettingsChanged;
             _readyCanvas = refs.ReadyCanvas;
@@ -81,8 +68,6 @@ namespace AbsoluteZero.UI.Game.Presenters
             _readyButtonImage = refs.ReadyButtonImage;
             _envPanel = refs.EnvPanel;
             _envText = refs.EnvText;
-            _nameBoxes = refs.NameBoxes ?? new[] { refs.P1NameBox, refs.P2NameBox };
-            _crownText = refs.CrownText;
 
             _readyButton.onClick.AddListener(OnReadyClicked);
 
@@ -91,12 +76,12 @@ namespace AbsoluteZero.UI.Game.Presenters
             _bridge.OnEnvironmentAnnounced += HandleEnvironmentAnnounced;
             _bridge.OnLocalHasSelectedItemChanged += HandleHasSelectedItemChanged;
             _bridge.OnOpponentRevealed += HandleOpponentRevealed;
-            _bridge.OnCurrentAttackerChanged += HandleAttackerChanged;
 
             var match = _bridge.CurrentMatch;
             HandlePhaseChanged(TurnPhase.WaitingForPlayers, match.CurrentPhase);
 
             _initialized = true;
+            HandleMatchSnapshotChanged(match);
         }
 
         public void SetStatusText(string text)
@@ -107,13 +92,14 @@ namespace AbsoluteZero.UI.Game.Presenters
 
         void HandlePhaseChanged(TurnPhase oldPhase, TurnPhase newPhase)
         {
+            if (newPhase != TurnPhase.PrepPhase) SetCountdownWarning(false);
             _phaseText.text = newPhase switch
             {
-                TurnPhase.WaitingForPlayers => "WAITING",
-                TurnPhase.PrepPhase => "PREP PHASE",
-                TurnPhase.AttackPhase => "ATTACK",
-                TurnPhase.ResolutionPhase => "RESOLUTION",
-                TurnPhase.RoundOver => "ROUND OVER",
+                TurnPhase.WaitingForPlayers => "참가자 대기",
+                TurnPhase.PrepPhase => "준비 단계",
+                TurnPhase.AttackPhase => "행동 진행",
+                TurnPhase.ResolutionPhase => "결과 정산",
+                TurnPhase.RoundOver => "라운드 종료",
                 _ => ""
             };
 
@@ -153,18 +139,13 @@ namespace AbsoluteZero.UI.Game.Presenters
                 GameAudioManager.Instance?.StopEnvironment();
             }
 
-            if (newPhase != TurnPhase.AttackPhase)
-            {
-                if (_crownText != null) _crownText.gameObject.SetActive(false);
-                HandleAttackerChanged(-1);
-            }
         }
 
         void HandleMatchSnapshotChanged(MatchSnapshot match)
         {
+            if (!isActiveAndEnabled) return;
             UpdateTimerDisplay(match);
-            UpdateScoreDisplay(match);
-            UpdateCrown(match);
+            UpdateRoundDisplay(match);
         }
 
         void UpdateTimerDisplay(MatchSnapshot match)
@@ -174,7 +155,7 @@ namespace AbsoluteZero.UI.Game.Presenters
                 _timerText.text = "";
                 if (_timerSliderImage != null) _timerSliderImage.fillAmount = 0f;
                 if (_clockHandRT != null) _clockHandRT.localRotation = Quaternion.identity;
-                SetAlarmActive(false);
+                SetCountdownWarning(false);
                 return;
             }
 
@@ -190,45 +171,37 @@ namespace AbsoluteZero.UI.Game.Presenters
                 _clockHandRT.localRotation = Quaternion.Euler(0f, 0f, ratio * 360f);
 
             bool shouldAlarm = remaining > 0 && remaining <= ALARM_TIME_THRESHOLD;
-            SetAlarmActive(shouldAlarm);
+            SetCountdownWarning(shouldAlarm);
 
             _timerText.color = remaining <= ALARM_TIME_THRESHOLD ? Color.red : Color.white;
         }
 
-        void SetAlarmActive(bool active)
+        void SetCountdownWarning(bool active)
         {
-            if (_timeAlarmObj == null) return;
-            if (active && !_alarmShaking)
-            {
-                _timeAlarmObj.SetActive(true);
-                _alarmShaking = true;
-                _nextAlarmJitter = 0;
-                GameAudioManager.Instance?.PlayClockTick();
-            }
-            else if (!active && _alarmShaking)
-            {
-                _alarmShaking = false;
-                _alarmOffset?.Clear();
-                _timeAlarmObj.SetActive(false);
-                GameAudioManager.Instance?.StopClockTick();
-            }
+            active &= isActiveAndEnabled;
+            if (_countdownWarningActive == active) return;
+            _countdownWarningActive = active;
+            if (active) GameAudioManager.Instance?.PlayClockTick();
+            else GameAudioManager.Instance?.StopClockTick();
         }
 
         void OnSettingsChanged()
         {
             if (_settings != null && !_settings.Current.Shake) ClearShakeOffsets();
         }
-        void ClearShakeOffsets() { _alarmOffset?.Clear(); _summerOffset?.Clear(); }
-        void OnDisable() => ClearShakeOffsets();
+        void ClearShakeOffsets() => _summerOffset?.Clear();
+        void OnEnable()
+        {
+            if (_initialized) HandleMatchSnapshotChanged(_bridge.CurrentMatch);
+        }
+        void OnDisable()
+        {
+            SetCountdownWarning(false);
+            ClearShakeOffsets();
+        }
         void LateUpdate()
         {
             if (!_initialized || (_settings != null && !_settings.Current.Shake)) return;
-            if (_alarmShaking && Time.time >= _nextAlarmJitter)
-            {
-                _alarmOffset?.Apply(new Vector3((float)(_visualRandom.NextDouble() * 16 - 8),
-                    (float)(_visualRandom.NextDouble() * 8 - 4), 0));
-                _nextAlarmJitter = Time.time + .05f;
-            }
             if (_summerVacShaking)
             {
                 float t = Time.time * 6 * Mathf.PI * 2;
@@ -236,51 +209,9 @@ namespace AbsoluteZero.UI.Game.Presenters
             }
         }
 
-        void UpdateScoreDisplay(MatchSnapshot match)
+        void UpdateRoundDisplay(MatchSnapshot match)
         {
-            if (match.Mode == GameMode.Multi && match.KillScores != null)
-            {
-                var parts = new System.Text.StringBuilder();
-                for (int i = 0; i < match.KillScores.Length; i++)
-                {
-                    if (i > 0) parts.Append(" : ");
-                    parts.Append(match.KillScores[i]);
-                }
-                _scoreText.text = parts.ToString();
-            }
-            else
-            {
-                _scoreText.text = $"{match.P1RoundWins} : {match.P2RoundWins}";
-            }
-        }
-
-        void UpdateCrown(MatchSnapshot match)
-        {
-            if (_crownText == null) return;
-            bool showCrown = match.CurrentPhase == TurnPhase.AttackPhase
-                             && match.FirstReadySeat != byte.MaxValue;
-            _crownText.gameObject.SetActive(showCrown);
-            if (showCrown && _nameBoxes != null)
-            {
-                int seat = match.FirstReadySeat;
-                if (seat >= 0 && seat < _nameBoxes.Length && _nameBoxes[seat] != null)
-                {
-                    var crownRT = _crownText.GetComponent<RectTransform>();
-                    var boxRT = _nameBoxes[seat].GetComponent<RectTransform>();
-                    if (crownRT.parent == boxRT.parent)
-                        crownRT.anchoredPosition = new Vector2(boxRT.anchoredPosition.x - 65f, 0);
-                }
-            }
-        }
-
-        void HandleAttackerChanged(int seatIdx)
-        {
-            if (_nameBoxes == null) return;
-            for (int i = 0; i < _nameBoxes.Length; i++)
-            {
-                if (_nameBoxes[i] != null)
-                    _nameBoxes[i].color = i == seatIdx ? BOX_ACTIVE : BOX_NORMAL;
-            }
+            if (_roundText != null) _roundText.text = $"라운드 {match.RoundNumber}";
         }
 
         void HandleHasSelectedItemChanged(bool hasItem)
@@ -319,15 +250,16 @@ namespace AbsoluteZero.UI.Game.Presenters
 
         void HandleEnvironmentAnnounced(EnvironmentType env)
         {
+            // Reserved legacy ID is not a standalone announcement anymore.
+            if (env == EnvironmentType.CicadaSong) return;
             StopSummerVacShake();
 
             if (_envPanel == null || _envText == null) return;
 
             string name = env switch
             {
-                EnvironmentType.SunnyDay => "햇살이 더 쩍쩍해집니다.",
+                EnvironmentType.SunnyDay => "햇살이 쨍쨍해집니다.",
                 EnvironmentType.CoolBreeze => "시원한 바람이 불어옵니다.",
-                EnvironmentType.CicadaSong => "매미 소리가 들려옵니다.",
                 EnvironmentType.Kids => "근처에 어린 친구들이 서성거립니다.",
                 EnvironmentType.Ambulance => "근처에 응급구조원이 대기중입니다.",
                 EnvironmentType.SummerVacation => "여름방학이 얼마 남지 않았습니다.",
@@ -391,10 +323,9 @@ namespace AbsoluteZero.UI.Game.Presenters
                 _bridge.OnEnvironmentAnnounced -= HandleEnvironmentAnnounced;
                 _bridge.OnLocalHasSelectedItemChanged -= HandleHasSelectedItemChanged;
                 _bridge.OnOpponentRevealed -= HandleOpponentRevealed;
-                _bridge.OnCurrentAttackerChanged -= HandleAttackerChanged;
             }
             StopSummerVacShake();
-            SetAlarmActive(false);
+            SetCountdownWarning(false);
 
             if (GameAudioManager.Instance != null)
             {

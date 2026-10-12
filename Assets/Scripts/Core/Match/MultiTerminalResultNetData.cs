@@ -5,6 +5,24 @@ namespace AbsoluteZero.Core.Match
 {
     public static class MultiVictoryRules
     {
+        // Round cap is evaluated only after a completed round. Ghosts retain their
+        // earned score; departed seats are excluded by the caller's eligibility mask.
+        public static byte FindRoundLimitWinners(int completedRound, int maxRounds,
+            int[] scores, byte eligibleSeats)
+        {
+            if (maxRounds <= 0 || completedRound < maxRounds || scores == null) return 0;
+            int best = int.MinValue;
+            byte winners = 0;
+            for (int seat = 0; seat < Math.Min(scores.Length, 8); seat++)
+            {
+                byte bit = (byte)(1 << seat);
+                if ((eligibleSeats & bit) == 0 || scores[seat] < best) continue;
+                if (scores[seat] > best) { best = scores[seat]; winners = 0; }
+                winners |= bit;
+            }
+            return winners;
+        }
+
         public static byte FindThresholdCrossings(int[] scoresBefore, int[] scoresAfter,
             int killsToWin)
         {

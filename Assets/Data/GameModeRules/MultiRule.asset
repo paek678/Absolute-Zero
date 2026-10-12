@@ -15,8 +15,8 @@ MonoBehaviour:
   targetMode: 2
   winCondition: 1
   winsRequired: 2
-  killsToWin: 5
-  maxRounds: 99
+  killsToWin: 3
+  maxRounds: 3
   prepPhaseDuration: 20
   initialRandomItems: 2
   maxRandomItems: 4

@@ -289,7 +289,8 @@ namespace AbsoluteZero.Core.Solo
                         // then represent extra stolen copies without changing mode rules.
                         // AssignNewCopyId keeps duplicate item types as distinct objects.
                         for (int i = 0; i < 4; i++)
-                            inventory.SlotStates.Add(inventory.AssignNewCopyId(inventory.SlotStates[4 + i]));
+                            if (!inventory.GrantSpecificItem(inventory.SlotStates[4 + i].ItemId))
+                            { Fail("layout duplicate grant failed"); return; }
                     }
                     player.FanSpeed.Value = 0;
                     if (inventory.SlotStates.Count != LayoutItemCount || inventory.GetRandomSlotCount() != LayoutItemCount - 4)
@@ -445,6 +446,26 @@ namespace AbsoluteZero.Core.Solo
         }
         IEnumerator ExitLater()
         {
+            // RPC guard actors finish before observers. Keep all four peers alive
+            // until their independent assertions finish; otherwise fixture teardown
+            // triggers the real 3->2 disconnect policy during the remaining checks.
+            if (_case == "rpc-guards")
+            {
+                string directory = Path.GetDirectoryName(Application.consoleLogPath);
+                int seat = Players().First(p => p.IsOwner).PlayerIndex;
+                File.WriteAllText(Path.Combine(directory, _token + ".guard-" + seat), "passed");
+                float deadline = Time.realtimeSinceStartup + 30f;
+                while (!Enumerable.Range(0, _count).All(i => File.Exists(Path.Combine(directory, _token + ".guard-" + i))))
+                {
+                    if (Time.realtimeSinceStartup >= deadline)
+                    {
+                        Debug.LogError("[MATRIX] FAIL RPC guard peer completion barrier timed out");
+                        Application.Quit(2);
+                        yield break;
+                    }
+                    yield return null;
+                }
+            }
             if (Arg("--az-notification-check", "0") == "1")
             {
                 float deadline = Time.realtimeSinceStartup + 30;
@@ -962,6 +983,9 @@ namespace AbsoluteZero.Core.Solo
                 if (state.KillScores[0] == 1) Pass(_case.ToUpperInvariant() + "_CHECKS local=" + local.PlayerIndex);
                 return;
             }
+            if (_case == "role-cat") { HandleRoleCat(tm, players, local); return; }
+            if (_case == "animation") { HandleAnimationSequence(tm, players, local); return; }
+            if (_case == "item-showcase") { HandleItemShowcase(tm, players, local); return; }
             if (_count == 2 && HandleDuel(tm, players, local)) return;
             if (_nm.IsServer && !_seeded && tm.CurrentPhase.Value == TurnPhase.PrepPhase && players.Length == _count)
             {

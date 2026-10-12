@@ -34,7 +34,7 @@ def clients_observed_game(folder, names):
         for name in clients)
 
 
-def run_case(executable, root, case, port, proxy=False, delay_ms=0, loss=0, hold_uplink=0, drop_seat=3, relay=False, delay_view_ms=0, delay_descriptor_ms=0, visible=False, leak_diagnostics=False, resource_probe=False, manual_input=False, cosmetic_check=False, settings_check=False, accessory_check=False, capture=False):
+def run_case(executable, root, case, port, proxy=False, delay_ms=0, loss=0, hold_uplink=0, drop_seat=3, relay=False, delay_view_ms=0, delay_descriptor_ms=0, visible=False, leak_diagnostics=False, resource_probe=False, manual_input=False, cosmetic_check=False, settings_check=False, accessory_check=False, capture=False, record_telemetry=False):
     cosmetic_check = cosmetic_check or accessory_check
     kind, count, winner = case
     capture = capture or kind == "layout"
@@ -65,6 +65,10 @@ def run_case(executable, root, case, port, proxy=False, delay_ms=0, loss=0, hold
                 "--az-drop-seat", str(drop_seat),
                 "--az-network-stress", "1" if proxy and (loss > 0 or delay_ms > 0) else "0",
                 "--az-port", str(endpoint), "-logFile", str(folder / f"{name}.log")]
+            if record_telemetry:
+                evidence = folder / (name + '-trace')
+                evidence.mkdir()
+                command.extend(['--az-playtest', str(evidence)])
             if manual_input:
                 command.extend(["--az-manual-input", "1"])
             if cosmetic_check:

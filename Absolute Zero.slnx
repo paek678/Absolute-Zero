@@ -3,10 +3,15 @@
   <Project Path="Unity.Networking.Transport.csproj" />
   <Project Path="AbsoluteZero.Core.csproj" />
   <Project Path="Assembly-CSharp.csproj" />
+  <Project Path="Unity.2D.IK.Editor.csproj" />
+  <Project Path="Unity.2D.Animation.Editor.csproj" />
   <Project Path="Unity.Networking.Editor.csproj" />
   <Project Path="AbsoluteZero.EditorTests.csproj" />
   <Project Path="Assembly-CSharp-Editor.csproj" />
+  <Project Path="Unity.2D.Animation.Runtime.csproj" />
+  <Project Path="Unity.2D.IK.Runtime.csproj" />
   <Project Path="AbsoluteZero.ActionFixture.csproj" />
+  <Project Path="Unity.2D.Animation.EditorTests.csproj" />
   <Project Path="AbsoluteZero.PresentationFixture.csproj" />
   <Project Path="AbsoluteZero.SoloFixture.csproj" />
   <Project Path="AbsoluteZero.BehaviorFixture.csproj" />

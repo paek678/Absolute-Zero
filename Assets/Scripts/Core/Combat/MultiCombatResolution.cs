@@ -7,6 +7,9 @@ namespace AbsoluteZero.Core.Combat
     public class MultiCombatResolution
     {
         public const int MaxEvents = 16;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        internal System.Collections.Generic.List<Solo.BalanceObservation> BalanceImpacts;
+#endif
 
         public CombatEvent[] OrderedEvents;
         public int EventCount;

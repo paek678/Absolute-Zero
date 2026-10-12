@@ -75,7 +75,16 @@ namespace AbsoluteZero.UI.MiniGame
             StartCoroutine(ResultOutroRoutine(success));
         }
 
-        public void ForceCancel() => Finish(false);
+        public void ForceCancel()
+        {
+            if (_finished) return;
+            _finished = true;
+            OnFinished?.Invoke(SlotIndex, false);
+            Destroy(gameObject);
+        }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        internal void CompleteModeledResult(bool success) => Finish(success);
+#endif
 
         IEnumerator ResultOutroRoutine(bool success)
         {
@@ -86,14 +95,15 @@ namespace AbsoluteZero.UI.MiniGame
             blockerRect.offsetMin = Vector2.zero;
             blockerRect.offsetMax = Vector2.zero;
 
-            var band = CreatePanel(_root, "ResultBand", new Vector2(0f, 20f), new Vector2(4000f, 170f),
+            var band = CreatePanel(_root, "ResultBand", new Vector2(0f, 20f), new Vector2(1000f, 170f),
                 new Color(0f, 0f, 0f, 0.55f));
             band.raycastTarget = false;
+            CasualUiSkin.Surface(band, success ? CasualUiSkin.Mint : CasualUiSkin.Peach);
 
             var label = CreateText(_root, "ResultText", new Vector2(0f, 20f), new Vector2(800f, 140f),
                 success ? "성공!" : "실패…", 84);
             label.fontStyle = FontStyles.Bold;
-            label.color = success ? new Color(0.45f, 1f, 0.5f) : new Color(1f, 0.4f, 0.35f);
+            CasualUiSkin.Label(label);
             label.raycastTarget = false;
 
             var labelRect = label.GetComponent<RectTransform>();
@@ -154,6 +164,7 @@ namespace AbsoluteZero.UI.MiniGame
             var lineBgImg = lineBg.AddComponent<Image>();
             lineBgImg.color = new Color(0f, 0f, 0f, 0.6f);
             lineBgImg.raycastTarget = false;
+            CasualUiSkin.Surface(lineBgImg, CasualUiSkin.Cream, CasualUiSkin.Pill, 40);
 
             var fillGO = new GameObject("TimerLineFill");
             fillGO.transform.SetParent(lineBg.transform, false);
@@ -163,6 +174,7 @@ namespace AbsoluteZero.UI.MiniGame
             fillRect.offsetMin = Vector2.zero;
             fillRect.offsetMax = Vector2.zero;
             _timerFill = fillGO.AddComponent<Image>();
+            _timerFill.sprite = CasualUiSkin.Pill;
             _timerFill.type = Image.Type.Filled;
             _timerFill.fillMethod = Image.FillMethod.Horizontal;
             _timerFill.fillAmount = 1f;
@@ -188,13 +200,14 @@ namespace AbsoluteZero.UI.MiniGame
             bannerRect.anchoredPosition = new Vector2(0f, 40f);
             bannerRect.sizeDelta = Vector2.zero;
 
-            var band = CreatePanel(bannerRect, "Band", new Vector2(-offX, 0f), new Vector2(4000f, 210f),
+            var band = CreatePanel(bannerRect, "Band", new Vector2(-offX, 0f), new Vector2(1100f, 210f),
                 new Color(0f, 0f, 0f, 0.6f));
-            var lineColor = new Color(1f, 0.95f, 0.75f);
+            var lineColor = new Color(.64f, .53f, .37f, .5f);
             var topLine = CreatePanel(bannerRect, "TopLine", new Vector2(-offX, 78f), new Vector2(620, 8), lineColor);
             var label = CreateText(bannerRect, "Text", new Vector2(-offX, 0f), new Vector2(900, 120), text, 82);
             label.fontStyle = FontStyles.Bold;
-            label.color = Color.white;
+            CasualUiSkin.Label(label);
+            CasualUiSkin.Surface(band, CasualUiSkin.Butter);
             var bottomLine = CreatePanel(bannerRect, "BottomLine", new Vector2(-offX, -78f), new Vector2(620, 8), lineColor);
 
             band.raycastTarget = false;

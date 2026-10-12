@@ -971,12 +971,8 @@ namespace AbsoluteZero.Core.Session
         LobbyPlayer CreatePlayerData()
         {
             string playerId = _services.PlayerId;
-            string shortId = playerId?.Length >= 6 ? playerId[..6] : (playerId ?? "Unknown");
-
             var profileService = CosmeticProfileService.Instance;
-            string nickname = profileService != null ? profileService.Nickname : "";
-            if (string.IsNullOrEmpty(nickname))
-                nickname = $"Player_{shortId}";
+            string nickname = ParticipantDisplayName.Lobby(profileService?.Nickname, playerId);
 
             string cosmeticDto = profileService != null ? (profileService.GetCompactDto() ?? "") : "";
 

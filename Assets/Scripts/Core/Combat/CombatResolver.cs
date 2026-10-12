@@ -30,6 +30,9 @@ namespace AbsoluteZero.Core.Combat
             int firstIdx = DetermineOrder(p1Queue, p2Queue, p1, p2, environment);
             int secondIdx = 1 - firstIdx;
             result.FirstPlayerIndex = firstIdx;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Solo.PlaytestTelemetry.Current?.ActionOrder(new[] { firstIdx, secondIdx });
+#endif
             Debug.Log($"[COMBAT] Turn order: P{firstIdx} goes first, P{secondIdx} goes second");
 
             ApplyDefense(p1Queue, modifiers, 0, p1);
@@ -140,6 +143,10 @@ namespace AbsoluteZero.Core.Combat
                                  ItemDropTable dropTable)
         {
             short capturedItemId = user.GetInventory().SlotStates[action.SlotIndex].ItemId;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            using var balanceAction = Solo.PlaytestTelemetry.BeginItem(userIdx, targetIdx, capturedItemId,
+                user.GetInventory().SlotStates[action.SlotIndex].CopyId);
+#endif
 
             float userTempBefore = user.Temperature.Value;
             float targetTempBefore = target.Temperature.Value;
@@ -208,6 +215,13 @@ namespace AbsoluteZero.Core.Combat
                 && queue.selectedAction.Value.ItemData is DefenseItemDataSO defItem)
             {
                 Debug.Log($"[COMBAT] ApplyDefense: P{playerIdx} activated '{defItem.ItemName}' — filter={defItem.Filter}, block={defItem.BlockAmount}");
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                var defenseSlot = player.GetInventory().SlotStates[queue.selectedAction.Value.SlotIndex];
+                using var balanceAction = Solo.PlaytestTelemetry.BeginItem(playerIdx, playerIdx, defenseSlot.ItemId, defenseSlot.CopyId);
+                Solo.PlaytestTelemetry.Current?.Balance("defense_active", new Solo.BalanceObservation {
+                    action = Solo.PlaytestTelemetry.Current.CurrentBalanceAction, defenseItem = defenseSlot.ItemId,
+                    requested = defItem.BlockAmount });
+#endif
                 modifiers[playerIdx].ActiveDefense = new DefenseInfo
                 {
                     ItemId = player.GetInventory().SlotStates[queue.selectedAction.Value.SlotIndex].ItemId,
@@ -447,6 +461,12 @@ namespace AbsoluteZero.Core.Combat
         void ResolveAction(byte actorSeat, byte targetSeat, byte slotIndex, ItemEffectRuleSnapshot rule,
             MatchCombatSnapshot snap, float[] workingTemps, MultiCombatResolution resolution)
         {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            float balanceRequested = 0, balanceBlocked = 0;
+            int balanceTarget = targetSeat;
+            bool balanceMeasured = false;
+            float balanceActorBefore = workingTemps[actorSeat], balanceTargetBefore = workingTemps[targetSeat];
+#endif
             switch (rule.EffectKind)
             {
                 case ItemEffectKind.Defense:
@@ -455,6 +475,9 @@ namespace AbsoluteZero.Core.Combat
                 case ItemEffectKind.DirectDamage:
                     float blocked = GetBlockedAmount(targetSeat, rule.AttackFilter, resolution, snap);
                     float damage = ItemEffectCalculations.DamageAfterBlock(rule.BaseDamage, blocked);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    balanceMeasured = true; balanceRequested = -rule.BaseDamage; balanceBlocked = rule.BaseDamage - damage;
+#endif
                     workingTemps[targetSeat] -= damage;
                     ClampTemp(workingTemps, targetSeat);
                     if (damage > 0f)
@@ -473,10 +496,16 @@ namespace AbsoluteZero.Core.Combat
                 case ItemEffectKind.Equalize:
                     float userTemp = workingTemps[actorSeat];
                     float diff = ItemEffectCalculations.EqualizationDelta(userTemp, workingTemps[targetSeat]);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    balanceMeasured = true; balanceRequested = diff;
+#endif
                     if (diff < 0f)
                     {
                         float eqBlocked = GetBlockedAmount(targetSeat, rule.AttackFilter, resolution, snap);
                         float eqDamage = ItemEffectCalculations.DamageAfterBlock(-diff, eqBlocked);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    balanceBlocked = -diff - eqDamage;
+#endif
                         workingTemps[targetSeat] -= eqDamage;
                         if (eqDamage > 0f)
                             resolution.LastDamageSources[targetSeat] = DamageSource.Create(actorSeat, DamageOrigin.Item);
@@ -510,6 +539,9 @@ namespace AbsoluteZero.Core.Combat
                             useIndex = ItemEffectCalculations.RecoveryUseIndex(rule.MaxUses, snap.Inventories[actorSeat].Slots[slotIndex].RemainingUses);
                         }
                         float heal = ItemEffectCalculations.RecoveryAtIndex(rule.HealPerUse, useIndex);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    balanceMeasured = true; balanceTarget = actorSeat; balanceRequested = heal;
+#endif
                         workingTemps[actorSeat] += heal;
                         ClampTemp(workingTemps, actorSeat);
                     }
@@ -527,6 +559,9 @@ namespace AbsoluteZero.Core.Combat
                 case ItemEffectKind.Buff:
                     if (!Mathf.Approximately(rule.ImmediateTempDelta, 0f))
                     {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    balanceMeasured = true; balanceTarget = actorSeat; balanceRequested = rule.ImmediateTempDelta;
+#endif
                         float preBuff = workingTemps[actorSeat];
                         workingTemps[actorSeat] += rule.ImmediateTempDelta;
                         ClampTemp(workingTemps, actorSeat);
@@ -557,6 +592,9 @@ namespace AbsoluteZero.Core.Combat
 
                 case ItemEffectKind.Debuff:
                     float debufBlocked = GetBlockedAmount(targetSeat, rule.AttackFilter, resolution, snap);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    balanceMeasured = !Mathf.Approximately(rule.ImmediateTempDelta, 0f); balanceRequested = rule.ImmediateTempDelta; if (debufBlocked >= float.MaxValue) balanceBlocked = Mathf.Abs(balanceRequested);
+#endif
                     if (debufBlocked >= float.MaxValue)
                     {
                         resolution.AddEvent(new CombatEvent
@@ -577,6 +615,9 @@ namespace AbsoluteZero.Core.Combat
                         else
                         {
                             float debufDmg = ItemEffectCalculations.DamageAfterBlock(-rule.ImmediateTempDelta, debufBlocked);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    balanceBlocked = -rule.ImmediateTempDelta - debufDmg;
+#endif
                             workingTemps[targetSeat] -= debufDmg;
                             if (debufDmg > 0f)
                                 resolution.LastDamageSources[targetSeat] = DamageSource.Create(actorSeat, DamageOrigin.Item);
@@ -691,6 +732,15 @@ namespace AbsoluteZero.Core.Combat
                     });
                     break;
             }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (balanceMeasured)
+            {
+                resolution.BalanceImpacts ??= new System.Collections.Generic.List<Solo.BalanceObservation>();
+                resolution.BalanceImpacts.Add(Solo.PlaytestTelemetry.Impact(default, balanceTarget,
+                    balanceTarget == actorSeat ? balanceActorBefore : balanceTargetBefore, workingTemps[balanceTarget],
+                    balanceRequested, balanceBlocked, resolution.DefenseItemIds[balanceTarget]));
+            }
+#endif
         }
 
         float GetBlockedAmount(byte targetSeat, DamageFilter attackFilter,

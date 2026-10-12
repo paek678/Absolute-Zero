@@ -23,6 +23,7 @@ namespace AbsoluteZero.Core.Combat
         public InventoryPresenter Inventory { get; }
         public ItemManager Items { get; }
         public Camera Camera { get; }
+        readonly MultiPerspectiveLayout _layout;
 
         public CombatPresentationContext(GameObject owner)
         {
@@ -38,6 +39,7 @@ namespace AbsoluteZero.Core.Combat
             Views = MatchViewBindings.ForScene(owner.scene);
             Fps = FPSVisualController.Instance;
             Inventory = InventoryPresenter.Instance;
+            _layout = Inventory != null ? Inventory.GetComponent<MultiPerspectiveLayout>() : null;
             Items = ItemManager.Instance;
             Camera = Views != null ? Views.GameplayCamera : UnityEngine.Camera.main;
         }
@@ -71,6 +73,20 @@ namespace AbsoluteZero.Core.Combat
             // Compatibility fixture only; never reinterpret a replacement player's binding.
             var spawn = GameObject.Find($"SpawnPoint_{seat + 1}");
             return spawn != null ? spawn.transform.position + Vector3.up * 1.5f : Vector3.zero;
+        }
+
+        public bool TryGetItemSweep(int seat, out Vector3 first, out Vector3 last)
+        {
+            first = last = default;
+            if (GetBinding(seat) == null) return false;
+            bool local = Human != null && Human.Identity.PlayerIndex == seat;
+            if (!local && _match.ActiveConfig.Mode == Core.Network.GameMode.Multi)
+                return _layout != null && _layout.TryGetItemSweep(seat, out first, out last);
+            var a = Views != null ? Views.GetItemAnchor(local, 0) : null;
+            var b = Views != null ? Views.GetItemAnchor(local, 7) : null;
+            if (a == null || b == null) return false;
+            first = a.position; last = b.position;
+            return true;
         }
 
         public IEnumerable<AZPlayerVisual> CurrentVisuals

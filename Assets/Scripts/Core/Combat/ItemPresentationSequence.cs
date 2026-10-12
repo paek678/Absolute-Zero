@@ -105,63 +105,10 @@ namespace AbsoluteZero.Core.Combat
                 yield break;
             }
 
-            if (!isLocalUser)
-            {
-                var itemSprite = GameSprites.GetItemSpriteFor(itemData);
-                actorVisual.SetItemSprite(itemSprite);
-            }
-
-            if (!isLocalUser) actorVisual.PlayCombatAnimation(userTrigger);
-            GameAudioManager.Instance?.PlayItemSfxFor(itemData.AnimTrigger, itemData);
-
-            if (isLocalUser)
-            {
-                var fps = Context.Fps;
-                if (fps != null) fps.PlayFPSItemAnimation(itemData.AnimTrigger, itemData);
-            }
-
-            float animLen = GetAnimDuration(itemData, actorVisual.GetAnimator(), userTrigger);
-
-            if (itemData.EffectHitCount > 0 && itemData.EffectDelay > 0f)
-            {
-                yield return new WaitForSeconds(itemData.EffectDelay);
-                ApplyMultiEventTemps(mainEffects);
-                float remaining = animLen - itemData.EffectDelay;
-
-                for (int h = 0; h < itemData.EffectHitCount; h++)
-                {
-                    PlayMultiImpactReactions(actorSeat, isAttack, isRecovery,
-                        isLocalUser, h, mainEffects, nm);
-
-                    if (h < itemData.EffectHitCount - 1 && itemData.EffectInterval > 0f)
-                    {
-                        yield return new WaitForSeconds(itemData.EffectInterval);
-                        remaining -= itemData.EffectInterval;
-                    }
-                }
-
-                if (remaining > 0f)
-                    yield return new WaitForSeconds(remaining);
-            }
-            else
-            {
-                float firstHalf = animLen * 0.5f;
-                if (firstHalf > 0f)
-                    yield return new WaitForSeconds(firstHalf);
-                ApplyMultiEventTemps(mainEffects);
-                PlayMultiImpactReactions(actorSeat, isAttack, isRecovery,
-                    isLocalUser, 0, mainEffects, nm);
-                float secondHalf = animLen - firstHalf;
-                if (secondHalf > 0f)
-                    yield return new WaitForSeconds(secondHalf);
-            }
-
-            actorVisual.ReturnToIdle();
-            if (isLocalUser)
-            {
-                var fps = Context.Fps;
-                if (fps != null) fps.ReturnToIdle();
-            }
+            yield return Run(PlayAnimatedItem(itemData, actorVisual, userTrigger,
+                () => ApplyMultiEventTemps(mainEffects),
+                hit => PlayMultiImpactReactions(actorSeat, isAttack, isRecovery,
+                    isLocalUser, hit, mainEffects, nm)));
 
             foreach (var evt in mainEffects)
             {
@@ -207,7 +154,10 @@ namespace AbsoluteZero.Core.Combat
                     if (hitIndex == 0)
                     {
                         if (targetVisual.IsLocalHuman)
+                        {
+                            ScreenVFXManager.Instance.PlayHitVFX();
                             CameraShake.Instance?.Shake(0.15f, 0.1f);
+                        }
                         _services.IceBreak(GetPlayerWorldPos(targetSeat));
                     }
                 }
@@ -312,114 +262,33 @@ namespace AbsoluteZero.Core.Combat
 
             if (hasUserAnim)
             {
-                if (!isLocalUser && userVisual != null)
-                {
-                    var itemSprite = GameSprites.GetItemSpriteFor(itemData);
-                    userVisual.SetItemSprite(itemSprite);
-                    Debug.Log($"[CombatVFX] → 3P SetItemSprite('{itemData.ItemName}') sprite={itemSprite != null}");
-                }
-
-                if (!isLocalUser)
-                {
-                    Debug.Log($"[CombatVFX] → userVisual.PlayCombatAnimation('{userTrigger}')");
-                    userVisual.PlayCombatAnimation(userTrigger);
-                }
-
-                bool isBuldak = ItemPresentation.GetChoreography(itemData) == ItemChoreography.Buldak;
-                if (!isBuldak)
-                    GameAudioManager.Instance?.PlayItemSfxFor(itemData.AnimTrigger, itemData);
-                else
-                    Run(_contact.PlayBuldakSfx(isLocalUser, itemData));
-
-                if (isLocalUser)
-                {
-                    var fps = Context.Fps;
-                    Debug.Log($"[CombatVFX] → FPS isLocalUser=true, FPSInstance={fps != null}");
-                    if (fps != null) fps.PlayFPSItemAnimation(itemData.AnimTrigger, itemData);
-                }
-
-                float animLen = GetAnimDuration(itemData, userVisual.GetAnimator(), userTrigger);
-
-                if (itemData.EffectHitCount > 0 && itemData.EffectDelay > 0f)
-                {
-                    yield return new WaitForSeconds(itemData.EffectDelay);
-                    ApplyEventTemps(userIdx, result);
-                    float remaining = animLen - itemData.EffectDelay;
-
-                    for (int h = 0; h < itemData.EffectHitCount; h++)
+                yield return Run(PlayAnimatedItem(itemData, userVisual, userTrigger,
+                    () => ApplyEventTemps(userIdx, result), hit =>
                     {
                         if ((isAttack || targetDefending) && targetVisual != null)
                         {
-                            if (targetDefending && h == 0)
-                            {
+                            if (targetDefending && hit == 0)
                                 PlayDefenseReaction(targetVisual, defenseItemId);
-                            }
-                            if (targetDamaged)
-                            {
-                                targetVisual.PlayDamageFlash(preserveCombatAnimation: targetDefending);
-                                if (!isLocalUser)
-                                {
-                                    _services.Hit(GetPlayerWorldPos(targetIdx));
-                                    if (h == 0)
-                                    {
-                                        ScreenVFXManager.Instance.PlayHitVFX();
-                                        CameraShake.Instance?.Shake(0.15f, 0.1f);
-                                        _services.IceBreak(GetPlayerWorldPos(targetIdx));
-                                    }
-                                }
-                                GameAudioManager.Instance?.PlayDamaged();
-                            }
-                        }
-                        else if (isRecovery && userVisual != null)
-                        {
-                            if (isLocalUser)
-                            {
-                                _services.Hit(GetPlayerWorldPos(userIdx));
-                                if (h == 0) ScreenVFXManager.Instance.PlayRecoveryVFX();
-                            }
-                        }
-
-                        if (h < itemData.EffectHitCount - 1 && itemData.EffectInterval > 0f)
-                        {
-                            yield return new WaitForSeconds(itemData.EffectInterval);
-                            remaining -= itemData.EffectInterval;
-                        }
-                    }
-
-                    if (remaining > 0f)
-                        yield return new WaitForSeconds(remaining);
-                }
-                else
-                {
-                    yield return new WaitForSeconds(animLen * 0.5f);
-                    ApplyEventTemps(userIdx, result);
-                    if ((isAttack || targetDefending) && targetVisual != null)
-                    {
-                        if (targetDefending)
-                            PlayDefenseReaction(targetVisual, defenseItemId);
-                        if (targetDamaged)
-                        {
+                            if (!targetDamaged) return;
                             targetVisual.PlayDamageFlash(preserveCombatAnimation: targetDefending);
                             if (!isLocalUser)
                             {
                                 _services.Hit(GetPlayerWorldPos(targetIdx));
-                                ScreenVFXManager.Instance.PlayHitVFX();
-                                CameraShake.Instance?.Shake(0.15f, 0.1f);
-                                _services.IceBreak(GetPlayerWorldPos(targetIdx));
+                                if (hit == 0)
+                                {
+                                    ScreenVFXManager.Instance.PlayHitVFX();
+                                    CameraShake.Instance?.Shake(0.15f, 0.1f);
+                                    _services.IceBreak(GetPlayerWorldPos(targetIdx));
+                                }
                             }
                             GameAudioManager.Instance?.PlayDamaged();
                         }
-                    }
-                    yield return new WaitForSeconds(animLen * 0.5f);
-                }
-
-                Debug.Log($"[CombatVFX] → userVisual.ReturnToIdle()");
-                userVisual.ReturnToIdle();
-                if (isLocalUser)
-                {
-                    var fps = Context.Fps;
-                    if (fps != null) fps.ReturnToIdle();
-                }
+                        else if (isRecovery && isLocalUser && itemData.EffectHitCount > 0 && itemData.EffectDelay > 0f)
+                        {
+                            _services.Hit(GetPlayerWorldPos(userIdx));
+                            if (hit == 0) ScreenVFXManager.Instance.PlayRecoveryVFX();
+                        }
+                    }));
 
                 if (targetDefending && targetVisual != null)
                 {
@@ -488,6 +357,58 @@ namespace AbsoluteZero.Core.Combat
             }
 
             Debug.Log($"[CombatVFX] PlayItemSequence DONE: P{userIdx} '{itemData.ItemName}'");
+        }
+
+        // Both modes play the authored duel gesture and its full timeline here.
+        // Only authoritative outcome application and seat-specific reactions vary.
+        IEnumerator PlayAnimatedItem(ItemDataSO item, AZPlayerVisual actor, string trigger,
+            System.Action applyOutcome, System.Action<int> react)
+        {
+            bool local = actor.IsLocalHuman;
+            try
+            {
+                if (local) Context.Fps?.PlayFPSItemAnimation(item.AnimTrigger, item);
+                else
+                {
+                    actor.SetItemSprite(GameSprites.GetItemSpriteFor(item));
+                    actor.PlayCombatAnimation(trigger);
+                }
+                if (ItemPresentation.GetChoreography(item) == ItemChoreography.Buldak)
+                    Run(_contact.PlayBuldakSfx(local, item));
+                else
+                    GameAudioManager.Instance?.PlayItemSfxFor(item.AnimTrigger, item);
+
+                _services.ItemCue("gesture");
+                float duration = GetAnimDuration(item, actor.GetAnimator(), trigger);
+                bool timed = item.EffectHitCount > 0 && item.EffectDelay > 0f;
+                float delay = timed ? item.EffectDelay : duration * 0.5f;
+                if (delay > 0f) yield return new WaitForSeconds(delay);
+                applyOutcome();
+                float remaining = duration - delay;
+                int hits = timed ? item.EffectHitCount : 1;
+                for (int hit = 0; hit < hits; hit++)
+                {
+                    react(hit);
+                    _services.ItemCue("impact");
+                    if (hit < hits - 1 && item.EffectInterval > 0f)
+                    {
+                        yield return new WaitForSeconds(item.EffectInterval);
+                        remaining -= item.EffectInterval;
+                    }
+                }
+                if (remaining > 0f) yield return new WaitForSeconds(remaining);
+            }
+            finally
+            {
+                // A cancelled older performance must not reset a newer one.
+                // The manager owns cleanup once this execution/binding expires.
+                if (_services.Item.IsCurrent)
+                {
+                    if (actor != null) actor.ReturnToIdle();
+                    if (local) Context.Fps?.ReturnToIdle();
+                }
+            }
+            _services.ItemCue("gesture-end");
         }
 
         float GetAnimDuration(ItemDataSO itemData, Animator animator, string trigger = null)

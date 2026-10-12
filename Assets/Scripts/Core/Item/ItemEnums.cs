@@ -29,7 +29,7 @@ namespace AbsoluteZero.Core.Item
         None,
         SunnyDay,
         CoolBreeze,
-        CicadaSong,
+        CicadaSong, // Retired standalone event; reserve value 3 for serialized/network compatibility.
         Kids,
         Ambulance,
         SummerVacation,

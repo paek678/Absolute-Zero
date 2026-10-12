@@ -51,5 +51,11 @@ namespace AbsoluteZero.Core.Combat
             _owner.SignalContactCue(Item.ActorSeat, Item.TargetSeat, Item.Item.ItemName, stage);
 #endif
         }
+        public void ItemCue(string stage)
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            _owner.SignalItemPresentationCue(Item.ActorSeat, Item.TargetSeat, Item.Item.ItemName, stage);
+#endif
+        }
     }
 }

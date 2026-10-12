@@ -8,7 +8,6 @@ namespace AbsoluteZero.UI.Game.Build
     public struct OppBarEntry
     {
         public Canvas Canvas;
-        public TextMeshProUGUI TempText;
         public Slider HpSlider;
         public Image HpFillImage;
     }
@@ -19,20 +18,18 @@ namespace AbsoluteZero.UI.Game.Build
         public TextMeshProUGUI PhaseText;
         public TextMeshProUGUI TimerText;
         public TextMeshProUGUI StatusText;
-        public TextMeshProUGUI ScoreText;
-        public TextMeshProUGUI MyTempText;
+        public TextMeshProUGUI RoundText;
         public Slider MyHpSlider;
         public Image MyHpFillImage;
         public Image TimerFillImage;
         public Image TimerSliderImage;
         public RectTransform ClockHandRT;
-        public GameObject TimeAlarmObj;
-        public Image TimeAlarmImage;
         public RectTransform TimerContainerRT;
         public GameObject EnvPanel;
         public TextMeshProUGUI EnvText;
 
         public Image CinematicOverlay;
+        public Image CinematicPlate;
         public TextMeshProUGUI CinematicText;
         public Button LobbyButton;
         public Button RematchButton;
@@ -46,9 +43,14 @@ namespace AbsoluteZero.UI.Game.Build
 
         public Image[] NameBoxes;
         public TextMeshProUGUI[] NameTexts;
+        public TextMeshProUGUI[] SeatLabels;
+        public TextMeshProUGUI[] ScoreLabels;
+        public TextMeshProUGUI[] ActionLabels;
+        public Image[] ActionBadges;
+        public GameObject[] ActionBadgeRoots;
+        public Image[] ActiveFrames;
 
         public Canvas OppBarCanvas;
-        public TextMeshProUGUI OppTempText;
         public Slider OppHpSlider;
         public Image OppHpFillImage;
 

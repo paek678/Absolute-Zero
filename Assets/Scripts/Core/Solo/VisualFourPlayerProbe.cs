@@ -37,6 +37,8 @@ namespace AbsoluteZero.Core.Solo
         int _scenarioTimeout;
         ushort _port;
         bool _relayFlow;
+        bool _manualPlay;
+        bool _manualCaptureScheduled;
         string _coordinationFile;
         NetworkManager _network;
         System.Random _random;
@@ -52,6 +54,8 @@ namespace AbsoluteZero.Core.Solo
         bool _hoverCaptureStarted;
         bool _hoverCaptureDone;
         bool _ghostShowcase;
+        int _ghostShowcaseSeat = 1;
+        float _ghostMediaReadyAt = -1f;
         bool _ghostLethalShowcase;
         bool _fullMatch;
         bool _fullNatural;
@@ -76,6 +80,7 @@ namespace AbsoluteZero.Core.Solo
             DontDestroyOnLoad(go);
             var probe = go.AddComponent<VisualFourPlayerProbe>();
             probe._role = Arg("--az-role", "client");
+            probe._manualPlay = Arg("--az-manual-play", "0") == "1";
             probe._run = Arg("--az-run", "visual-local");
             probe._seed = ParseInt("--az-seed", 29031);
             probe._turnLimit = Mathf.Clamp(ParseInt("--az-turns", 4), 1, 20);
@@ -85,6 +90,8 @@ namespace AbsoluteZero.Core.Solo
             probe._ghostShowcase = Arg("--az-ghost-showcase", "0") == "1";
             probe._ghostLethalShowcase = Arg("--az-ghost-lethal-showcase", "0") == "1";
             if (probe._ghostLethalShowcase) probe._ghostShowcase = true;
+            if (!probe._ghostLethalShowcase)
+                probe._ghostShowcaseSeat = Mathf.Clamp(ParseInt("--az-ghost-showcase-seat", 1), 0, 3);
             probe._possessionCase = Arg("--az-possession-case", "");
             probe._ghostLedgerCase = Arg("--az-ghost-ledger-case", "");
             probe._ghostLifecycleCase = Arg("--az-ghost-lifecycle-case", "");
@@ -110,6 +117,8 @@ namespace AbsoluteZero.Core.Solo
 
         void OnEnable()
         {
+            // AddComponent calls OnEnable before Launch assigns fields.
+            if (Arg("--az-manual-play", "0") == "1") return;
             Core.Combat.CombatVFXManager.OnPresentationSettled += OnPresentationSettled;
             TurnManager.OnGhostSkillUsed += OnGhostSkillUsedVisual;
             TurnManager.OnMultiDeathPresentation += OnGhostDeathPresentation;
@@ -163,7 +172,7 @@ namespace AbsoluteZero.Core.Solo
 
             if (_role == "host")
             {
-                UnityEngine.Random.InitState(_seed);
+                if (!_manualPlay) UnityEngine.Random.InitState(_seed);
                 _network.ConnectionApprovalCallback = Approve;
                 if (!_network.StartHost())
                 {
@@ -250,7 +259,7 @@ namespace AbsoluteZero.Core.Solo
                 }
                 Debug.Log("[VISUAL] RELAY_LOBBY_FOUR_JOINED");
 
-                UnityEngine.Random.InitState(_seed);
+                if (!_manualPlay) UnityEngine.Random.InitState(_seed);
                 Task<Result<Unit>> startTask = coordinator.StartMatchAsHostAsync();
                 yield return WaitForTask(startTask, 90f, "Relay host start");
                 if (_finishing) yield break;
@@ -336,7 +345,7 @@ namespace AbsoluteZero.Core.Solo
         void Update()
         {
             if (_finishing) return;
-            if (Time.realtimeSinceStartup > _scenarioTimeout)
+            if (!_manualPlay && Time.realtimeSinceStartup > _scenarioTimeout)
             {
                 Fail($"Scenario timeout after {_scenarioTimeout} seconds");
                 return;
@@ -368,6 +377,17 @@ namespace AbsoluteZero.Core.Solo
             {
                 _nextStateLog = Time.unscaledTime + 1f;
                 LogState("STATE", turn, state, players);
+            }
+
+            // Manual launcher owns connection only. Input, results and lifetime belong to the player.
+            if (_manualPlay)
+            {
+                if (!_manualCaptureScheduled && Arg("--az-manual-capture", "0") == "1")
+                {
+                    _manualCaptureScheduled = true;
+                    StartCoroutine(CaptureManualStartup());
+                }
+                return;
             }
 
             if (state.TerminalResult.Value.Released)
@@ -444,14 +464,24 @@ namespace AbsoluteZero.Core.Solo
 
         void UpdateGhostShowcase(PlayerState local, PlayerState[] players, TurnManager turn)
         {
+            byte grudgeTarget = (byte)((_ghostShowcaseSeat + 3) % 4);
+            byte possessionTarget = (byte)((_ghostShowcaseSeat + 1) % 4);
             if (_role == "host" && !_ghostForced && players.Length == 4
                 && turn.CurrentPhase.Value == TurnPhase.PrepPhase
                 && FindObjectsByType<PlayerSeatMarker>(FindObjectsSortMode.None).Length >= 3)
             {
-                _ghostForced = turn.DebugForceGhostForVisual(1);
+                if (Arg("--az-ghost-media", "0") == "1")
+                {
+                    if (FindObjectsByType<Canvas>(FindObjectsSortMode.None).Any(canvas =>
+                        canvas.name == "LoadingScreenCanvas" && canvas.isActiveAndEnabled)) return;
+                    if (_ghostMediaReadyAt < 0) _ghostMediaReadyAt = Time.unscaledTime + 1f;
+                    if (Time.unscaledTime < _ghostMediaReadyAt) return;
+                    Debug.Log($"[VISUAL] GHOST_MEDIA_DEATH time={Time.unscaledTime:F3}");
+                }
+                _ghostForced = turn.DebugForceGhostForVisual((byte)_ghostShowcaseSeat);
             }
 
-            var ghost = players.FirstOrDefault(player => player.PlayerIndex == 1);
+            var ghost = players.FirstOrDefault(player => player.PlayerIndex == _ghostShowcaseSeat);
             if (ghost == null || ghost.CurrentLifeState.Value != LifeState.Ghost) return;
             if (_ghostLethalShowcase && _role == "host" && !_ghostLethalArmed)
             {
@@ -470,9 +500,11 @@ namespace AbsoluteZero.Core.Solo
                 _ghostCaptureStarted = true;
                 _ghostObservedAt = Time.unscaledTime;
                 StartCoroutine(CaptureGhostTransition());
+                if (Arg("--az-ghost-growth-check", "0") == "1")
+                    StartCoroutine(CheckGhostGrowth(_ghostShowcaseSeat));
             }
 
-            if (_localSeat != 1) return;
+            if (_localSeat != _ghostShowcaseSeat) return;
             if (_ghostLethalShowcase)
             {
                 var state = MatchCompositionRoot.Instance?.NetworkState;
@@ -488,10 +520,10 @@ namespace AbsoluteZero.Core.Solo
                 _nextGhostRequestAt = Time.unscaledTime + 0.75f;
                 var ghostState = MatchCompositionRoot.Instance?.NetworkState;
                 if (ghostState != null)
-                    turn.UseGhostSkillRpc(GhostSkillService.SKILL_GRUDGE, 0,
+                    turn.UseGhostSkillRpc(GhostSkillService.SKILL_GRUDGE, grudgeTarget,
                         ghostState.GhostMatchEpoch.Value, ghostState.GhostRoundEpoch.Value,
                         turn.TurnNumber.Value, firstRequest ? 0x80000101u : 0x80000102u);
-                Debug.Log($"[VISUAL] GHOST_REQUEST skill=Grudge actor=1 target=0 retry={!firstRequest}");
+                Debug.Log($"[VISUAL] GHOST_REQUEST skill=Grudge actor={_ghostShowcaseSeat} target={grudgeTarget} retry={!firstRequest}");
             }
             if (!_ghostLethalShowcase && _ghostSkillsObserved == 1
                 && elapsed >= 6.2f && Time.unscaledTime >= _nextGhostRequestAt)
@@ -501,10 +533,10 @@ namespace AbsoluteZero.Core.Solo
                 _nextGhostRequestAt = Time.unscaledTime + 0.75f;
                 var ghostState = MatchCompositionRoot.Instance?.NetworkState;
                 if (ghostState != null)
-                    turn.UseGhostSkillRpc(GhostSkillService.SKILL_POSSESSION, 2,
+                    turn.UseGhostSkillRpc(GhostSkillService.SKILL_POSSESSION, possessionTarget,
                         ghostState.GhostMatchEpoch.Value, ghostState.GhostRoundEpoch.Value,
                         turn.TurnNumber.Value, firstRequest ? 0x80000103u : 0x80000104u);
-                Debug.Log($"[VISUAL] GHOST_REQUEST skill=Possession actor=1 target=2 retry={!firstRequest}");
+                Debug.Log($"[VISUAL] GHOST_REQUEST skill=Possession actor={_ghostShowcaseSeat} target={possessionTarget} retry={!firstRequest}");
             }
         }
 
@@ -521,6 +553,56 @@ namespace AbsoluteZero.Core.Solo
             _ghostSkillsObserved++;
             Debug.Log($"[VISUAL] GHOST_VFX_START actor={ghostSeat} skill={skillIndex} target={targetSeat}");
             StartCoroutine(CaptureGhostSkillFrames(ghostSeat, skillIndex, targetSeat));
+            if (Arg("--az-ghost-avatar-check", "0") == "1")
+                StartCoroutine(CheckGhostAvatar(ghostSeat, skillIndex));
+            if (skillIndex == GhostSkillService.SKILL_POSSESSION && Arg("--az-possession-icon-check", "0") == "1")
+                StartCoroutine(CheckPossessionStatusIcon(targetSeat));
+        }
+
+        IEnumerator CheckPossessionStatusIcon(byte targetSeat)
+        {
+            yield return new WaitForSecondsRealtime(.25f);
+            float started = Time.unscaledTime;
+            bool observed = false, sustained = false;
+            var iconRoot = GameObject.Find("PossessionStatusIcon" + targetSeat);
+            var icon = iconRoot != null ? iconRoot.transform as RectTransform : null;
+            if (icon == null) { Fail("Possession status icon missing"); yield break; }
+            var fixedParent = icon.parent;
+            var fixedPosition = icon.anchoredPosition;
+            while (Time.unscaledTime - started < 60f)
+            {
+                yield return new WaitForEndOfFrame();
+                var state = MatchCompositionRoot.Instance?.NetworkState;
+                if (state == null || icon == null) yield break;
+                bool active = (state.GhostPossessedMask.Value & (1 << targetSeat)) != 0;
+                bool visible = icon.gameObject.activeInHierarchy;
+                if (icon.parent != fixedParent || icon.anchoredPosition != fixedPosition
+                    || (fixedParent.name != "HPBar" && fixedParent.name != "MyHpBar")
+                    || GameObject.Find("MyTemp") != null || GameObject.Find("OppTemp") != null)
+                { Fail("Thermometer icon moved locally or numeric temperature label remains"); yield break; }
+                if (active != visible || GameObject.Find("PossessedSeat" + targetSeat) != null)
+                { Fail($"Possession status mismatch active={active} visible={visible}"); yield break; }
+                if (active && !observed)
+                {
+                    observed = true;
+                    Debug.Log($"[VISUAL] POSSESSION_ICON_ACTIVE local={_localSeat} target={targetSeat}");
+                    Capture("possession-status-active");
+                }
+                if (active && !sustained && Time.unscaledTime - started >= 2f)
+                {
+                    sustained = true;
+                    Debug.Log($"[VISUAL] POSSESSION_ICON_PERSISTED local={_localSeat} target={targetSeat}");
+                    Capture("possession-status-persisted");
+                }
+                if (observed && !active)
+                {
+                    Debug.Log($"[VISUAL] POSSESSION_ICON_CLEARED local={_localSeat} target={targetSeat}");
+                    Capture("possession-status-cleared");
+                    yield break;
+                }
+                yield return null;
+            }
+            Fail("Possession status did not clear within fixture budget");
         }
 
         void OnGhostImpact(uint castId)
@@ -562,6 +644,16 @@ namespace AbsoluteZero.Core.Solo
         IEnumerator FinishGhostShowcase()
         {
             yield return new WaitForSecondsRealtime(1.5f);
+            if (Arg("--az-ghost-media", "0") == "1")
+            {
+                // Recording-only continuation: ordinary inventory commands after both skills.
+                _ghostShowcase = false;
+                _turnLimit = 20;
+                _hoverCaptureStarted = _hoverCaptureDone = true;
+                _observedTurn = -1;
+                Debug.Log($"[VISUAL] GHOST_MEDIA_CONTINUE time={Time.unscaledTime:F3}");
+                yield return new WaitForSecondsRealtime(32f);
+            }
             StartCoroutine(Finish("ghost-showcase"));
         }
 
@@ -740,7 +832,7 @@ namespace AbsoluteZero.Core.Solo
 
         void OnPresentationSettled(uint sequence)
         {
-            if (_finishing || _localSeat < 0) return;
+            if (_manualPlay || _finishing || _localSeat < 0) return;
             _settledTurns++;
             var root = MatchCompositionRoot.Instance;
             var turn = TurnManager.Instance;
@@ -831,6 +923,12 @@ namespace AbsoluteZero.Core.Solo
 
         int _captureIndex;
 
+        IEnumerator CaptureManualStartup()
+        {
+            yield return new WaitForSecondsRealtime(6f);
+            Capture("manual-clean-startup");
+        }
+
         void Capture(string label)
         {
             string logPath = Application.consoleLogPath;
@@ -862,7 +960,7 @@ namespace AbsoluteZero.Core.Solo
 
         void OnGUI()
         {
-            if (Arg("--az-visual-flow", "0") != "1") return;
+            if (!GameplayDebugDisplay.Enabled || Arg("--az-visual-flow", "0") != "1") return;
             var boxStyle = new GUIStyle(GUI.skin.box)
             {
                 alignment = TextAnchor.UpperLeft,

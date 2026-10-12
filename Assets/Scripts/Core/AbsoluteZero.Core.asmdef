@@ -11,6 +11,7 @@
         "Unity.Networking.Transport",
         "Unity.Collections",
         "UnityEngine.UI",
+        "Unity.2D.Animation.Runtime",
         "Unity.Behavior",
         "Unity.Behavior.SerializableGUID"
     ],

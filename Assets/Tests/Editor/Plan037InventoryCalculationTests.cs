@@ -93,17 +93,68 @@ namespace AbsoluteZero.Tests
             Assert.That(InventoryMutationCalculations.CanReroll(exhausted, ItemSlotType.Sub), Is.False);
         }
 
-        [Test]
-        public void FullDestinationCanStackButNeverTurnsLimitedUsesIntoUnlimited()
+        [TestCase(0, true)] [TestCase(1, true)] [TestCase(2, true)]
+        [TestCase(3, false)] [TestCase(4, false)]
+        public void GenerationStopsAtThreePhysicalCopies(int count, bool eligible)
         {
-            var limited = new ItemSlotNetData { ItemId = 1, RemainingUses = 250 };
-            var stacked = InventoryMutationCalculations.PlaceStolen(limited, 10, 12, 12);
-            Assert.That(stacked.Destination, Is.EqualTo(StealDestination.Stack));
-            Assert.That(stacked.StackedUses, Is.EqualTo(254));
-            limited.RemainingUses = 255;
-            Assert.That(InventoryMutationCalculations.PlaceStolen(limited, 10, 12, 12).Destination, Is.EqualTo(StealDestination.None));
-            Assert.That(InventoryMutationCalculations.PlaceStolen(limited, 10, 11, 12).Destination, Is.EqualTo(StealDestination.Append));
-            Assert.That(InventoryMutationCalculations.PlaceStolen(null, 10, 12, 12).Destination, Is.EqualTo(StealDestination.None));
+            var slots = new List<ItemSlotNetData> { ItemSlotNetData.Empty };
+            for (int i = 0; i < count; i++) slots.Add(new ItemSlotNetData { ItemId = 2, RemainingUses = 1 });
+            Assert.That(InventoryMutationCalculations.CanGenerateCopy(2, false, slots), Is.EqualTo(eligible));
+            Assert.That(InventoryMutationCalculations.CanGenerateCopy(-1, false, slots), Is.False);
+        }
+
+        [Test]
+        public void RerollExcludesOnlyItsOwnSlotAndCountsPendingReplacements()
+        {
+            var slots = new[] {
+                new ItemSlotNetData { ItemId = 2, RemainingUses = 1 },
+                new ItemSlotNetData { ItemId = 2, RemainingUses = 1 },
+                new ItemSlotNetData { ItemId = 2, RemainingUses = 1 },
+                new ItemSlotNetData { ItemId = 3, RemainingUses = 1 } };
+            Assert.That(InventoryMutationCalculations.CanGenerateCopy(2, false, slots, 0), Is.True);
+            Assert.That(InventoryMutationCalculations.CanGenerateCopy(2, false, slots, 3), Is.False);
+            slots[0].ItemId = 3;
+            Assert.That(InventoryMutationCalculations.CanGenerateCopy(2, false, slots, 3), Is.True);
+            slots[3].ItemId = 2;
+            Assert.That(InventoryMutationCalculations.CanGenerateCopy(2, false, slots, 0), Is.False);
+        }
+
+        [Test]
+        public void ExistingUnlimitedCannotGenerateADuplicateAndExhaustedCopiesStillCount()
+        {
+            var slots = new[] { new ItemSlotNetData { ItemId = 2, RemainingUses = 255 } };
+            Assert.That(InventoryMutationCalculations.CanGenerateCopy(2, false, slots), Is.False);
+            Assert.That(InventoryMutationCalculations.CanGenerateCopy(2, true, slots), Is.False);
+            slots[0].RemainingUses = 0;
+            Assert.That(InventoryMutationCalculations.CanGenerateCopy(2, true, slots), Is.False);
+            Assert.That(InventoryMutationCalculations.CanGenerateCopy(2, false, new[] { slots[0], slots[0], slots[0] }), Is.False);
+        }
+
+        [Test]
+        public void DominantCappedCandidateCannotStarveLegalDrop()
+        {
+            var capped = Item(1000000f); var legal = Item(1f);
+            var slots = new[] { new ItemSlotNetData { ItemId = 0, RemainingUses = 1 },
+                new ItemSlotNetData { ItemId = 0, RemainingUses = 1 },
+                new ItemSlotNetData { ItemId = 0, RemainingUses = 1 } };
+            var table = new ItemDropTable(new ItemDataSO[] { capped, legal });
+            for (int i = 0; i < 32; i++)
+                Assert.That(table.Roll(item => InventoryMutationCalculations.CanGenerateCopy(
+                    (short)(item == capped ? 0 : 1), false, slots)), Is.SameAs(legal));
+            var before = Random.state;
+            Assert.That(new ItemDropTable(new ItemDataSO[] { capped }).Roll(item =>
+                InventoryMutationCalculations.CanGenerateCopy(0, false, slots)), Is.Null);
+            Assert.That(Random.state, Is.EqualTo(before));
+        }
+
+        [TestCase(12, -1, -1)]
+        [TestCase(12, 5, 5)]
+        [TestCase(11, -1, 11)]
+        [TestCase(4, 1, 1)]
+        [TestCase(0, -1, 0)]
+        public void NewCopyUsesItsOwnSlotAndNeverOverwritesAnOccupiedSlot(int count, int empty, int expected)
+        {
+            Assert.That(InventoryMutationCalculations.SeparateCopySlot(count, empty, 12), Is.EqualTo(expected));
         }
     }
 }

@@ -61,6 +61,7 @@ namespace AbsoluteZero.UI.LobbyUI
                 return;
             }
 
+            CasualLobbySkin.Apply(canvasRoot);
             _mainView = new LobbyMainView(_mainPanel);
             _modeSelectView = new LobbyModeSelectView(_modeSelectPanel);
             _roomView = new LobbyRoomView(_roomPanel);

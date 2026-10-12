@@ -248,6 +248,7 @@ namespace AbsoluteZero.Core.Turn
 
         public override void OnNetworkDespawn()
         {
+            CancelEnvironmentCamera();
             _prepInput.Close();
             PrepInputOpened = null;
             if (_rematchWaitHandle != null)
@@ -655,6 +656,9 @@ namespace AbsoluteZero.Core.Turn
                 _matchManager.RoundNumber.Value, TurnNumber.Value, checked(++_prepSequence)),
                 PrepStartServerTime.Value, currentPrepDuration, _tempsAtTurnStart);
             PublishPhaseChanged(TurnPhase.PrepPhase, TurnNumber.Value);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Solo.PlaytestTelemetry.Current?.PrepOpened();
+#endif
             PrepInputOpened?.Invoke(prep);
 
             while (elapsed < currentPrepDuration)
@@ -1198,6 +1202,24 @@ namespace AbsoluteZero.Core.Turn
                     Debug.LogWarning("[TurnManager] Multi HandleRoundEnd: RoundInProgress→RoundEnd transition failed");
                 }
                 endsMatch = _multiTerminalWinnerMask != 0;
+                if (!endsMatch && _gameRule != null && _matchManager != null)
+                {
+                    byte eligible = 0;
+                    var roster = MatchCompositionRoot.Instance?.Roster;
+                    if (roster != null)
+                        foreach (var entry in roster.Seats.Values)
+                            if (entry.SeatIndex < 8 && (entry.State == SeatConnectionState.Connected
+                                || entry.State == SeatConnectionState.Local))
+                                eligible |= (byte)(1 << entry.SeatIndex);
+                    byte leaders = MultiVictoryRules.FindRoundLimitWinners(
+                        _matchManager.RoundNumber.Value, _gameRule.MaxRounds, CaptureKillScores(), eligible);
+                    if (leaders != 0)
+                    {
+                        LatchMultiVictory(leaders);
+                        endsMatch = true;
+                        Debug.Log($"[TurnManager] Multi round limit reached — round={_matchManager.RoundNumber.Value}, winnerMask={leaders:X2}");
+                    }
+                }
             }
             else
             {
@@ -1230,19 +1252,9 @@ namespace AbsoluteZero.Core.Turn
             {
                 if (IsMulti && _matchManager != null)
                 {
-                    var multiWinnerMask = _multiTerminalWinnerMask;
-                    var multiOutcome = CountBits(multiWinnerMask) > 1
-                        ? MultiMatchOutcome.JointVictory
-                        : MultiMatchOutcome.SingleWinner;
-                    if (!_matchManager.TryTransitionMatchState(
-                        Network.MatchState.RoundEnd, Network.MatchState.MatchComplete))
-                    {
-                        Debug.LogWarning("[TurnManager] Multi MatchComplete transition failed — proceeding to next round");
-                        yield return StartCoroutine(StartNextRound(winnerIndex < 0));
-                        yield break;
-                    }
-                    OnMultiMatchEndClientRpc((byte)multiOutcome, multiWinnerMask);
-                    Debug.Log($"[TurnManager] Multi match complete — outcome={multiOutcome}, winnerMask={multiWinnerMask:X2}");
+                    // All round presentations have settled. Publish the same persistent
+                    // terminal result used by kill-threshold victories, including late observers.
+                    CompleteLatchedMultiMatch(++_resultSequence);
                     yield break;
                 }
 
@@ -1718,7 +1730,7 @@ namespace AbsoluteZero.Core.Turn
 
         IEnumerator EnvironmentAnnouncementRoutine()
         {
-            ActiveEnvironment.Value = _envRules.SelectRandom();
+            ActiveEnvironment.Value = _envRules.SelectRandom(_gameMode);
 
             Debug.Log($"[ENV] Environment selected: {ActiveEnvironment.Value} ({EnvironmentRuleService.GetName(ActiveEnvironment.Value)})");
 
@@ -1732,41 +1744,62 @@ namespace AbsoluteZero.Core.Turn
         [Rpc(SendTo.Everyone)]
         void AnnounceEnvironmentClientRpc(EnvironmentType env)
         {
+            CancelEnvironmentCamera();
             OnEnvironmentAnnounced?.Invoke(env);
-            StartCoroutine(EnvironmentCameraRoutine());
+            var mode = MatchCompositionRoot.Instance?.ActiveConfig?.Mode;
+            float degrees = mode.HasValue ? DuelSpriteFacing.EnvironmentPanDegrees(mode.Value, env) : 0f;
+            if (degrees > 0f)
+                _environmentCameraRoutine = StartCoroutine(EnvironmentCameraRoutine(degrees));
         }
 
-        IEnumerator EnvironmentCameraRoutine()
+        Coroutine _environmentCameraRoutine;
+        Camera _environmentPanCamera;
+        Quaternion _environmentPanRotation;
+
+        void CancelEnvironmentCamera()
         {
-            var cam = Camera.main;
+            if (_environmentCameraRoutine != null) StopCoroutine(_environmentCameraRoutine);
+            _environmentCameraRoutine = null;
+            if (_environmentPanCamera != null) _environmentPanCamera.transform.rotation = _environmentPanRotation;
+            _environmentPanCamera = null;
+        }
+
+        IEnumerator EnvironmentCameraRoutine(float degrees)
+        {
+            var cam = MatchViewBindings.ForScene(gameObject.scene)?.GameplayCamera ?? Camera.main;
             if (cam == null) yield break;
-
-            Vector3 startEuler = cam.transform.eulerAngles;
-            float startY = startEuler.y;
-            float targetY = startY - 25f;
-
-            const float panDuration = 0.6f;
-            float t = 0f;
-            while (t < panDuration)
+            _environmentPanCamera = cam;
+            _environmentPanRotation = cam.transform.rotation;
+            var start = _environmentPanRotation;
+            var target = Quaternion.AngleAxis(-degrees, Vector3.up) * start;
+            cam.GetComponent<DuelSpriteFacing>()?.DiscoverScene();
+            try
             {
-                t += Time.deltaTime;
-                float ratio = Mathf.SmoothStep(0f, 1f, t / panDuration);
-                cam.transform.eulerAngles = new Vector3(startEuler.x, Mathf.Lerp(startY, targetY, ratio), startEuler.z);
-                yield return null;
+                const float panDuration = 0.6f;
+                float t = 0f;
+                while (t < panDuration && cam != null)
+                {
+                    t += Time.deltaTime;
+                    cam.transform.rotation = Quaternion.Slerp(start, target, Mathf.SmoothStep(0f, 1f, t / panDuration));
+                    yield return null;
+                }
+                if (cam == null) yield break;
+                cam.transform.rotation = target;
+                yield return _waitTwo;
+                t = 0f;
+                while (t < panDuration && cam != null)
+                {
+                    t += Time.deltaTime;
+                    cam.transform.rotation = Quaternion.Slerp(target, start, Mathf.SmoothStep(0f, 1f, t / panDuration));
+                    yield return null;
+                }
             }
-            cam.transform.eulerAngles = new Vector3(startEuler.x, targetY, startEuler.z);
-
-            yield return _waitTwo;
-
-            t = 0f;
-            while (t < panDuration)
+            finally
             {
-                t += Time.deltaTime;
-                float ratio = Mathf.SmoothStep(0f, 1f, t / panDuration);
-                cam.transform.eulerAngles = new Vector3(startEuler.x, Mathf.Lerp(targetY, startY, ratio), startEuler.z);
-                yield return null;
+                if (cam != null) cam.transform.rotation = start;
+                _environmentPanCamera = null;
+                _environmentCameraRoutine = null;
             }
-            cam.transform.eulerAngles = startEuler;
         }
 
         [Rpc(SendTo.Everyone)]

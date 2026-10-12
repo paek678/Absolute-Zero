@@ -35,13 +35,13 @@ namespace AbsoluteZero.Core.Item
             cardGO.transform.SetParent(transform, false);
             _mainSprite = cardGO.AddComponent<SpriteRenderer>();
             _mainSprite.sprite = itemSprite != null ? itemSprite : (_fallbackSprite = CreateFallbackSprite());
-            _mainSprite.sortingOrder = 5;
+            WorldInteractionLayer.Apply(_mainSprite);
 
             var labelGO = new GameObject("Label");
             labelGO.transform.SetParent(transform, false);
             labelGO.transform.localPosition = new Vector3(0f, -0.6f, -0.01f);
             _label = labelGO.AddComponent<TextMesh>();
-            _label.text = itemName;
+            _label.text = GameplayDebugDisplay.ItemLabel(itemName, string.Empty, GameplayDebugDisplay.ShowItemNames);
             _label.fontSize = 28;
             _label.characterSize = 0.05f;
             _label.anchor = TextAnchor.MiddleCenter;
@@ -68,14 +68,25 @@ namespace AbsoluteZero.Core.Item
             var views = MatchViewBindings.ForScene(gameObject.scene);
             var bannedTex = views != null ? views.GetSprite(MatchSpriteRole.BannedTape) : Resources.Load<Sprite>("banned_tape");
             if (bannedTex != null) _bannedOverlay.sprite = bannedTex;
-            _bannedOverlay.sortingOrder = 7;
+            WorldInteractionLayer.Apply(_bannedOverlay, WorldInteractionLayer.BanOrder);
             bannedGO.SetActive(false);
+            AbsoluteZero.Core.Combat.DuelSpriteFacing.Register(gameObject);
         }
 
         public void SetInteractable(bool interactable)
         {
             if (_mainSprite == null) return;
             _mainSprite.color = interactable ? Color.white : new Color(1f, 1f, 1f, 0.35f);
+        }
+
+        public void SetPresentationFacing(Quaternion itemRotation, Quaternion labelRotation)
+        {
+            // Rotate the root so its collider, hover outline and ban tape match the art.
+            transform.rotation = itemRotation;
+            if (_label == null) return;
+            var relative = Quaternion.Inverse(itemRotation) * labelRotation;
+            _label.transform.localRotation = relative;
+            _label.transform.localPosition = relative * new Vector3(0f, -0.6f, -0.01f);
         }
 
         // The same CopyId keeps its object. Reset transient hover/selection before the
@@ -109,7 +120,9 @@ namespace AbsoluteZero.Core.Item
         public void UpdateDisplay(string itemName, string usesText, bool usable)
         {
             if (_label != null)
-                _label.text = $"{itemName}\n{usesText}";
+                _label.text = GameplayDebugDisplay.ItemLabel(itemName,
+                    string.Empty,
+                    GameplayDebugDisplay.ShowItemNames);
 
             SetInteractable(usable);
         }

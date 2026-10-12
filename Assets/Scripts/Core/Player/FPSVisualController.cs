@@ -316,6 +316,7 @@ namespace AbsoluteZero.Core.Player
                 return;
             }
 
+            ResetAnimationTriggers();
             _animator.Play(IdleState, 0, 0f);
             _animator.Update(0f);
 
@@ -325,6 +326,7 @@ namespace AbsoluteZero.Core.Player
                 if (sprite == null)
                     _spriteCache.TryGetValue(trigger, out sprite);
                 _itemRenderer.sprite = sprite;
+                WorldInteractionLayer.ApplyHeld(_itemRenderer);
             }
 
             _animator.SetTrigger(trigger);
@@ -338,9 +340,17 @@ namespace AbsoluteZero.Core.Player
         public void ReturnToIdle()
         {
             if (_animator == null) return;
+            ResetAnimationTriggers();
             _animator.Play(IdleState, 0, 0f);
             if (_itemRenderer != null)
                 _itemRenderer.sprite = null;
+        }
+
+        void ResetAnimationTriggers()
+        {
+            foreach (var parameter in _animator.parameters)
+                if (parameter.type == AnimatorControllerParameterType.Trigger)
+                    _animator.ResetTrigger(parameter.nameHash);
         }
     }
 }

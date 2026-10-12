@@ -1,6 +1,4 @@
-using System.Globalization;
 using System.Text;
-using System.Text.RegularExpressions;
 using Unity.Collections;
 using UnityEngine;
 
@@ -9,7 +7,6 @@ namespace AbsoluteZero.Core.Cosmetic
     public class CosmeticProfileService : MonoBehaviour
     {
         const string NicknameKey = "player_nickname";
-        static readonly Regex NicknameRegex = new(@"^[가-힣a-zA-Z0-9]+$", RegexOptions.Compiled);
 
         [SerializeField] CosmeticRegistrySO _registry;
 
@@ -49,19 +46,7 @@ namespace AbsoluteZero.Core.Cosmetic
         }
 
         public bool TryValidateNickname(string raw, out string validated)
-        {
-            validated = null;
-            if (string.IsNullOrWhiteSpace(raw)) return false;
-
-            string trimmed = raw.Trim().Normalize(NormalizationForm.FormC);
-            if (!NicknameRegex.IsMatch(trimmed)) return false;
-
-            int textLen = new StringInfo(trimmed).LengthInTextElements;
-            if (textLen < 2 || textLen > 8) return false;
-
-            validated = trimmed;
-            return true;
-        }
+            => ParticipantDisplayName.TryHuman(raw, out validated);
 
         public void SetNickname(string validated)
         {

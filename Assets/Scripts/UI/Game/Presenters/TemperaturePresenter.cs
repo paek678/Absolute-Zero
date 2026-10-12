@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using AbsoluteZero.Core.Player;
 using AbsoluteZero.UI.Game.Bridge;
 using AbsoluteZero.UI.Game.Build;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -12,7 +11,6 @@ namespace AbsoluteZero.UI.Game.Presenters
     {
         readonly IGameDataBridge _bridge;
 
-        readonly TextMeshProUGUI _myTempText;
         readonly Slider _myHpSlider;
         readonly Image _myHpFillImage;
 
@@ -34,7 +32,6 @@ namespace AbsoluteZero.UI.Game.Presenters
         public TemperaturePresenter(IGameDataBridge bridge, GameHudRefs refs)
         {
             _bridge = bridge;
-            _myTempText = refs.MyTempText;
             _myHpSlider = refs.MyHpSlider;
             _myHpFillImage = refs.MyHpFillImage;
             _oppBars = refs.OppBars;
@@ -54,7 +51,6 @@ namespace AbsoluteZero.UI.Game.Presenters
             {
                 float myTarget = GetOverrideOrActual(localSeat, mySeat.Temperature);
                 _displayedMyTemp = MoveDisplayedTemperature(_displayedMyTemp, myTarget, deltaTime);
-                _myTempText.text = $"{_displayedMyTemp:F0}°";
                 if (_myHpSlider != null)
                     _myHpSlider.value = Mathf.Clamp01(_displayedMyTemp / 37f);
                 if (_myHpFillImage != null)
@@ -76,8 +72,6 @@ namespace AbsoluteZero.UI.Game.Presenters
                 float displayed = MoveDisplayedTemperature(_displayedOppTemps[i], oppTarget, deltaTime);
                 _displayedOppTemps[i] = displayed;
 
-                if (bar.TempText != null)
-                    bar.TempText.text = $"{displayed:F0}°";
                 if (bar.HpSlider != null)
                     bar.HpSlider.value = Mathf.Clamp01(displayed / 37f);
                 if (bar.HpFillImage != null)

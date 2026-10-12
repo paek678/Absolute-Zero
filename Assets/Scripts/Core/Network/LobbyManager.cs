@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using AbsoluteZero.Core.Cosmetic;
 using Unity.Services.Authentication;
 using Unity.Services.Core;
 using Unity.Services.Lobbies;
@@ -323,7 +324,8 @@ namespace AbsoluteZero.Core.Network
             {
                 Data = new Dictionary<string, PlayerDataObject>
                 {
-                    { "PlayerName", new PlayerDataObject(PlayerDataObject.VisibilityOptions.Public, $"Player_{PlayerId?.Substring(0, 6) ?? "Unknown"}") },
+                    { "PlayerName", new PlayerDataObject(PlayerDataObject.VisibilityOptions.Public,
+                        ParticipantDisplayName.Lobby(CosmeticProfileService.Instance?.Nickname, PlayerId)) },
                     { "IsReady", new PlayerDataObject(PlayerDataObject.VisibilityOptions.Public, "false") },
                     { "LastAction", new PlayerDataObject(PlayerDataObject.VisibilityOptions.Public, "") }
                 }

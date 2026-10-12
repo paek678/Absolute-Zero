@@ -35,8 +35,24 @@ namespace AbsoluteZero.UI.MiniGame
             BuildCanvas();
         }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        void OnEnable() => AbsoluteZero.Core.Solo.FullMatchPlaytestDriver.PresentMiniGameResult += PresentModeledResult;
+        bool PresentModeledResult(PlayerState owner, MiniGameTicket ticket, bool success)
+        {
+            if (owner != _localPlayer) return false;
+            if (_active != null && _activeTicket.AttemptId == ticket.AttemptId
+                && _activeTicket.MatchEpoch == ticket.MatchEpoch && _activeTicket.RoundEpoch == ticket.RoundEpoch
+                && _activeTicket.Turn == ticket.Turn && _activeTicket.CopyId == ticket.CopyId)
+                _active.CompleteModeledResult(success);
+            // This owner has a real UI: a previously finished/cancelled attempt must not submit again.
+            return true;
+        }
+#endif
         void OnDisable()
         {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            AbsoluteZero.Core.Solo.FullMatchPlaytestDriver.PresentMiniGameResult -= PresentModeledResult;
+#endif
             if (_active != null && _activeHandler != null)
                 _active.OnFinished -= _activeHandler;
             if (_localPlayer != null)

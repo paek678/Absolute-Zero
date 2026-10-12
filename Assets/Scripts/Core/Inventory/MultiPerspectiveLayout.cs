@@ -25,13 +25,14 @@ namespace AbsoluteZero.Core.Inventory
             public PlayerInventory Inventory;
             public PlayerBinding Participant;
             public readonly InventoryViewReconciler<GameObject> Views = new();
+            public readonly InventoryPresentationSlots Slots = new();
         }
 
         static readonly Vector3[] RemotePlayerPositions =
         {
-            new(-4.8f, 1.60f, 5.1f),
-            new(0f, 1.60f, 8.8f),
-            new(4.8f, 1.60f, 5.1f)
+            new(-7.2f, 1.60f, 4.2f),
+            new(0f, 1.60f, 9.2f),
+            new(7.2f, 1.60f, 4.2f)
         };
 
         readonly Dictionary<byte, RemoteInventoryBinding> _bindings = new();
@@ -44,13 +45,23 @@ namespace AbsoluteZero.Core.Inventory
         bool _localIceboxPositioned;
         MapCharacterLayout _mapLayout;
         Quaternion _inventoryFacing = Quaternion.identity;
+        readonly Transform[][] _itemAnchors = new Transform[3][];
+        bool _localSlotPlacesReady;
 
         // Centered behind the local item row so the Ready control and arrow tail stay visible.
         static readonly Vector3 LocalIceboxPosition = new(0f, 0.05f, 2.4f);
-        static readonly Vector3 InventoryFloorOffset = new(0f, 0.85f, -3.4f);
+        public static Vector3 IceboxCenter => LocalIceboxPosition;
+        // These are offsets in the local viewer's map frame, not the character's facing.
+        // Keep side inventories inward even when an artist rotates a character anchor.
+        static readonly Vector3[] InventoryFloorOffsets =
+        {
+            new(2.9f, 0.85f, -0.6f), new(0f, 0.85f, -3.4f), new(-2.9f, 0.85f, -0.6f)
+        };
         const float RemoteIconSize = 0.54f;
-        const float RemoteColumnSpacing = 0.72f;
-        const float RemoteRowSpacing = 0.76f;
+        const float SideIconSize = 0.44f;
+        const float RemoteColumnSpacing = 0.62f;
+        const float SideColumnSpacing = 1.00f;
+        const float RemoteRowSpacing = 0.60f;
 
         void Update()
         {
@@ -68,6 +79,8 @@ namespace AbsoluteZero.Core.Inventory
                 PositionRemoteVisualSlots();
             if (!_localIceboxPositioned)
                 PositionLocalIcebox();
+            if (!_localSlotPlacesReady)
+                PositionLocalSlotPlaces();
 
             if (Time.unscaledTime < _nextReconcile) return;
             _nextReconcile = Time.unscaledTime + 0.5f;
@@ -165,11 +178,19 @@ namespace AbsoluteZero.Core.Inventory
             {
                 foreach (var staleBinding in _bindings.Values) Unbind(staleBinding);
                 _bindings.Clear(); _dirtySeats.Clear(); _localPlayer = null; _localSeat = -1;
+                foreach (var anchors in _itemAnchors)
+                    if (anchors != null) anchors[0].parent.gameObject.SetActive(false);
                 return;
             }
             _localPlayer = perspective.HumanBinding.State;
             _localSeat = perspective.HumanSeat;
             var players = MatchCompositionRoot.Instance.Registry.Players;
+
+            // Reserve visible places even before the first inventory is dealt.
+            // A departed seat loses its places together with its character.
+            for (int slot = 0; slot < _itemAnchors.Length; slot++)
+                if (_itemAnchors[slot] != null)
+                    _itemAnchors[slot][0].parent.gameObject.SetActive(false);
 
             var present = new HashSet<byte>();
             foreach (var participant in players)
@@ -182,6 +203,12 @@ namespace AbsoluteZero.Core.Inventory
 
                 byte seat = (byte)player.PlayerIndex;
                 present.Add(seat);
+                int visualSlot = AZPlayerVisual.GetRemoteVisualSlot(player.PlayerIndex, _localSeat);
+                if (visualSlot >= 0 && visualSlot < _itemAnchors.Length)
+                {
+                    EnsureItemAnchors(visualSlot);
+                    _itemAnchors[visualSlot][0].parent.gameObject.SetActive(true);
+                }
                 var inventory = player.GetInventory();
                 if (inventory == null || _inventoryView == null || !_inventoryView.HasSeat(seat)
                     || _inventoryView.GetCount(seat) == 0)
@@ -224,17 +251,21 @@ namespace AbsoluteZero.Core.Inventory
                 || !new BoundInventoryReader(binding.Participant, _inventoryView).TryRead(out var snapshot)) return;
             int slot = AZPlayerVisual.GetRemoteVisualSlot(binding.Player.PlayerIndex, _localSeat);
             if (slot < 0 || slot >= RemotePlayerPositions.Length) return;
-            int visibleIndex = 0;
+            EnsureItemAnchors(slot);
+            binding.Slots.Refresh(snapshot, id => ItemManager.Instance.GetItemData(id)?.Persistence == ItemPersistence.RandomConsumable);
             binding.Views.Reconcile(snapshot, (i, state) => CreateRemoteItem(state.ItemId),
                 (go, i, state) => {
                     var item = ItemManager.Instance.GetItemData(state.ItemId);
                     go.name = $"RemoteSeat{binding.Player.PlayerIndex}_Item{i}_{item.ItemName}";
-                    // Two rows on the sides, one row in front of the north seat so
-                    // the south-center icebox has room to open. Stolen items may
-                    // exceed the normal eight: fit extra columns inside the same area.
-                    int columns = slot == 1 ? Mathf.Max(8, snapshot.Count) : Mathf.Max(4, Mathf.CeilToInt(snapshot.Count / 2f));
-                    float fit = (slot == 1 ? 8f : 4f) / columns;
-                    go.transform.position = ItemPosition(slot, visibleIndex++, columns, fit);
+                    // Every rack reserves all 12 slots from the start. Adding or
+                    // removing a copy never recenters/rescales the other copies.
+                    int anchor = binding.Slots.Get(state.CopyId);
+                    if (anchor < 0) return;
+                    int basicCount = InventoryPresentationSlots.Capacity - InventoryPresentationSlots.RandomCapacity;
+                    int cell = anchor >= InventoryPresentationSlots.RandomCapacity
+                        ? anchor - InventoryPresentationSlots.RandomCapacity : anchor + basicCount;
+                    const float fit = 8f / InventoryPresentationSlots.Capacity;
+                    go.transform.position = _itemAnchors[slot][cell].position;
                     go.transform.rotation = _inventoryFacing;
                     go.transform.localScale = Vector3.one;
                     var renderer = go.GetComponentInChildren<SpriteRenderer>();
@@ -242,15 +273,15 @@ namespace AbsoluteZero.Core.Inventory
                     var art = VisibleSpriteBounds(renderer.sprite);
                     Vector2 size = art.size;
                     float largestSide = Mathf.Max(size.x, size.y);
-                    float scale = largestSide > 0f ? RemoteIconSize * fit / largestSide : 1f;
+                    float iconSize = slot == 1 ? RemoteIconSize : SideIconSize;
+                    float scale = largestSide > 0f ? iconSize * fit / largestSide : 1f;
                     renderer.transform.localScale = Vector3.one * scale;
+                    renderer.transform.rotation = MultiItemFacing.RackFacing(RackOrigin(slot), LocalIceboxPosition, _inventoryFacing);
                     // Imported pivots differ. Center the icon inside its cell while
                     // keeping text size and the cell's transform independent of art.
-                    renderer.transform.localPosition = -art.center * scale;
-                    var label = go.GetComponentInChildren<TextMesh>();
-                    label.transform.localPosition = new Vector3(0f, -0.35f * fit, -0.01f);
-                    label.characterSize = 0.07f * fit;
-                    label.text = state.IsUnlimited ? "--" : state.RemainingUses.ToString();
+                    renderer.transform.localPosition = -(renderer.transform.localRotation * (art.center * scale));
+                    InventoryFloorContact.Bind(go, renderer, FloorPosition(slot).y);
+
                 }, DestroyView, go => go != null);
         }
 
@@ -261,30 +292,96 @@ namespace AbsoluteZero.Core.Inventory
             go.transform.SetParent(transform, false);
             var icon = new GameObject("Icon");
             icon.transform.SetParent(go.transform, false);
-            icon.AddComponent<SpriteRenderer>().sortingOrder = 8;
-            var label = new GameObject("Uses");
-            label.transform.SetParent(go.transform, false);
-            label.transform.localPosition = new Vector3(0f, -0.35f, -0.01f);
-            var text = label.AddComponent<TextMesh>();
-            text.fontSize = 24;
-            text.characterSize = 0.07f;
-            text.anchor = TextAnchor.MiddleCenter;
-            text.alignment = TextAlignment.Center;
-            text.color = Color.white;
-            label.GetComponent<MeshRenderer>().sortingOrder = 9;
+            WorldInteractionLayer.Apply(icon.AddComponent<SpriteRenderer>());
+            AbsoluteZero.Core.Combat.DuelSpriteFacing.Register(go);
             return go;
         }
 
-        Vector3 ItemPosition(int slot, int index, int columns, float fit)
+        void EnsureItemAnchors(int slot)
         {
+            if (_itemAnchors[slot] != null) return;
+            var root = new GameObject($"RemoteInventoryAnchors_{slot}").transform;
+            root.SetParent(transform, false);
+            _itemAnchors[slot] = new Transform[InventoryPresentationSlots.Capacity];
+            for (int i = 0; i < _itemAnchors[slot].Length; i++)
+            {
+                var anchor = new GameObject($"Slot_{i:00}").transform;
+                anchor.SetParent(root, false);
+                anchor.position = ItemPosition(slot, i);
+                _itemAnchors[slot][i] = anchor;
+            }
+            int columns = slot == 1 ? InventoryPresentationSlots.Capacity : InventoryPresentationSlots.Capacity / 2;
+            int rows = InventoryPresentationSlots.Capacity / columns;
+            var first = _itemAnchors[slot][0].position;
+            var last = _itemAnchors[slot][InventoryPresentationSlots.Capacity - 1].position;
+            var step = _itemAnchors[slot][1].position - first;
+            InventorySlotGrid.Create(root, (first + last) * .5f,
+                step, columns, rows, step.magnitude, slot == 1 ? step.magnitude : RemoteRowSpacing);
+        }
+
+        void PositionLocalSlotPlaces()
+        {
+            var views = MatchViewBindings.ForScene(gameObject.scene);
+            if (views == null) return;
+            var anchors = new Transform[InventoryPresentationSlots.Capacity];
+            for (int i = 0; i < anchors.Length; i++)
+            {
+                anchors[i] = views.GetItemAnchor(true, i);
+                if (anchors[i] == null) return;
+            }
+            // Keep the Ready button gap. No anchor or item is moved.
+            foreach (var anchor in anchors)
+            {
+                var oldPlace = anchor.Find("ItemPlace")?.GetComponent<SpriteRenderer>();
+                if (oldPlace != null) oldPlace.enabled = false;
+            }
+            CreateLocalStrip(anchors, 0, 8, 1f);
+            CreateLocalStrip(anchors, 8, 2, 1.2f);
+            CreateLocalStrip(anchors, 10, 2, 1.2f);
+            _localSlotPlacesReady = true;
+        }
+
+        void CreateLocalStrip(Transform[] anchors, int start, int count, float depth)
+        {
+            var first = anchors[start].position;
+            var last = anchors[start + count - 1].position;
+            var step = (last - first) / (count - 1);
+            InventorySlotGrid.Create(transform, (first + last) * .5f,
+                step, count, 1, step.magnitude, depth);
+        }
+
+        Vector3 ItemPosition(int slot, int index)
+        {
+            int columns = slot == 1 ? InventoryPresentationSlots.Capacity : InventoryPresentationSlots.Capacity / 2;
+            const float fit = 8f / InventoryPresentationSlots.Capacity;
             int column = index % columns;
             int row = index / columns;
-            float across = (column - (columns - 1) * 0.5f) * RemoteColumnSpacing * fit;
-            float down = slot == 1 ? 0f : (0.5f - row) * RemoteRowSpacing;
+            float spacing = slot == 1 ? RemoteColumnSpacing : SideColumnSpacing;
+            float across = (column - (columns - 1) * 0.5f) * spacing * fit;
+            float inward = slot == 1 ? 0f : (0.5f - row) * RemoteRowSpacing;
+            return MultiItemFacing.RackPosition(RackOrigin(slot), LocalIceboxPosition, across, inward);
+        }
+
+        Vector3 FloorPosition(int slot)
+        {
             var anchor = _mapLayout != null ? _mapLayout.GetAnchor(MapLayoutMode.Multi, MapAnchorRole.RemoteVisual, slot) : null;
-            var floor = anchor != null ? anchor.transform.position : RemotePlayerPositions[slot] - Vector3.up * 1.6f;
-            var orientation = anchor != null ? anchor.transform.rotation : Quaternion.identity;
-            return floor + orientation * InventoryFloorOffset + _inventoryFacing * new Vector3(across, down, 0f);
+            return anchor != null ? anchor.transform.position : RemotePlayerPositions[slot] - Vector3.up * 1.6f;
+        }
+
+        Vector3 RackOrigin(int slot) => FloorPosition(slot) + InventoryFloorOffsets[slot];
+
+        // Expose the same stable row used by rendered items, in this viewer's seat frame.
+        public bool TryGetItemSweep(int seat, out Vector3 first, out Vector3 last)
+        {
+            first = last = default;
+            if (_localSeat < 0 || seat == _localSeat || !_bindings.ContainsKey((byte)seat)) return false;
+            int slot = AZPlayerVisual.GetRemoteVisualSlot(seat, _localSeat);
+            if (slot < 0 || slot >= _itemAnchors.Length) return false;
+            EnsureItemAnchors(slot);
+            int columns = slot == 1 ? InventoryPresentationSlots.Capacity : InventoryPresentationSlots.Capacity / 2;
+            first = _itemAnchors[slot][0].position;
+            last = _itemAnchors[slot][columns - 1].position;
+            return true;
         }
 
         static Bounds VisibleSpriteBounds(Sprite sprite)
@@ -315,6 +412,10 @@ namespace AbsoluteZero.Core.Inventory
             Destroy(view);
         }
 
-        static void Unbind(RemoteInventoryBinding binding) => binding.Views.Clear(DestroyView);
+        static void Unbind(RemoteInventoryBinding binding)
+        {
+            binding.Views.Clear(DestroyView);
+            binding.Slots.Clear();
+        }
     }
 }

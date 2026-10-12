@@ -60,11 +60,15 @@ namespace AbsoluteZero.UI.Game.Bridge
             public NetworkVariable<bool>.OnValueChangedDelegate OnBasicBlocked;
             public NetworkVariable<bool>.OnValueChangedDelegate OnHasSelected;
             public NetworkVariable<LifeState>.OnValueChangedDelegate OnLifeState;
+            public Action OnName;
         }
 
         public int SeatCount => _seats.Count;
         public byte LocalSeatIndex => _localSeatIndex;
         public MatchSnapshot CurrentMatch => _currentMatch;
+        public CombatPresentationHudSnapshot CurrentPresentation => _binding && IsMatchCurrent && _vfx != null ? _vfx.CurrentHud : default;
+        public event Action<CombatPresentationHudSnapshot> OnPresentationChanged;
+        void HandlePresentationChanged(CombatPresentationHudSnapshot value) => OnPresentationChanged?.Invoke(CurrentPresentation);
         public bool TryGetLatestResult(out MatchResultNotice result)
         {
             result = default;
@@ -186,6 +190,8 @@ namespace AbsoluteZero.UI.Game.Bridge
             if (_vfx != null)
             {
                 _vfx.OnTempOverridesClear += HandleTempOverridesClear;
+                _vfx.HudChanged += HandlePresentationChanged;
+                HandlePresentationChanged(_vfx.CurrentHud);
                 _vfx.OnTempTargetsOverride += HandleTempTargetsOverride;
                 _vfx.OnPlayerTempOverride += HandlePlayerTempOverride;
                 HandleTempOverridesClear();
@@ -348,7 +354,8 @@ namespace AbsoluteZero.UI.Game.Bridge
                     if (IsLocalSeat(idx))
                         OnLocalHasSelectedItemChanged?.Invoke(cur);
                 },
-                OnLifeState = (_, _) => _matchDirty = true
+                OnName = () => MarkSeatDirty(idx),
+                OnLifeState = (_, _) => { _matchDirty = true; MarkSeatDirty(idx); }
             };
             _seatCallbacks[idx] = cb;
 
@@ -360,6 +367,7 @@ namespace AbsoluteZero.UI.Game.Bridge
             ps.IsBasicBlocked.OnValueChanged += cb.OnBasicBlocked;
             ps.HasSelectedItem.OnValueChanged += cb.OnHasSelected;
             ps.CurrentLifeState.OnValueChanged += cb.OnLifeState;
+            ps.DisplayNameChanged += cb.OnName;
 
             ResolveLocalSeat();
             BuildSeatSnapshot(idx, ps);
@@ -380,6 +388,7 @@ namespace AbsoluteZero.UI.Game.Bridge
                 ps.IsBasicBlocked.OnValueChanged -= cb.OnBasicBlocked;
                 ps.HasSelectedItem.OnValueChanged -= cb.OnHasSelected;
                 ps.CurrentLifeState.OnValueChanged -= cb.OnLifeState;
+                ps.DisplayNameChanged -= cb.OnName;
             }
             _seatCallbacks.Remove(idx);
             _seats.Remove(idx);
@@ -411,6 +420,8 @@ namespace AbsoluteZero.UI.Game.Bridge
             _seats[idx] = new SeatSnapshot
             {
                 SeatIndex = idx,
+                DisplayName = ps.DisplayNameText,
+                LifeState = ps.CurrentLifeState.Value,
                 ClientId = identity.ClientId,
                 ControllerKind = identity.ControllerKind,
                 Temperature = ps.Temperature.Value,
@@ -682,6 +693,7 @@ namespace AbsoluteZero.UI.Game.Bridge
             if (_vfx != null)
             {
                 _vfx.OnTempOverridesClear -= HandleTempOverridesClear;
+                _vfx.HudChanged -= HandlePresentationChanged;
                 _vfx.OnTempTargetsOverride -= HandleTempTargetsOverride;
                 _vfx.OnPlayerTempOverride -= HandlePlayerTempOverride;
             }
@@ -698,6 +710,7 @@ namespace AbsoluteZero.UI.Game.Bridge
             {
                 OnTempOverridesClear?.Invoke();
                 OnCurrentAttackerChanged?.Invoke(-1);
+                OnPresentationChanged?.Invoke(default);
             }
         }
     }

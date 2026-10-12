@@ -84,7 +84,7 @@ namespace AbsoluteZero.UI.LobbyUI
             _camera = cameraObject.AddComponent<Camera>();
             _camera.enabled = false;
             _camera.orthographic = true; _camera.clearFlags = CameraClearFlags.SolidColor;
-            _camera.backgroundColor = new Color(.81f, .87f, .85f, 1);
+            _camera.backgroundColor = Color.clear; // Let the shared rounded preview surface show through.
             _camera.cullingMask = 1 << _layer;
             _camera.nearClipPlane = .1f; _camera.farClipPlane = 50;
             _camera.allowHDR = false; _camera.allowMSAA = false;

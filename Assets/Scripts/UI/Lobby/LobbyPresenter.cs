@@ -155,6 +155,7 @@ namespace AbsoluteZero.UI.LobbyUI
 
             if (newState == LobbyViewState.Room)
             {
+                _roomView.SetPlayerCount(_coordinator != null ? _coordinator.SelectedPlayerCount : 2);
                 bool inLobby = _lobbyManager != null && _lobbyManager.IsInLobby;
                 _roomView.ApplyMembership(inLobby);
             }
@@ -175,6 +176,7 @@ namespace AbsoluteZero.UI.LobbyUI
         {
             if (_disposed || _currentState != LobbyViewState.Main || Router?.Current != null || _solo?.IsBusy == true) return;
             if (_solo == null) { _mainView.SetStatus("봇 선택 화면이 연결되지 않았습니다."); return; }
+            if (!CommitNickname(_mainView.NicknameText)) return;
             SetState(LobbyViewState.SoloSelect);
         }
 
@@ -188,6 +190,7 @@ namespace AbsoluteZero.UI.LobbyUI
         void HandleArenaClicked()
         {
             if (_disposed || Router?.Current != null) return;
+            if (!CommitNickname(_mainView.NicknameText)) return;
             SetState(LobbyViewState.ModeSelect);
         }
 
@@ -349,24 +352,42 @@ namespace AbsoluteZero.UI.LobbyUI
         async void HandleNicknameEndEdit(string raw)
         {
             if (_disposed) return;
-
-            var profileService = CosmeticProfileService.Instance;
-            if (profileService == null) return;
-
-            if (!profileService.TryValidateNickname(raw, out string validated))
-            {
-                _mainView.SetNicknameText(profileService.Nickname);
-                return;
-            }
-
-            profileService.SetNickname(validated);
-            _mainView.SetNicknameText(validated);
+            if (!CommitNickname(raw)) return;
+            string validated = CosmeticProfileService.Instance?.Nickname;
+            if (string.IsNullOrEmpty(validated)) return;
 
             if (_lobbyManager != null && _lobbyManager.IsInLobby)
             {
                 try { await _lobbyManager.SetPlayerNameAsync(validated); }
                 catch (Exception e) { Debug.LogWarning($"[LobbyPresenter] SetPlayerName failed: {e.Message}"); }
             }
+        }
+
+        // Button navigation must commit before changing panels; do not depend on
+        // EventSystem deselection/onEndEdit ordering (mouse, keyboard or automation).
+        bool CommitNickname(string raw)
+        {
+            var profile = CosmeticProfileService.Instance;
+            if (profile == null)
+            {
+                _mainView.SetStatus("닉네임 정보를 준비하고 있습니다. 잠시 후 다시 시도하세요.");
+                return false;
+            }
+            // Preserve the existing optional-name flow and the last saved name.
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                _mainView.SetNicknameText(profile.Nickname ?? "");
+                return true;
+            }
+            if (!profile.TryValidateNickname(raw, out string name))
+            {
+                _mainView.SetStatus("닉네임은 한글·영문·숫자 2~8자로 입력하세요.");
+                return false;
+            }
+            if (profile.Nickname != name) profile.SetNickname(name);
+            _mainView.SetNicknameText(name);
+            _mainView.SetStatus("닉네임이 저장되었습니다.");
+            return true;
         }
 
         #endregion

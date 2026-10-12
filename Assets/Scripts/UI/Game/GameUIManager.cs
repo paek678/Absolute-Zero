@@ -58,6 +58,8 @@ namespace AbsoluteZero.UI.Game
 
             _matchHudPresenter = gameObject.AddComponent<MatchHudPresenter>();
             _matchHudPresenter.Initialize(bridge, commands, refs);
+            gameObject.AddComponent<ParticipantBannerPresenter>().Initialize(bridge, refs);
+            gameObject.AddComponent<CombatRoleIconPresenter>().Initialize(bridge, refs);
 
             _roundResultPresenter = new RoundResultPresenter(bridge, commands, refs, this);
 
@@ -75,7 +77,7 @@ namespace AbsoluteZero.UI.Game
 
             SpawnInventoryPresenter();
             _targetingArrowPresenter = gameObject.AddComponent<TargetingArrowPresenter>();
-            _targetingArrowPresenter.Initialize();
+            _targetingArrowPresenter.Initialize(Resources.Load<Sprite>("UI/TargetingArrowRounded"), 64f);
             SpawnMiniGameHub();
 
             _bridge.OnPhaseChanged += HandlePhaseChanged;
@@ -84,6 +86,8 @@ namespace AbsoluteZero.UI.Game
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             var args = System.Environment.GetCommandLineArgs();
             int scenario = System.Array.IndexOf(args, "--az-matrix");
+            if (scenario >= 0 && scenario + 1 < args.Length && args[scenario + 1] == "role-cat")
+                gameObject.AddComponent<CombatRoleCaptureProbe>();
             if (scenario >= 0 && scenario + 1 < args.Length && args[scenario + 1] == "input")
                 gameObject.AddComponent<InventoryInteractionProbe>().Initialize(this, _inventoryPresenter, _commands);
 #endif
@@ -122,6 +126,8 @@ namespace AbsoluteZero.UI.Game
 
         void OnDisable()
         {
+            if (_waitingForTarget) CancelTargetSelection();
+            _targetingArrowPresenter?.Hide();
             if (_miniGameHub != null)
             {
                 _miniGameHub.OnFinishedLocal -= OnMiniGameFinished;
@@ -134,7 +140,13 @@ namespace AbsoluteZero.UI.Game
         {
             if (!_initialized) return;
             _tempPresenter.Tick(Time.deltaTime);
-            if (LocalGameplayInput.IsBlocked) return;
+            if (LocalGameplayInput.IsBlocked)
+            {
+                _targetingArrowPresenter?.Hide();
+                _snappedTargetSeat = byte.MaxValue;
+                _snappedTargetTransform = null;
+                return;
+            }
 
             if (_waitingForTarget)
             {
@@ -261,6 +273,14 @@ namespace AbsoluteZero.UI.Game
             _ghostSkillPresenter?.CancelAimForMenu();
         }
 
+        // OpponentBarPresenter lays out in Update. LateUpdate follows all those updates.
+        void LateUpdate()
+        {
+            if (!_initialized || !_waitingForTarget || LocalGameplayInput.IsBlocked)
+            { _targetingArrowPresenter?.Hide(); return; }
+            UpdateTargetingArrow();
+        }
+
         void CancelTargetSelection()
         {
             _waitingForTarget = false;
@@ -312,27 +332,21 @@ namespace AbsoluteZero.UI.Game
                 targetTransform = _debugHoverTarget;
                 var marker = targetTransform.GetComponentInParent<PlayerSeatMarker>();
                 targetSeat = marker != null ? marker.SeatIndex : byte.MaxValue;
-                targetScreen = TargetSnapScreenPosition(cam, targetTransform);
-                snapped = targetSeat != byte.MaxValue;
+                snapped = targetSeat != byte.MaxValue && TryGetEligibleTarget(targetSeat, out targetTransform)
+                    && TryTargetSnapScreenPosition(cam, targetTransform, out targetScreen);
             }
 #endif
 
+            if (snapped)
+            {
+                int slot = AZPlayerVisual.GetRemoteVisualSlot(targetSeat, _bridge.LocalSeatIndex);
+                RectTransform bar = slot >= 0 && slot < _refs.OppBars.Count && _refs.OppBars[slot].HpSlider != null
+                    ? _refs.OppBars[slot].HpSlider.transform as RectTransform : null;
+                snapped = _targetingArrowPresenter != null && _targetingArrowPresenter.Show(cam, targetTransform, bar);
+            }
+            if (!snapped) _targetingArrowPresenter?.Hide();
             _snappedTargetSeat = snapped ? targetSeat : byte.MaxValue;
             _snappedTargetTransform = snapped ? targetTransform : null;
-
-            Vector3 tailWorld = itemView.transform.position + Vector3.up * 0.2f;
-            Vector2 tailScreen = cam.WorldToScreenPoint(tailWorld);
-            int visualSlot = snapped
-                ? AZPlayerVisual.GetRemoteVisualSlot(targetSeat, _bridge.LocalSeatIndex)
-                : -1;
-            bool straight = snapped && visualSlot == 1;
-            float bendDirection = snapped
-                ? (visualSlot == 0 ? -1f : visualSlot == 2 ? 1f : 0f)
-                : Mathf.Sign(targetScreen.x - tailScreen.x);
-            Vector2 arrowHeadScreen = snapped
-                ? TargetArrowScreenPosition(cam, targetTransform)
-                : targetScreen;
-            _targetingArrowPresenter?.Show(tailScreen, arrowHeadScreen, straight, bendDirection);
         }
 
         bool TryResolveSnap(Vector2 pointer, out byte targetSeat, out Transform targetTransform,
@@ -347,8 +361,8 @@ namespace AbsoluteZero.UI.Game
             if (_snappedTargetSeat != byte.MaxValue
                 && TryGetEligibleTarget(_snappedTargetSeat, out var current))
             {
-                Vector2 currentScreen = TargetSnapScreenPosition(cam, current);
-                if (Vector2.Distance(pointer, currentScreen) <= TargetSnapReleasePixels)
+                if (TryTargetSnapScreenPosition(cam, current, out var currentScreen)
+                    && Vector2.Distance(pointer, currentScreen) <= TargetSnapReleasePixels)
                 {
                     targetSeat = _snappedTargetSeat;
                     targetTransform = current;
@@ -365,7 +379,7 @@ namespace AbsoluteZero.UI.Game
                 if (!IsEligibleTarget(seat)) continue;
                 var target = views?.GetTarget(seat);
                 if (target == null) continue;
-                Vector2 screen = TargetSnapScreenPosition(cam, target);
+                if (!TryTargetSnapScreenPosition(cam, target, out var screen)) continue;
                 float distance = Vector2.Distance(pointer, screen);
                 if (distance > closest) continue;
                 closest = distance;
@@ -393,45 +407,13 @@ namespace AbsoluteZero.UI.Game
                 && match.LifeStates[seat] == LifeState.Alive;
         }
 
-        static Vector2 TargetSnapScreenPosition(Camera cam, Transform target)
+        static bool TryTargetSnapScreenPosition(Camera cam, Transform target, out Vector2 screen)
         {
             var collider = target.GetComponentInChildren<Collider>();
             Vector3 world = collider != null
                 ? collider.bounds.center + Vector3.up * collider.bounds.extents.y * 0.35f
                 : target.position + Vector3.up;
-            return cam.WorldToScreenPoint(world);
-        }
-
-        static Vector2 TargetArrowScreenPosition(Camera cam, Transform target)
-        {
-            Bounds visualBounds = default;
-            bool hasVisualBounds = false;
-            foreach (var renderer in target.GetComponentsInChildren<SpriteRenderer>())
-            {
-                if (!renderer.enabled || !renderer.gameObject.activeInHierarchy) continue;
-                string objectName = renderer.gameObject.name.ToLowerInvariant();
-                if (objectName.Contains("item") || objectName.Contains("fan")
-                    || objectName.Contains("effect") || objectName.Contains("outline")
-                    || objectName.Contains("freeze") || objectName.Contains("ghost"))
-                    continue;
-
-                if (!hasVisualBounds)
-                {
-                    visualBounds = renderer.bounds;
-                    hasVisualBounds = true;
-                }
-                else
-                {
-                    visualBounds.Encapsulate(renderer.bounds);
-                }
-            }
-
-            Vector3 world = hasVisualBounds
-                ? visualBounds.center - Vector3.up * visualBounds.extents.y
-                : target.position + Vector3.down * 0.08f;
-            Vector2 screen = cam.WorldToScreenPoint(world);
-            screen.y -= Mathf.Clamp(Screen.height * 0.025f, 10f, 32f);
-            return screen;
+            return TargetingArrowPresenter.TryProjectVisible(cam, world, out screen);
         }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD

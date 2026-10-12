@@ -14,6 +14,11 @@ namespace AbsoluteZero.Core.Buff
             public EffectType Type;
             public float Value;
             public int TurnsRemaining;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            public long TraceReceipt;
+            public long TraceEffect;
+            public Solo.BalanceActionIdentity TraceAction;
+#endif
         }
 
         public struct AppliedEffect
@@ -38,6 +43,11 @@ namespace AbsoluteZero.Core.Buff
             {
                 TargetPlayerIndex = targetPlayer,
                 SourceSeat = sourceSeat,
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                TraceReceipt = Solo.PlaytestTelemetry.Current?.ActiveReceipt ?? 0,
+                TraceAction = Solo.PlaytestTelemetry.Current?.CurrentBalanceAction ?? default,
+                TraceEffect = Solo.PlaytestTelemetry.Current?.Scheduled(targetPlayer, type, value, delayTurns) ?? 0,
+#endif
                 Type = type,
                 Value = value,
                 TurnsRemaining = delayTurns
@@ -98,12 +108,18 @@ namespace AbsoluteZero.Core.Buff
                     if (eff.TargetPlayerIndex < 0 || eff.TargetPlayerIndex >= players.Length
                         || players[eff.TargetPlayerIndex] == null)
                     {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                        TraceCancelled(eff, "unavailable_target");
+#endif
                         _pending.RemoveAt(i);
                         continue;
                     }
                     var target = players[eff.TargetPlayerIndex];
                     if (target.CurrentLifeState.Value != LifeState.Alive)
                     {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                        TraceCancelled(eff, "unavailable_target");
+#endif
                         _pending.RemoveAt(i);
                         continue;
                     }
@@ -151,10 +167,20 @@ namespace AbsoluteZero.Core.Buff
                 _pending.RemoveAt(i);
 
                 if (effect.TargetPlayerIndex < 0 || effect.TargetPlayerIndex >= players.Length)
+                {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    TraceCancelled(effect, "unavailable_target");
+#endif
                     continue;
+                }
                 var target = players[effect.TargetPlayerIndex];
                 if (target == null || target.CurrentLifeState.Value != LifeState.Alive)
+                {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    TraceCancelled(effect, "unavailable_target");
+#endif
                     continue;
+                }
 
                 float before = target.Temperature.Value;
                 ApplyEffect(target, effect);
@@ -177,11 +203,24 @@ namespace AbsoluteZero.Core.Buff
         void ApplyEffect(PlayerState target, ScheduledEffect eff)
         {
             float beforeTemp = target.Temperature.Value;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Solo.PlaytestTelemetry.Current?.ScheduledEnd(eff.TraceAction, eff.TraceEffect, eff.TargetPlayerIndex, "due_processed");
+#endif
             switch (eff.Type)
             {
                 case EffectType.TempChange:
                     target.Temperature.Value = Mathf.Clamp(
                         target.Temperature.Value + eff.Value, 0f, 37f);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    if (Solo.PlaytestTelemetry.Current != null)
+                    {
+                        var impact = Solo.PlaytestTelemetry.Impact(eff.TraceAction, target.PlayerIndex, beforeTemp,
+                            target.Temperature.Value, eff.Value, reason: "scheduled");
+                        impact.effect = eff.TraceEffect;
+                        Solo.PlaytestTelemetry.Current.Balance("impact", impact);
+                    }
+                    Solo.PlaytestTelemetry.Current?.Temperature("scheduled", target.PlayerIndex, beforeTemp, target.Temperature.Value, eff.Value, eff.TraceReceipt);
+#endif
                     Debug.Log($"[COMBAT] BuffSystem.ApplyEffect: P{eff.TargetPlayerIndex} TempChange {beforeTemp:F1} → {target.Temperature.Value:F1} (delta={eff.Value})");
                     break;
                 case EffectType.FanSpeedChange:
@@ -193,18 +232,34 @@ namespace AbsoluteZero.Core.Buff
                     float beforeFan = target.FanSpeed.Value;
                     target.FanSpeed.Value = eff.Value;
                     target.IsFanUpgraded.Value = true;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    Solo.PlaytestTelemetry.Current?.Balance("fan_change", new Solo.BalanceObservation {
+                        action = eff.TraceAction, effect = eff.TraceEffect, target = target.PlayerIndex,
+                        before = beforeFan, after = eff.Value, reason = "scheduled" });
+#endif
                     Debug.Log($"[COMBAT] BuffSystem.ApplyEffect: P{eff.TargetPlayerIndex} FanSpeed {beforeFan} → {eff.Value} (upgraded)");
                     break;
             }
         }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        static void TraceCancelled(ScheduledEffect effect, string reason)
+            => Solo.PlaytestTelemetry.Current?.ScheduledEnd(effect.TraceAction, effect.TraceEffect, effect.TargetPlayerIndex, reason);
+#endif
+
         public void ClearForSeat(int seatIndex)
         {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            foreach (var effect in _pending) if (effect.TargetPlayerIndex == seatIndex) TraceCancelled(effect, "seat_clear");
+#endif
             _pending.RemoveAll(e => e.TargetPlayerIndex == seatIndex);
         }
 
         public void ClearAll()
         {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            foreach (var effect in _pending) TraceCancelled(effect, "round_clear");
+#endif
             _pending.Clear();
             _lastApplied.Clear();
         }
@@ -214,7 +269,12 @@ namespace AbsoluteZero.Core.Buff
             for (int i = _pending.Count - 1; i >= 0; i--)
             {
                 if (_pending[i].TargetPlayerIndex == seat)
+                {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    TraceCancelled(_pending[i], "seat_clear");
+#endif
                     _pending.RemoveAt(i);
+                }
             }
         }
     }

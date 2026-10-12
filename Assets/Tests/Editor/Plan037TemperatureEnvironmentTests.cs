@@ -106,7 +106,7 @@ namespace AbsoluteZero.Tests
         [TestCase(3707)] [TestCase(299)]
         public void EnvironmentPoolUsesExactlyOneDrawInTheCurrentOrder(int seed)
         {
-            var expectedPool = new[] { EnvironmentType.SunnyDay, EnvironmentType.CoolBreeze, EnvironmentType.CicadaSong,
+            var expectedPool = new[] { EnvironmentType.SunnyDay, EnvironmentType.CoolBreeze,
                 EnvironmentType.Kids, EnvironmentType.Ambulance, EnvironmentType.SummerVacation, EnvironmentType.HeatWaveWarning };
             Random.InitState(seed);
             var rules = new EnvironmentRuleService();

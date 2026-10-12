@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using AbsoluteZero.Core.Audio;
 using AbsoluteZero.Core.Common;
 using AbsoluteZero.Core.Item;
+using AbsoluteZero.Core.Match;
+using AbsoluteZero.Core.Network;
 using AbsoluteZero.Core.Turn;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -68,6 +70,7 @@ namespace AbsoluteZero.Core.Combat
             BuildTea();
             BuildCat();
             BuildWindParticle();
+            DuelSpriteFacing.Install(gameObject);
 
             TurnManager.OnEnvironmentAnnounced += OnEnvironmentAnnounced;
         }
@@ -88,15 +91,17 @@ namespace AbsoluteZero.Core.Combat
             {
                 case EnvironmentType.SunnyDay:
                     StartCoroutine(LerpLight(new Color(1f, 0.95f, 0.7f), 3f));
-                    if (_coolerObj != null) _coolerObj.SetActive(true);
+                    ShowDuelCooler();
                     if (_teaObj != null) _teaObj.SetActive(true);
                     break;
                 case EnvironmentType.HeatWaveWarning:
                     StartCoroutine(LerpLight(new Color(1f, 0.6f, 0.5f), 2.5f));
                     break;
                 case EnvironmentType.CoolBreeze:
-                    StartCoroutine(LerpLight(new Color(0.8f, 0.9f, 1f), 1.8f));
-                    if (_coolerObj != null) _coolerObj.SetActive(true);
+                    // Night keeps its authored moonlight; wind must not turn it into daytime.
+                    if (MatchCompositionRoot.Instance?.ActiveConfig?.Mode != GameMode.Multi)
+                        StartCoroutine(LerpLight(new Color(0.8f, 0.9f, 1f), 1.8f));
+                    ShowDuelCooler();
                     if (_windObj != null) _windObj.SetActive(true);
                     break;
                 case EnvironmentType.Kids:
@@ -108,6 +113,14 @@ namespace AbsoluteZero.Core.Combat
                     StartCoroutine(AmbulanceSlideRoutine());
                     break;
             }
+        }
+
+        void ShowDuelCooler()
+        {
+            // The cooler clip uses absolute first-person duel coordinates and crosses
+            // the Multi camera's near plane. Multi shows the shared wind particles only.
+            if (_coolerObj != null)
+                _coolerObj.SetActive(MatchCompositionRoot.Instance?.ActiveConfig?.Mode != GameMode.Multi);
         }
 
         void ResetVisuals()

@@ -36,6 +36,7 @@ namespace AbsoluteZero.Core.Combat
             GameAudioManager.Instance?.PlayItemSfxFor("", itemData);
 
             var views = Context.Views;
+            bool hasSweep = Context.TryGetItemSweep(targetIdx, out var sweepStart, out var sweepEnd);
             var spSleep = views != null ? views.GetSprite(MatchSpriteRole.CatSleep) : Resources.Load<Sprite>("Cat/cat_sleep");
             var spWakeup = views != null ? views.GetSprite(MatchSpriteRole.CatWakeup) : Resources.Load<Sprite>("Cat/cat_wakeup");
             var spJump = views != null ? views.GetSprite(isLocalUser ? MatchSpriteRole.CatJump : MatchSpriteRole.CatJump2) : Resources.Load<Sprite>(isLocalUser ? "Cat/cat_jump" : "Cat/cat_jump2");
@@ -70,10 +71,9 @@ namespace AbsoluteZero.Core.Combat
                 originalScale = go.transform.localScale;
 
                 borrowed = new BorrowedItemPresentation(go, sr, _resources);
-                sr.sharedMaterial = _resources.Own(new Material(Shader.Find("Sprites/Default")));
 
                 sr.sprite = spSleep;
-                sr.sortingOrder = 90;
+                WorldInteractionLayer.Apply(sr);
 
                 var hover = go.GetComponent<HoverEffect>();
                 if (hover != null) hover.enabled = false;
@@ -96,12 +96,17 @@ namespace AbsoluteZero.Core.Combat
                 go = _resources.Own(new GameObject("CatAnim"));
                 sr = go.AddComponent<SpriteRenderer>();
                 sr.sprite = spSleep;
-                sr.sortingOrder = 90;
+                WorldInteractionLayer.Apply(sr);
                 Vector3 userPos = GetPlayerWorldPos(userIdx);
-                go.transform.position = userPos + new Vector3(-0.5f, 0.3f, 0f);
-                originalScale = Vector3.one * 0.7f;
+                go.transform.position = Context.TryGetItemSweep(userIdx, out var sourceFirst, out var sourceLast)
+                    ? (sourceFirst + sourceLast) * .5f : userPos;
+                float size = Mathf.Max(spSleep.bounds.size.x, spSleep.bounds.size.y);
+                originalScale = Vector3.one * (size > 0f ? .95f / size : .7f);
                 go.transform.localScale = originalScale;
+                if (onImpact != null)
+                    go.transform.position += Vector3.up * (Mathf.Max(0f, -spSleep.bounds.min.y * originalScale.y) + .10f);
             }
+            DuelSpriteFacing.Register(go);
 
             if (userVisual != null && !userVisual.IsLocalHuman)
                 userVisual.PlayCombatAnimation("jump");
@@ -113,14 +118,13 @@ namespace AbsoluteZero.Core.Combat
 
             sr.sprite = spJump;
 
-            string destMarkerPrefix = isLocalUser ? "EnemyItem" : "PlayerItem";
-            int randomIdx = Random.Range(1, 9);
-            var destMarker = onImpact == null
-                ? (views != null ? views.GetItemAnchor(!isLocalUser, randomIdx - 1)
-                    : GameObject.Find($"{destMarkerPrefix}{randomIdx}")?.transform) : null;
-            Vector3 destPos = destMarker != null
-                ? destMarker.position
-                : GetPlayerWorldPos(targetIdx) + new Vector3(0f, 0.3f, 0f);
+            Vector3 destPos = hasSweep ? (sweepStart + sweepEnd) * .5f : GetPlayerWorldPos(targetIdx);
+            Vector3 sweep = hasSweep ? (sweepEnd - sweepStart) * .4f : Vector3.zero;
+
+            // Multi's painted slot planes sit at the anchors' height. Stand the cat
+            // on that plane instead of putting its centre through the painted cells.
+            if (onImpact != null && hasSweep && spRummage != null)
+                destPos.y += Mathf.Max(0f, -spRummage.bounds.min.y * (originalScale.x + .05f)) + .10f;
 
             Vector3 arcStart = go.transform.position;
             bool flipX = destPos.x < arcStart.x;
@@ -128,7 +132,7 @@ namespace AbsoluteZero.Core.Combat
             go.transform.localScale = new Vector3(flipX ? -baseScale : baseScale, baseScale, originalScale.z);
 
             float arcDur = 0.8f;
-            float arcHeight = 2.5f;
+            float arcHeight = .65f;
             float t = 0f;
             while (t < arcDur)
             {
@@ -151,6 +155,7 @@ namespace AbsoluteZero.Core.Combat
                 tempSR.sharedMaterial = sr.sharedMaterial;
                 tempGO.transform.position = go.transform.position;
                 tempGO.transform.localScale = go.transform.localScale;
+                DuelSpriteFacing.Register(tempGO);
                 go = tempGO;
                 sr = tempSR;
                 catItemTransform = null;
@@ -163,19 +168,19 @@ namespace AbsoluteZero.Core.Combat
             }
 
             sr.sprite = spRummage;
+            _services.ItemCue("cat-rummage");
 
             float rumbleDur = minDuration;
-            float rumbleRange = 1.2f;
-            float rumbleSpeed = 12f;
+            float rumbleSpeed = 7f;
             t = 0f;
             while (t < rumbleDur)
             {
                 t += Time.deltaTime;
-                float xOff = Mathf.Sin(t * rumbleSpeed) * rumbleRange;
-                go.transform.position = destPos + new Vector3(xOff, 0f, 0f);
+                go.transform.position = destPos + sweep * Mathf.Sin(t * rumbleSpeed);
 
                 float s = baseScale + Mathf.Sin(t * rumbleSpeed * 2f) * 0.05f;
-                float dir = Mathf.Sin(t * rumbleSpeed) >= 0f ? 1f : -1f;
+                float screenDirection = Context.Camera != null ? Vector3.Dot(sweep, Context.Camera.transform.right) : sweep.x;
+                float dir = Mathf.Cos(t * rumbleSpeed) * screenDirection >= 0f ? 1f : -1f;
                 go.transform.localScale = new Vector3(dir * s, s, originalScale.z);
                 yield return null;
             }

@@ -24,7 +24,7 @@ namespace AbsoluteZero.UI.Game
     {
         GameUIManager _ui; InventoryPresenter _inventory; ILocalPlayerCommands _commands;
         Mouse _mouse; Keyboard _keyboard; int _checks; Vector2 _pointer;
-        bool _multi;
+        bool _multi, _allTargetsChecked;
         InputSettings _previousSettings, _probeSettings;
         readonly List<InputDevice> _physicalInputs = new();
         public void Initialize(GameUIManager ui, InventoryPresenter inventory, ILocalPlayerCommands commands)
@@ -122,7 +122,39 @@ namespace AbsoluteZero.UI.Game
             Check(_inventory.SelectionStage == ItemSelectionStage.Aiming, "target item aiming");
             var root = MatchCompositionRoot.Instance;
             Check(root != null && root.ViewBindings != null, "scene has required target view bindings");
-            byte seat = (byte)((_inventory.GetLocalPlayer().PlayerIndex + 1) % root.ActiveConfig.RequiredPlayerCount);
+            var liveSeats = new List<byte>();
+            int localSeat = _inventory.GetLocalPlayer().PlayerIndex;
+            foreach (var player in FindObjectsByType<PlayerState>(FindObjectsSortMode.None))
+                if (player.PlayerIndex >= 0 && player.PlayerIndex != localSeat && player.CurrentLifeState.Value == LifeState.Alive
+                    && root.ViewBindings.GetTarget((byte)player.PlayerIndex) != null)
+                    liveSeats.Add((byte)player.PlayerIndex);
+            liveSeats.Sort((a,b) => ((a-localSeat+4)%4).CompareTo((b-localSeat+4)%4));
+            Check(liveSeats.Count > 0, "live target exists");
+            byte seat = liveSeats[0];
+            if (!_allTargetsChecked)
+            {
+                foreach (byte candidate in liveSeats)
+                {
+                    // Release the previous snap before approaching a different character.
+                    _pointer = new Vector2(5,Screen.height-5);
+                    InputSystem.QueueStateEvent(_mouse,new MouseState { position=_pointer }); yield return Frames(3);
+                    Check(!_ui.DebugTargetHoverVisible,"marker hidden outside targets");
+                    var collider = root.ViewBindings.GetTarget(candidate).GetComponentInChildren<Collider>();
+                    _pointer = Camera.main.WorldToScreenPoint(collider.bounds.center + Vector3.up*collider.bounds.extents.y*.35f);
+                    InputSystem.QueueStateEvent(_mouse,new MouseState { position=_pointer }); yield return Frames(3);
+                    Check(_ui.DebugTargetHoverVisible,"marker visible for P"+candidate);
+                    Check((byte)typeof(GameUIManager).GetField("_snappedTargetSeat",BindingFlags.NonPublic|BindingFlags.Instance).GetValue(_ui)==candidate,
+                        "marker matches live target P"+candidate);
+                    Debug.Log("[INPUT] SNAP target-matrix local="+localSeat+" target="+candidate);
+                    yield return Frames(2);
+                }
+                var block = new object(); LocalGameplayInput.Block(block);
+                try { yield return Frames(3); Check(!_ui.DebugTargetHoverVisible,"marker hidden by input block"); }
+                finally { LocalGameplayInput.Release(block); }
+                _pointer = new Vector2(5,Screen.height-5);
+                InputSystem.QueueStateEvent(_mouse,new MouseState { position=_pointer }); yield return Frames(3);
+                _allTargetsChecked = true;
+            }
             Transform target = null;
             yield return Until(() => (target = root.ViewBindings.GetTarget(seat)) != null, "registered target ready");
             var col = target.GetComponentInChildren<Collider>();

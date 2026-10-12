@@ -247,11 +247,14 @@ Item click → Mini-game starts (PrepPhase timer continues)
 
 Appears at **2nd prep phase** of each round. Random. Resets per round.
 
+**Mode/map restriction (user direction, 2026-10-06; pool corrected 2026-10-12):** Solo and 1v1 always use `PavilionDay`; Multi (3–4 players, including 4→3 continuation) uses `PavilionNight`. Day draws the six effects below, equally weighted. Night draws only Cool Breeze, Kids, Ambulance and Summer Vacation, equally weighted. Sunny Day and Heat Wave are excluded at night because their current staging is daytime-oriented. Standalone Cicada Song is excluded in all modes. Cool Breeze retains the authored night lighting and shows its wind effect without applying the daytime light override. Effect values and announcement timing are otherwise unchanged. See [PLAN 048](Plans/PLAN_048_mode_maps_and_night_environment.md).
+
+**Multi visual cleanup (2026-10-06):** Do not spawn the standing local/opponent fans, and keep character `isWind` hair animation off in Multi. Solo/1v1 retain those visuals. This presentation change preserves preparation temperature loss/recovery and attack items (Fan/HandFan); their gameplay state is not disabled. See [validation](Validation/PLAN_049_multi_fan_visuals.md).
+
 | Environment | Effect | Impact |
 |-------------|--------|--------|
 | **Sunny Day** (햇살쨍쨍) | Fan-off recovery: 2°/sec | Recovery items less valuable |
 | **Cool Breeze** (바람선선) | Fan-off recovery: 0°/sec | Recovery items critical |
-| **Cicada Song** (매미울음) | Audio/visual distraction | Pure chaos |
 | **Kids** (잼민이들) | Steal 1 unused random item | Can't hoard items |
 | **Ambulance** (앰뷸런스) | Turn 3: lower-temp player +10° | Comeback mechanic |
 | **Summer Vacation** (여름방학) | Prep time: 20s → 10s | Less decision time |
@@ -259,11 +262,13 @@ Appears at **2nd prep phase** of each round. Random. Resets per round.
 
 ### Environment Variable Staging Detail
 
-> All environment variables follow the same base staging:
-> 1. Camera rotates LEFT to show surrounding environment
-> 2. Staging text appears center-screen (fade in / fade out) during camera rotation
-> 3. Each environment's unique staging plays
-> 4. Camera returns to default position
+Standalone Cicada Song is retired (confirmed 2026-10-12): it has no gameplay effect and is excluded from every mode's random pool and announcement UI. `SFX_cicada` remains an ambient sound for Sunny Day and Heat Wave. The legacy enum ID stays reserved to avoid shifting serialized/network values.
+
+> Camera staging (user decision, 2026-10-12; all modes):
+> 1. Only Kids and Ambulance, which introduce a character, rotate the camera LEFT.
+> 2. Sunny Day, Cool Breeze, Summer Vacation, Heat Wave and None keep the camera in place.
+> 3. Announcement text and each environment's unique effects still play normally.
+> 4. Character introductions retain the existing pan/hold/return timing and screen-facing 2D art (1v1/Solo: 25 degrees; Multi: 3 degrees), then restore the original camera rotation.
 
 | Env | Staging Text | Background Staging | Sound |
 |-----|-------------|-------------------|-------|
@@ -500,6 +505,8 @@ Camera: pos(0,5,-5) rot(22°,0,0) FOV=65 — overhead angle, all 4 seats visible
 | Deathmatch grant | N/A | **2 players left → keep current items/uses and fill empty random capacity to 4** |
 
 Deathmatch top-up keeps duplicates in separate slots, allows at most three copies of one item, and never stacks uses into an existing copy.
+
+2026-10-12 presentation/inventory decision: In every mode, ordinary grants and stolen items also remain separate copies instead of adding uses to an owned item. Each acquisition receives its own CopyId and available item cell; surviving copies keep their cells. Item quantity/infinity labels below world items are hidden. Original per-item uses and total/mode capacity limits remain unchanged; the three-copy limit above remains specific to deathmatch top-up.
 
 ### Target Selection
 

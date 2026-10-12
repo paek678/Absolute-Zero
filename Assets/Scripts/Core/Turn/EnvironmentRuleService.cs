@@ -3,6 +3,7 @@ using AbsoluteZero.Core.Combat;
 using AbsoluteZero.Core.Item;
 using AbsoluteZero.Core.Item.Data;
 using AbsoluteZero.Core.Match;
+using AbsoluteZero.Core.Network;
 using AbsoluteZero.Core.Player;
 using UnityEngine;
 
@@ -13,9 +14,9 @@ namespace AbsoluteZero.Core.Turn
         public const float KIDS_STEAL_STAGING_SECONDS = 3.2f;
         public const float AMBULANCE_BLANKET_STAGING_SECONDS = 3f;
 
-        public EnvironmentType SelectRandom()
+        public EnvironmentType SelectRandom(GameMode mode = GameMode.OneVsOne)
         {
-            return EnvironmentCalculations.Select(Random.Range(0, EnvironmentCalculations.PoolCount));
+            return EnvironmentCalculations.Select(Common.GameplayRandom.Range("environment", 0, EnvironmentCalculations.PoolCountFor(mode)), mode);
         }
 
         public float GetPrepDuration(EnvironmentType env, float baseDuration)
@@ -66,7 +67,7 @@ namespace AbsoluteZero.Core.Turn
 
         public void LogActiveEnvironment(EnvironmentType env, int turnNumber)
         {
-            if (env == EnvironmentType.None) return;
+            if (env == EnvironmentType.None || env == EnvironmentType.CicadaSong) return;
 
             Debug.Log($"[ENV] ===== Turn {turnNumber} — active: {env} ({GetName(env)}) =====");
             switch (env)
@@ -76,9 +77,6 @@ namespace AbsoluteZero.Core.Turn
                     break;
                 case EnvironmentType.CoolBreeze:
                     Debug.Log("[ENV] CoolBreeze: recovery rate 1 → 0°/sec (no fan-off recovery)");
-                    break;
-                case EnvironmentType.CicadaSong:
-                    Debug.Log("[ENV] CicadaSong: audio/visual distraction (no gameplay effect yet)");
                     break;
                 case EnvironmentType.HeatWaveWarning:
                     Debug.Log("[ENV] HeatWave: lower-temp player acts first this turn");
@@ -101,7 +99,7 @@ namespace AbsoluteZero.Core.Turn
 
             if (candidates.Count == 0) return;
 
-            int targetSlot = candidates[Random.Range(0, candidates.Count)];
+            int targetSlot = candidates[Common.GameplayRandom.Range("environment-kids", 0, candidates.Count)];
             var targetItem = inventory.GetItemData(targetSlot);
             string itemName = targetItem != null ? targetItem.ItemName : "?";
 
@@ -120,7 +118,6 @@ namespace AbsoluteZero.Core.Turn
             {
                 EnvironmentType.SunnyDay => "햇살쨍쨍",
                 EnvironmentType.CoolBreeze => "바람선선",
-                EnvironmentType.CicadaSong => "매미울음",
                 EnvironmentType.Kids => "잼민이들",
                 EnvironmentType.Ambulance => "앰뷸런스",
                 EnvironmentType.SummerVacation => "여름방학",

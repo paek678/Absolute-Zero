@@ -7,6 +7,7 @@ using AbsoluteZero.Core.Turn;
 using TMPro;
 using Unity.Netcode;
 using UnityEngine;
+using AbsoluteZero.UI.Common;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -54,6 +55,9 @@ namespace AbsoluteZero.UI.Loading
         CanvasGroup _canvasGroup;
         Image _fillImage;
         TextMeshProUGUI _percentText;
+        Sprite[] _loadingFaces;
+        // Cosmetic selection must not advance Unity's shared gameplay random state.
+        readonly System.Random _faceRandom = new();
 
         bool _showing;
         bool _dismissing;
@@ -290,7 +294,7 @@ namespace AbsoluteZero.UI.Loading
             _percentText.fontStyle = FontStyles.Bold;
             CenterAnchor(_percentText.GetComponent<RectTransform>());
 
-            // Character — bottom right (use kid head sprite as placeholder)
+            // Pick one expression per loading screen; retain it until dismissed.
             var charSprite = LoadCharacterSprite();
             if (charSprite != null)
             {
@@ -313,16 +317,18 @@ namespace AbsoluteZero.UI.Loading
             ltRect.anchorMax = new Vector2(1f, 0f);
             ltRect.pivot = new Vector2(0.5f, 0.5f);
 
+            CasualUiSkin.Surface(barBg.GetComponent<Image>(), CasualUiSkin.Cream, CasualUiSkin.Pill, 20);
+            CasualUiSkin.Surface(_fillImage, CasualUiSkin.Mint, CasualUiSkin.Pill, 20);
+            CasualUiSkin.Labels(root, new Color(.96f, .94f, .88f));
             UpdateProgressUI();
         }
 
-        static Sprite LoadCharacterSprite()
+        Sprite LoadCharacterSprite()
         {
-            var sprites = Resources.LoadAll<Sprite>("Environment/kid_idle");
-            if (sprites == null) return null;
-            foreach (var s in sprites)
-                if (s.name == "kid_idle_1") return s;
-            return sprites.Length > 0 ? sprites[0] : null;
+            _loadingFaces ??= Resources.LoadAll<Sprite>("UI/LoadingFaces");
+            return _loadingFaces.Length > 0
+                ? _loadingFaces[_faceRandom.Next(_loadingFaces.Length)]
+                : null;
         }
 
         void UpdateProgressUI()

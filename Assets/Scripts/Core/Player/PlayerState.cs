@@ -89,6 +89,14 @@ namespace AbsoluteZero.Core.Player
             default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         bool _hasAcceptedCosmetic;
+        public readonly NetworkVariable<FixedString64Bytes> DisplayName = new(
+            default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        public string DisplayNameText => DisplayName.Value.Length > 0 ? DisplayName.Value.ToString() : ParticipantDisplayName.Fallback(PlayerIndex);
+        public event Action DisplayNameChanged;
+        void OnDisplayNameChanged(FixedString64Bytes previous, FixedString64Bytes current) => DisplayNameChanged?.Invoke();
+        int _nameAttempts;
+        double _nextNameAttempt;
+        double _nameDeadline;
 
         public static event Action<Transform, Vector3, byte> OnEmoteRequested;
 
@@ -114,6 +122,7 @@ namespace AbsoluteZero.Core.Player
         {
             _botCommands?.Tick();
             TickCosmeticSubmission();
+            TickDisplayNameSubmission();
             if (IsServer && _miniGameAttempts.Pending is MiniGameAttempt attempt
                 && (!IsMiniGameScopeCurrent(attempt) || _turnContext?.Phase != TurnPhase.PrepPhase
                     || IsReady.Value || !Admission.IsLiveActionParticipant(_binding)))
@@ -278,11 +287,13 @@ namespace AbsoluteZero.Core.Player
         public override void OnNetworkSpawn()
         {
             base.OnNetworkSpawn();
+            _nameAttempts = 0; _nextNameAttempt = 0; _nameDeadline = Time.unscaledTimeAsDouble + 30;
 
             if (IsServer)
                 GetInventory().SlotStates.OnListChanged += OnInventorySlotChanged;
 
             CosmeticDataNV.OnValueChanged += OnCosmeticNVChanged;
+            DisplayName.OnValueChanged += OnDisplayNameChanged;
 
             var mcr = MatchCompositionRoot.Instance;
             if (mcr == null)
@@ -376,6 +387,38 @@ namespace AbsoluteZero.Core.Player
             ReportCosmeticStatus(before);
         }
 
+        void TickDisplayNameSubmission()
+        {
+            var root = MatchCompositionRoot.Instance;
+            if (!IsSpawned || !IsParticipantReady || root == null || !root.IsSessionCurrent
+                || !ReferenceEquals(root.Registry, _registeredRegistry) || DisplayName.Value.Length > 0) return;
+            if (IsBotControlled)
+            {
+                var launch = AppBootstrapper.Instance?.SessionRouter.LaunchContext;
+                if (IsServer && launch?.Solo != null && launch.Generation == _participant.Generation
+                    && root.Generation == _participant.Generation)
+                    DisplayName.Value = new FixedString64Bytes(ParticipantDisplayName.Bot(launch.Solo.BotDisplayName));
+                return;
+            }
+            if (!LocalMatchPerspective.IsLocalHuman(this) || _nameAttempts >= 6
+                || Time.unscaledTimeAsDouble > _nameDeadline || Time.unscaledTimeAsDouble < _nextNameAttempt) return;
+            if (!ParticipantDisplayName.TryHuman(CosmeticProfileService.Instance?.Nickname, out var name)) return;
+            _nameAttempts++; _nextNameAttempt = Time.unscaledTimeAsDouble + 2;
+            SubmitDisplayNameRpc(new FixedString64Bytes(name));
+        }
+
+        [Rpc(SendTo.Server)]
+        public void SubmitDisplayNameRpc(FixedString64Bytes name, RpcParams rpcParams = default)
+        {
+            var root = MatchCompositionRoot.Instance;
+            if (!IsServer || !IsSpawned || !IsParticipantReady || IsBotControlled
+                || rpcParams.Receive.SenderClientId != OwnerClientId
+                || root == null || !root.IsSessionCurrent || !ReferenceEquals(root.Registry, _registeredRegistry)
+                || root.Generation != _participant.Generation || DisplayName.Value.Length > 0) return;
+            if (ParticipantDisplayName.TryHuman(name.ToString(), out var validated))
+                DisplayName.Value = new FixedString64Bytes(validated);
+        }
+
         void ReportCosmeticStatus(CosmeticSubmissionStatus? before)
         {
             if (_cosmeticSubmission != null && before != _cosmeticSubmission.Status && _cosmeticSubmission.Status is
@@ -426,6 +469,7 @@ namespace AbsoluteZero.Core.Player
                 _inventory.SlotStates.OnListChanged -= OnInventorySlotChanged;
             _miniGameAttempts.Cancel(out _);
             CosmeticDataNV.OnValueChanged -= OnCosmeticNVChanged;
+            DisplayName.OnValueChanged -= OnDisplayNameChanged;
             SyncedPlayerIndex.OnValueChanged -= OnIndexAssigned;
             ParticipantMetadata.OnValueChanged -= OnParticipantAssigned;
             _registeredRegistry?.Unregister(_binding);
@@ -514,12 +558,28 @@ namespace AbsoluteZero.Core.Player
             uint observedGrantTransaction = 0,
             RpcParams rpcParams = default)
         {
-            if (!IsServer) return;
-            if (!IsParticipantReady || IsBotControlled || rpcParams.Receive.SenderClientId != OwnerClientId) return;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            using var playtestObservation = AbsoluteZero.Core.Solo.PlaytestTelemetry.Observe(this, "select", expectedCopyId);
+#endif
+            if (!IsServer) {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                playtestObservation.Verdict("NotServer");
+#endif
+                return;
+            }
+            if (!IsParticipantReady || IsBotControlled || rpcParams.Receive.SenderClientId != OwnerClientId) {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                playtestObservation.Verdict("WrongControllerOrOwner");
+#endif
+                return;
+            }
             if (TurnManager.Instance?.IsDeathmatchGrantInProgress == true
                 || _turnContext == null || _turnContext.Phase != TurnPhase.PrepPhase || IsReady.Value)
             {
                 ItemSelectionRejectedClientRpc(expectedCopyId);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                playtestObservation.Verdict("InputClosed");
+#endif
                 return;
             }
             if (_miniGameAttempts.HasPending)
@@ -529,6 +589,9 @@ namespace AbsoluteZero.Core.Player
                 // attempt's UI. Different-copy submissions can be rejected safely.
                 if (expectedCopyId != 0 && expectedCopyId != _miniGameAttempts.Pending.Value.Ticket.CopyId)
                     ItemSelectionRejectedClientRpc(expectedCopyId);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                playtestObservation.Verdict("MiniGamePending");
+#endif
                 return;
             }
             var root = MatchCompositionRoot.Instance;
@@ -540,6 +603,9 @@ namespace AbsoluteZero.Core.Player
                     || roundEpoch != network.GhostRoundEpoch.Value)
                 {
                     ItemSelectionRejectedClientRpc(expectedCopyId);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    playtestObservation.Verdict("EpochOrCopyMissing");
+#endif
                     return;
                 }
                 var grant = network.DeathmatchGrant.Value;
@@ -548,6 +614,9 @@ namespace AbsoluteZero.Core.Player
                     && observedGrantTransaction != grant.TransactionId)
                 {
                     ItemSelectionRejectedClientRpc(expectedCopyId);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    playtestObservation.Verdict("GrantMismatch");
+#endif
                     return;
                 }
                 // A displayed slot may have compacted. Keep the clicked physical copy.
@@ -562,6 +631,9 @@ namespace AbsoluteZero.Core.Player
                 if (actualSlot < 0)
                 {
                     ItemSelectionRejectedClientRpc(expectedCopyId);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    playtestObservation.Verdict("CopyMissing");
+#endif
                     return;
                 }
                 slotIndex = (byte)actualSlot;
@@ -573,6 +645,9 @@ namespace AbsoluteZero.Core.Player
             {
                 Debug.Log($"[PlayerState P{SyncedPlayerIndex.Value}] SelectItem rejected: {validation.Reason}");
                 ItemSelectionRejectedClientRpc(expectedCopyId);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                playtestObservation.Verdict(validation.Reason.ToString());
+#endif
                 return;
             }
             slotIndex = candidate.SlotIndex;
@@ -598,10 +673,17 @@ namespace AbsoluteZero.Core.Player
                 StartMiniGameClientRpc(slotIndex, (byte)itemData.MiniGameType,
                     itemData.MiniGameTimeLimit, itemData.MiniGameGoal,
                     ticket.MatchEpoch, ticket.RoundEpoch, ticket.Turn, ticket.AttemptId, ticket.CopyId);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                playtestObservation.Verdict("TicketStarted");
+#endif
                 return;
             }
 
-            if (!QueueValidatedItem(candidate).Succeeded) ItemSelectionRejectedClientRpc(expectedCopyId);
+            var queued = QueueValidatedItem(candidate);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            playtestObservation.Verdict(queued.Status + ":" + queued.Reason);
+#endif
+            if (!queued.Succeeded) ItemSelectionRejectedClientRpc(expectedCopyId);
         }
 
         [Rpc(SendTo.Owner)]
@@ -662,6 +744,12 @@ namespace AbsoluteZero.Core.Player
             uint copyId = mode == GameMode.Multi || mode == GameMode.Solo ? current.CopyId : 0;
             _actionQueue.SetSelected(current.SlotIndex, current.ItemData, current.TargetSeat, copyId);
             HasSelectedItem.Value = true;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            AbsoluteZero.Core.Solo.PlaytestTelemetry.Current?.Balance("queued", new AbsoluteZero.Core.Solo.BalanceObservation {
+                action = new AbsoluteZero.Core.Solo.BalanceActionIdentity { source = PlayerIndex, target = current.TargetSeat,
+                    item = _inventory.SlotStates[current.SlotIndex].ItemId, copy = current.CopyId },
+                reason = IsBotControlled ? "bot" : "human_driver" });
+#endif
 
             Debug.Log($"[PlayerState P{SyncedPlayerIndex.Value}] Item selected: {current.ItemData.ItemName} (queued for Attack)");
 
@@ -683,42 +771,97 @@ namespace AbsoluteZero.Core.Player
             uint matchEpoch, uint roundEpoch, int turn, uint attemptId, uint copyId,
             RpcParams rpcParams = default)
         {
-            if (!IsServer) return;
-            if (!IsParticipantReady || IsBotControlled || rpcParams.Receive.SenderClientId != OwnerClientId) return;
-            if (TurnManager.Instance?.IsDeathmatchGrantInProgress == true) return;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            using var playtestObservation = AbsoluteZero.Core.Solo.PlaytestTelemetry.Observe(this, "minigame", copyId);
+#endif
+            if (!IsServer) {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                playtestObservation.Verdict("NotServer");
+#endif
+                return;
+            }
+            if (!IsParticipantReady || IsBotControlled || rpcParams.Receive.SenderClientId != OwnerClientId) {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                playtestObservation.Verdict("WrongControllerOrOwner");
+#endif
+                return;
+            }
+            if (TurnManager.Instance?.IsDeathmatchGrantInProgress == true) {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                playtestObservation.Verdict("GrantInProgress");
+#endif
+                return;
+            }
             if (!_miniGameAttempts.TryTake(slotIndex, matchEpoch, roundEpoch, turn,
                     attemptId, copyId, out var attempt))
             {
                 Debug.Log($"[PlayerState P{SyncedPlayerIndex.Value}] Mini-game result rejected: stale ticket {attemptId}");
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                playtestObservation.Verdict("StaleTicket");
+#endif
                 return;
             }
             try
             {
-                if (!IsMiniGameScopeCurrent(attempt)) return;
+                if (!IsMiniGameScopeCurrent(attempt)) {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                playtestObservation.Verdict("StaleScope");
+#endif
+                return;
+            }
                 byte savedTarget = attempt.Target;
                 int actualSlot = Admission.FindItemCopy(copyId);
 
                 if (_turnContext == null || _turnContext.Phase != TurnPhase.PrepPhase)
                 {
                     Debug.Log($"[PlayerState P{SyncedPlayerIndex.Value}] Mini-game result rejected: prep phase already over");
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    playtestObservation.Verdict("WrongPhase");
+#endif
                     return;
                 }
-                if (IsReady.Value) return;
+                if (IsReady.Value) {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                playtestObservation.Verdict("AlreadyReady");
+#endif
+                return;
+            }
                 if (!attempt.IsWithinDeadline(NetworkManager.ServerTime.Time))
                 {
                     Debug.Log($"[PlayerState P{SyncedPlayerIndex.Value}] Mini-game result rejected: past deadline");
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    playtestObservation.Verdict("Deadline");
+#endif
                     return;
                 }
 
-                if (actualSlot < 0) return;
+                if (actualSlot < 0) {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                playtestObservation.Verdict("CopyMissing");
+#endif
+                return;
+            }
                 slotIndex = (byte)actualSlot;
                 var slot = _inventory.SlotStates[slotIndex];
-                if (!slot.IsUsable) return;
+                if (!slot.IsUsable) {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                playtestObservation.Verdict("UnusableCopy");
+#endif
+                return;
+            }
                 var itemData = _inventory.GetItemData(slotIndex);
-                if (!ItemAvailability.IsEnabled(itemData)) return;
+                if (!ItemAvailability.IsEnabled(itemData)) {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                playtestObservation.Verdict("DisabledItem");
+#endif
+                return;
+            }
                 if (!Admission.TryResolveTargetSeat(itemData, savedTarget, out byte resolvedTarget))
                 {
                     Debug.Log($"[PlayerState P{SyncedPlayerIndex.Value}] Mini-game result rejected: actor or target no longer eligible");
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    playtestObservation.Verdict("InvalidTarget");
+#endif
                     return;
                 }
 
@@ -727,14 +870,25 @@ namespace AbsoluteZero.Core.Player
                     Debug.Log($"[PlayerState P{SyncedPlayerIndex.Value}] Mini-game FAILED: slot {slotIndex} — consuming 1 use");
                     _inventory.ConsumeItem(slotIndex);
                     _inventory.CompactSlots();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    playtestObservation.Verdict("MiniGameFailureConsumed");
+#endif
                     return;
                 }
 
                 var validation = Admission.ValidateItemCandidate(slotIndex, copyId, resolvedTarget, null, out var candidate);
-                if (!validation.Succeeded) return;
+                if (!validation.Succeeded) {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                playtestObservation.Verdict(validation.Reason.ToString());
+#endif
+                return;
+            }
 
                 Debug.Log($"[PlayerState P{SyncedPlayerIndex.Value}] Mini-game SUCCESS: {itemData.ItemName} → queueing");
-                QueueValidatedItem(candidate);
+                var queued = QueueValidatedItem(candidate);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                playtestObservation.Verdict(queued.Status + ":" + queued.Reason);
+#endif
             }
             finally
             {
@@ -796,24 +950,70 @@ namespace AbsoluteZero.Core.Player
         public void PressReadyServerRpc(uint matchEpoch = 0, uint roundEpoch = 0,
             uint observedGrantTransaction = 0, RpcParams rpcParams = default)
         {
-            if (!IsServer) return;
-            if (!IsParticipantReady || IsBotControlled || rpcParams.Receive.SenderClientId != OwnerClientId) return;
-            if (TurnManager.Instance?.IsDeathmatchGrantInProgress == true) return;
-            if (_turnContext == null || _turnContext.Phase != TurnPhase.PrepPhase) return;
-            if (IsReady.Value) return;
-            if (CurrentLifeState.Value != LifeState.Alive) return;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            using var playtestObservation = AbsoluteZero.Core.Solo.PlaytestTelemetry.Observe(this, "ready");
+#endif
+            if (!IsServer) {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                playtestObservation.Verdict("NotServer");
+#endif
+                return;
+            }
+            if (!IsParticipantReady || IsBotControlled || rpcParams.Receive.SenderClientId != OwnerClientId) {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                playtestObservation.Verdict("WrongControllerOrOwner");
+#endif
+                return;
+            }
+            if (TurnManager.Instance?.IsDeathmatchGrantInProgress == true) {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                playtestObservation.Verdict("GrantInProgress");
+#endif
+                return;
+            }
+            if (_turnContext == null || _turnContext.Phase != TurnPhase.PrepPhase) {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                playtestObservation.Verdict("WrongPhase");
+#endif
+                return;
+            }
+            if (IsReady.Value) {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                playtestObservation.Verdict("AlreadyReady");
+#endif
+                return;
+            }
+            if (CurrentLifeState.Value != LifeState.Alive) {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                playtestObservation.Verdict("ActorUnavailable");
+#endif
+                return;
+            }
             var root = MatchCompositionRoot.Instance;
             if (root?.ActiveConfig?.Mode == GameMode.Multi)
             {
                 var state = root.NetworkState;
                 if (state == null || state.GhostMatchEpoch.Value != matchEpoch
-                    || state.GhostRoundEpoch.Value != roundEpoch) return;
+                    || state.GhostRoundEpoch.Value != roundEpoch) {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                playtestObservation.Verdict("EpochMismatch");
+#endif
+                return;
+            }
                 var grant = state.DeathmatchGrant.Value;
                 if (grant.RoundEpoch == roundEpoch && grant.Stage == DeathmatchGrantStage.Completed
-                    && observedGrantTransaction != grant.TransactionId) return;
+                    && observedGrantTransaction != grant.TransactionId) {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                playtestObservation.Verdict("GrantMismatch");
+#endif
+                return;
+            }
             }
 
-            MarkReady();
+            var readyResult = MarkReady();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            playtestObservation.Verdict(readyResult.Status + ":" + readyResult.Reason);
+#endif
         }
 
         PlayerActionResult CancelSelectedItem()
@@ -836,6 +1036,9 @@ namespace AbsoluteZero.Core.Player
             _actionQueue.SetReady(Time.time);
             IsReady.Value = true;
             IsFanActive.Value = false;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            AbsoluteZero.Core.Solo.PlaytestTelemetry.Current?.ReadyAccepted(this);
+#endif
 
             Debug.Log($"[PlayerState P{SyncedPlayerIndex.Value}] Ready pressed (hasItem={HasSelectedItem.Value}, tick={_readyServerTick})");
             return new PlayerActionResult(PlayerActionStatus.ReadyAccepted);

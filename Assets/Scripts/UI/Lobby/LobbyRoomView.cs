@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using AbsoluteZero.UI.Common;
 using UnityEngine.UI;
 
 using LobbyModel = Unity.Services.Lobbies.Models.Lobby;
@@ -22,8 +23,11 @@ namespace AbsoluteZero.UI.LobbyUI
         Button _leaveBtn;
         TextMeshProUGUI _statusText;
         TextMeshProUGUI _logText;
+        TextMeshProUGUI _modeLabel;
 
         readonly List<GameObject> _slotObjects = new();
+        int _seatCount = 2;
+        bool _inLobby;
 
         public event Action OnCreateClicked;
         public event Action<string> OnJoinClicked;
@@ -43,6 +47,7 @@ namespace AbsoluteZero.UI.LobbyUI
         {
             var panel = _root.transform.Find("PanelBG");
             if (panel == null) return;
+            _modeLabel = panel.Find("ModeLabel")?.GetComponent<TextMeshProUGUI>();
 
             var dimBtn = _root.transform.Find("Dim")?.GetComponent<Button>();
             if (dimBtn != null)
@@ -72,6 +77,7 @@ namespace AbsoluteZero.UI.LobbyUI
             var logScroll = panel.Find("LogScroll");
             if (logScroll != null)
                 _logText = logScroll.Find("LogText")?.GetComponent<TextMeshProUGUI>();
+            if (_logText != null) _logText.overflowMode = TextOverflowModes.Truncate;
 
             _statusText = panel.Find("StatusText")?.GetComponent<TextMeshProUGUI>();
 
@@ -91,6 +97,12 @@ namespace AbsoluteZero.UI.LobbyUI
         #region Public Render Methods
 
         public void SetVisible(bool visible) => _root.SetActive(visible);
+        public void SetPlayerCount(int count)
+        {
+            _seatCount = count;
+            if (_modeLabel != null) _modeLabel.text = count == 2 ? "1 대 1 대결" : $"{count}인 대결";
+            CasualLobbySkin.RoomLayout(_root.transform, _seatCount, _inLobby);
+        }
 
         public void SetLobbyCode(string code)
         {
@@ -131,6 +143,8 @@ namespace AbsoluteZero.UI.LobbyUI
 
         public void ApplyMembership(bool inLobby)
         {
+            _inLobby = inLobby;
+            CasualLobbySkin.RoomLayout(_root.transform, _seatCount, _inLobby);
             if (_createBtn != null) _createBtn.gameObject.SetActive(!inLobby);
             if (_joinCodeInput != null) _joinCodeInput.gameObject.SetActive(!inLobby);
             if (_joinBtn != null) _joinBtn.gameObject.SetActive(!inLobby);
@@ -142,6 +156,16 @@ namespace AbsoluteZero.UI.LobbyUI
         public void RenderPlayerList(LobbyModel lobby, string myPlayerId)
         {
             ClearPlayerList();
+            SetPlayerCount(lobby.MaxPlayers);
+            // Fit every participant into the authored list rectangle so the fourth
+            // nickname does not extend into the connection log below it.
+            float rowHeight = 55f;
+            var listRect = _playerListContainer as RectTransform;
+            var layout = _playerListContainer.GetComponent<VerticalLayoutGroup>();
+            int rows = Mathf.Max(lobby.MaxPlayers, lobby.Players.Count);
+            if (listRect != null && layout != null && rows > 0)
+                rowHeight = Mathf.Min(rowHeight, Mathf.Max(1f,
+                    (listRect.rect.height - layout.padding.vertical - layout.spacing * (rows - 1)) / rows));
 
             foreach (var player in lobby.Players)
             {
@@ -165,6 +189,10 @@ namespace AbsoluteZero.UI.LobbyUI
                     bgColor = new Color(0.35f, 0.48f, 0.61f, 0.80f);
 
                 var slotGO = UIHelper.CreatePlayerSlot(_playerListContainer, label, bgColor);
+                CasualUiSkin.Surface(slotGO.GetComponent<Image>(), isHost ? CasualUiSkin.Butter : isMe ? CasualUiSkin.Mint : CasualUiSkin.Sky, CasualUiSkin.Card, 6);
+                CasualUiSkin.Labels(slotGO.transform);
+                slotGO.GetComponent<LayoutElement>().preferredHeight = rowHeight;
+                slotGO.GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, rowHeight);
                 _slotObjects.Add(slotGO);
             }
 
@@ -173,6 +201,10 @@ namespace AbsoluteZero.UI.LobbyUI
             {
                 var slotGO = UIHelper.CreatePlayerSlot(_playerListContainer, "대기 중...",
                     new Color(0.91f, 0.88f, 0.83f, 0.50f));
+                CasualUiSkin.Surface(slotGO.GetComponent<Image>(), CasualUiSkin.Cream, CasualUiSkin.Card, 6);
+                CasualUiSkin.Labels(slotGO.transform);
+                slotGO.GetComponent<LayoutElement>().preferredHeight = rowHeight;
+                slotGO.GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, rowHeight);
                 _slotObjects.Add(slotGO);
             }
         }

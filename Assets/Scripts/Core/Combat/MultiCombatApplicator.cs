@@ -61,6 +61,18 @@ namespace AbsoluteZero.Core.Combat
                 }
             }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            ItemSlotNetData[] balanceConsumed = null;
+            if (Solo.PlaytestTelemetry.Current != null)
+            {
+                balanceConsumed = new ItemSlotNetData[invCount];
+                for (int i = 0; i < invCount; i++)
+                {
+                    var change = resolution.InventoryChanges[i];
+                    if (change.Consumed) balanceConsumed[i] = _accessor.GetInventorySlots(change.SeatIndex)[change.SlotIndex];
+                }
+            }
+#endif
             // Commit every prepared random choice before other state writes. The plans
             // validate their captured slots again and never roll a second time.
             for (int i = 0; i < preparedMutations.Length; i++)
@@ -76,6 +88,9 @@ namespace AbsoluteZero.Core.Combat
                 {
                     float newTemp = snapshot.CurrentTemperatures[seat] + resolution.TemperatureDeltas[seat];
                     _accessor.SetTemperature((byte)seat, newTemp);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    Solo.PlaytestTelemetry.Current?.Temperature("multi_resolved", seat, snapshot.CurrentTemperatures[seat], newTemp, resolution.TemperatureDeltas[seat]);
+#endif
                 }
             }
 
@@ -167,6 +182,9 @@ namespace AbsoluteZero.Core.Combat
                     _deathService.TryKill((byte)seat, resolution.LastDamageSources[seat]);
             }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Solo.PlaytestTelemetry.Current?.MultiCommitted(resolution, balanceConsumed);
+#endif
             _deathService.FlushDeathQueue();
             return true;
         }

@@ -191,7 +191,12 @@ namespace AbsoluteZero.Core.Match
             foreach (var rule in gameModeRules)
             {
                 if (rule != null && rule.TargetMode == mode)
+                {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    if (mode == GameMode.Multi) return Solo.BalanceTrialRule.Wrap(rule);
+#endif
                     return rule;
+                }
             }
             return null;
         }

@@ -12,7 +12,6 @@ namespace AbsoluteZero.Core.Player
         public NetworkList<ItemSlotNetData> SlotStates;
 
         const int MAX_SLOTS = 12;
-        const int MAX_DUPLICATE_COPIES = 3;
 
         ItemDataSO[] _itemRegistry;
         short[] _basicItemIds;
@@ -65,6 +64,29 @@ namespace AbsoluteZero.Core.Player
         {
             SlotStates = new NetworkList<ItemSlotNetData>();
         }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        public override void OnNetworkSpawn()
+        {
+            base.OnNetworkSpawn();
+            if (IsServer) SlotStates.OnListChanged += ObserveBalanceInventory;
+        }
+        public override void OnNetworkDespawn()
+        {
+            SlotStates.OnListChanged -= ObserveBalanceInventory;
+            base.OnNetworkDespawn();
+        }
+        void ObserveBalanceInventory(NetworkListEvent<ItemSlotNetData> change)
+        {
+            var recorder = Solo.PlaytestTelemetry.Current;
+            if (recorder == null) return;
+            recorder.Balance("inventory_change", new Solo.BalanceObservation {
+                action = recorder.CurrentBalanceAction, target = GetComponent<PlayerState>()?.PlayerIndex ?? -1,
+                reason = change.Type.ToString(),
+                previousSlot = Solo.PlaytestItemRecord.From(change.PreviousValue),
+                nextSlot = Solo.PlaytestItemRecord.From(change.Value) });
+        }
+#endif
 
         public void Initialize(ItemDataSO[] registry)
         {
@@ -166,8 +188,11 @@ namespace AbsoluteZero.Core.Player
             if (!IsServer) return;
             if (slotIndex >= SlotStates.Count) return;
             var slot = SlotStates[slotIndex];
-            if (slot.IsUnlimited) return;
             if (slot.RemainingUses == 0) return;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Solo.PlaytestTelemetry.Current?.Consumed(GetComponent<PlayerState>()?.PlayerIndex ?? -1, slot);
+#endif
+            if (slot.IsUnlimited) return;
 
             var item = GetItemData(slotIndex);
             string itemName = item != null ? item.ItemName : $"id={slot.ItemId}";
@@ -215,9 +240,7 @@ namespace AbsoluteZero.Core.Player
                 var item = dropTable.Roll(candidate =>
                 {
                     short candidateId = FindItemId(candidate);
-                    return candidateId >= 0
-                        && !IsBasicItem(candidateId)
-                        && CountCopies(candidateId) < MAX_DUPLICATE_COPIES;
+                    return !IsBasicItem(candidateId) && CanGenerate(candidate, EnumerateCopies());
                 });
                 if (item == null) break;
 
@@ -347,11 +370,7 @@ namespace AbsoluteZero.Core.Player
                 var item = dropTable.Roll(candidate =>
                 {
                     short candidateId = FindItemId(candidate);
-                    if (candidateId < 0 || IsBasicItem(candidateId)) return false;
-                    int copies = 0;
-                    for (int i = 0; i < staged.Count; i++)
-                        if (!staged[i].IsEmpty && staged[i].ItemId == candidateId) copies++;
-                    return copies < MAX_DUPLICATE_COPIES;
+                    return !IsBasicItem(candidateId) && CanGenerate(candidate, staged);
                 });
                 if (item == null) return false;
                 short itemId = FindItemId(item);
@@ -373,32 +392,14 @@ namespace AbsoluteZero.Core.Player
             int granted = 0;
             for (int i = 0; i < count; i++)
             {
+                if (FindAvailableCopySlot() < 0) break;
                 var item = RollExcludingOwned(dropTable);
-                if (item == null) continue;
+                if (item == null) break;
 
                 short itemId = FindItemId(item);
                 if (itemId < 0) continue;
 
-                int existingSlot = FindSlotByItemId(itemId);
-                if (existingSlot >= 0 && !SlotStates[existingSlot].IsUnlimited)
-                {
-                    var slot = SlotStates[existingSlot];
-                    slot.RemainingUses = (byte)Mathf.Min(slot.RemainingUses + Mathf.Max(1, item.MaxUses), 254);
-                    SlotStates[existingSlot] = slot;
-                    granted++;
-                    Debug.Log($"[ITEM] GrantRandomItems: STACKED '{item.ItemName}' on slot={existingSlot} (uses→{slot.RemainingUses})");
-                    continue;
-                }
-
-                if (SlotStates.Count >= MAX_SLOTS)
-                {
-                    Debug.Log($"[ITEM] GrantRandomItems: inventory full ({MAX_SLOTS}) — stopped at {granted}/{count}");
-                    return;
-                }
-
-                SlotStates.Add(MakeSlot(itemId, item));
-                granted++;
-                Debug.Log($"[ITEM] GrantRandomItems: slot={SlotStates.Count - 1} → '{item.ItemName}' (id={itemId}, cat={item.Category}, uses={item.MaxUses})");
+                if (GrantSpecificItem(itemId)) granted++;
             }
             Debug.Log($"[ITEM] GrantRandomItems: {granted}/{count} items granted");
         }
@@ -412,38 +413,49 @@ namespace AbsoluteZero.Core.Player
 
             if (!ItemAvailability.IsEnabled(item)) return false;
 
-            int existingSlot = FindSlotByItemId(itemId);
-            if (existingSlot >= 0 && !SlotStates[existingSlot].IsUnlimited)
-            {
-                var slot = SlotStates[existingSlot];
-                slot.RemainingUses = (byte)Mathf.Min(slot.RemainingUses + Mathf.Max(1, item.MaxUses), 254);
-                SlotStates[existingSlot] = slot;
-                return true;
-            }
-
-            if (SlotStates.Count >= MAX_SLOTS) return false;
-            SlotStates.Add(MakeSlot(itemId, item));
+            int destination = FindAvailableCopySlot();
+            if (destination < 0) return false;
+            PlaceCopy(destination, MakeSlot(itemId, item));
             return true;
+        }
+
+        // Every acquisition is a distinct copy. Empty network slots can be reused
+        // without changing surviving copies or exceeding the existing capacity.
+        public int FindAvailableCopySlot() =>
+            InventoryMutationCalculations.SeparateCopySlot(SlotStates.Count, FindEmptySlot(), MAX_SLOTS);
+
+        public bool TryReceiveSeparateCopy(ItemSlotNetData source, out int destination)
+        {
+            destination = -1;
+            if (!IsServer || source.IsEmpty || _itemRegistry == null
+                || source.ItemId < 0 || source.ItemId >= _itemRegistry.Length
+                || !ItemAvailability.IsEnabled(_itemRegistry[source.ItemId])) return false;
+            destination = FindAvailableCopySlot();
+            if (destination < 0) return false;
+            PlaceCopy(destination, AssignNewCopyId(source));
+            return true;
+        }
+
+        void PlaceCopy(int destination, ItemSlotNetData copy)
+        {
+            if (destination < SlotStates.Count) SlotStates[destination] = copy;
+            else SlotStates.Add(copy);
         }
 
         ItemDataSO RollExcludingOwned(ItemDropTable dropTable)
         {
-            const int MAX_ATTEMPTS = 20;
-            for (int attempt = 0; attempt < MAX_ATTEMPTS; attempt++)
-            {
-                var item = dropTable.Roll();
-                if (item == null) return null;
+            return dropTable.Roll(candidate => CanGenerate(candidate, EnumerateCopies()));
+        }
 
-                short itemId = FindItemId(item);
-                if (itemId < 0) return null;
+        internal bool CanGenerate(ItemDataSO candidate, IEnumerable<ItemSlotNetData> slots,
+            int excludedSlot = -1)
+            => ItemAvailability.IsEnabled(candidate)
+                && InventoryMutationCalculations.CanGenerateCopy(FindItemId(candidate),
+                    candidate.MaxUses <= 0, slots, excludedSlot);
 
-                int existingSlot = FindSlotByItemId(itemId);
-                if (existingSlot >= 0 && SlotStates[existingSlot].IsUnlimited)
-                    continue;
-
-                return item;
-            }
-            return null;
+        IEnumerable<ItemSlotNetData> EnumerateCopies()
+        {
+            for (int i = 0; i < SlotStates.Count; i++) yield return SlotStates[i];
         }
 
         int FindSlotByItemId(short itemId)
@@ -469,7 +481,7 @@ namespace AbsoluteZero.Core.Player
                 if (!InventoryMutationCalculations.CanReroll(SlotStates[i], existingItem != null ? existingItem.SlotType : (ItemSlotType?)null)) continue;
 
                 string oldName = GetItemData(i)?.ItemName ?? $"id={SlotStates[i].ItemId}";
-                var newItem = dropTable.Roll();
+                var newItem = dropTable.Roll(candidate => CanGenerate(candidate, EnumerateCopies(), i));
                 if (newItem == null) continue;
 
                 short itemId = FindItemId(newItem);
@@ -498,34 +510,24 @@ namespace AbsoluteZero.Core.Player
                 return;
             }
 
-            int targetSlot = occupied[UnityEngine.Random.Range(0, occupied.Count)];
+            int targetSlot = occupied[Common.GameplayRandom.Range("duel-steal", 0, occupied.Count)];
             string stolenName = otherInventory.GetItemData(targetSlot)?.ItemName ?? $"id={otherInventory.SlotStates[targetSlot].ItemId}";
-            short stolenItemId = otherInventory.SlotStates[targetSlot].ItemId;
-
-            int existingSlot = FindSlotByItemId(stolenItemId);
-            var placement = InventoryMutationCalculations.PlaceStolen(
-                existingSlot >= 0 ? SlotStates[existingSlot] : null,
-                otherInventory.SlotStates[targetSlot].RemainingUses, SlotStates.Count, MAX_SLOTS);
-            if (placement.Destination == StealDestination.Stack)
+            var stolenCopy = otherInventory.SlotStates[targetSlot];
+            if (!TryReceiveSeparateCopy(stolenCopy, out int destination))
             {
-                var slot = SlotStates[existingSlot];
-                slot.RemainingUses = placement.StackedUses;
-                SlotStates[existingSlot] = slot;
-                Debug.Log($"[ITEM] StealRandomItem: stole '{stolenName}' from opponent slot={targetSlot} → STACKED on slot={existingSlot} (uses→{slot.RemainingUses})");
-            }
-            else if (placement.Destination == StealDestination.None)
-            {
-                Debug.Log($"[ITEM] StealRandomItem: inventory full, cannot steal");
+                Debug.Log("[ITEM] StealRandomItem: inventory full, cannot steal");
                 return;
             }
-            else
-            {
-                SlotStates.Add(AssignNewCopyId(otherInventory.SlotStates[targetSlot]));
-                Debug.Log($"[ITEM] StealRandomItem: stole '{stolenName}' from opponent slot={targetSlot} → my slot={SlotStates.Count - 1}");
-            }
+            Debug.Log($"[ITEM] StealRandomItem: stole '{stolenName}' from opponent slot={targetSlot} → separate slot={destination}");
 
             otherInventory.GetComponent<PlayerState>()?.GetActionQueue()?.InvalidateSlot((byte)targetSlot);
             otherInventory.SlotStates[targetSlot] = ItemSlotNetData.Empty;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            var traceDestination = SlotStates[destination];
+            Solo.PlaytestTelemetry.Current?.Transfer(otherInventory.GetComponent<PlayerState>()?.PlayerIndex ?? -1,
+                GetComponent<PlayerState>()?.PlayerIndex ?? -1, stolenCopy.ItemId, stolenCopy.CopyId, traceDestination.CopyId,
+                stolenCopy.RemainingUses, 0, traceDestination.RemainingUses);
+#endif
         }
 
         public void ResetForNewRound()
@@ -586,15 +588,6 @@ namespace AbsoluteZero.Core.Player
                 if (SlotStates[i].IsEmpty)
                     return i;
             return -1;
-        }
-
-        int CountCopies(short itemId)
-        {
-            int count = 0;
-            for (int i = 0; i < SlotStates.Count; i++)
-                if (!SlotStates[i].IsEmpty && SlotStates[i].ItemId == itemId)
-                    count++;
-            return count;
         }
 
         ItemSlotNetData MakeSlot(short itemId, ItemDataSO item)

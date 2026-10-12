@@ -3,6 +3,8 @@ namespace AbsoluteZero.UI.Game.Bridge
     public struct SeatSnapshot
     {
         public byte SeatIndex;
+        public string DisplayName;
+        public Core.Player.LifeState LifeState;
         public ulong? ClientId;
         public Core.Player.Identity.PlayerControllerKind ControllerKind;
         public float Temperature;

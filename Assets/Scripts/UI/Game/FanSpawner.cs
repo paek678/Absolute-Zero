@@ -1,5 +1,6 @@
 using AbsoluteZero.Core.Common;
 using AbsoluteZero.Core.Match;
+using AbsoluteZero.Core.Network;
 using UnityEngine;
 
 namespace AbsoluteZero.UI.Game
@@ -21,6 +22,9 @@ namespace AbsoluteZero.UI.Game
 
         public void SpawnStayItemFans()
         {
+            // GameUIRoot waits for the replicated match config before initializing views.
+            if (MatchCompositionRoot.Instance?.ActiveConfig?.Mode == GameMode.Multi) return;
+
             var views = MatchViewBindings.ForScene(gameObject.scene);
             var bodySprite = views != null ? views.GetSprite(MatchSpriteRole.FanBody) : Resources.Load<Sprite>("Fan/fan_body");
             var bladesSprite = views != null ? views.GetSprite(MatchSpriteRole.FanBlades) : Resources.Load<Sprite>("Fan/fan_blades");
@@ -48,9 +52,11 @@ namespace AbsoluteZero.UI.Game
             go.transform.localPosition = new Vector3(0f, fanLiftBase * s, 0f);
             go.transform.localScale = isPlayer ? Vector3.one * s : new Vector3(-s, s, s);
 
+            AbsoluteZero.Core.Combat.DuelSpriteFacing.Register(go);
             var bodySr = go.AddComponent<SpriteRenderer>();
             bodySr.sprite = bodySprite != null ? bodySprite : fallback;
             bodySr.sortingOrder = 3;
+            if (isPlayer) WorldInteractionLayer.Apply(bodySr, WorldInteractionLayer.ButtonOrder + 1);
 
             if (bodySprite == null || bladesSprite == null) return;
 
@@ -67,6 +73,7 @@ namespace AbsoluteZero.UI.Game
                 var grilleSr = grille.AddComponent<SpriteRenderer>();
                 grilleSr.sprite = grilleSprite;
                 grilleSr.sortingOrder = 5;
+                if (isPlayer) WorldInteractionLayer.Apply(grilleSr, WorldInteractionLayer.ButtonOrder + 3);
             }
 
             var pivot = new GameObject("BladePivot");
@@ -80,6 +87,7 @@ namespace AbsoluteZero.UI.Game
             var bladeSr = blades.AddComponent<SpriteRenderer>();
             bladeSr.sprite = bladesSprite;
             bladeSr.sortingOrder = 4;
+            if (isPlayer) WorldInteractionLayer.Apply(bladeSr, WorldInteractionLayer.ButtonOrder + 2);
 
             var spinner = go.AddComponent<FanBladeSpinner>();
             spinner.Bind(blades.transform, playerIndex);

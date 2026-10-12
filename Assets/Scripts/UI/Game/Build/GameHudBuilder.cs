@@ -2,6 +2,7 @@ using AbsoluteZero.Core.Common;
 using AbsoluteZero.UI.Emote;
 using TMPro;
 using UnityEngine;
+using AbsoluteZero.UI.Common;
 using UnityEngine.UI;
 
 namespace AbsoluteZero.UI.Game.Build
@@ -12,14 +13,16 @@ namespace AbsoluteZero.UI.Game.Build
         static readonly Vector3 READY_BTN_POS = new(0f, 0.35f, 1.2f);
         const float WORLD_CANVAS_SCALE = 0.005f;
         const float OPP_BAR_SCALE = 0.007f;
-        static Sprite _crownSprite;
 
         public static GameHudRefs Build(int seatCount = 2)
         {
             var r = new GameHudRefs();
             BuildOverlayUI(r, seatCount);
-            BuildOppBarWorldUI(r);
+            BuildOppBarWorldUI(r, seatCount > 2);
             BuildReadyWorldUI(r);
+            foreach (var bar in r.OppBars)
+                AbsoluteZero.Core.Combat.DuelSpriteFacing.RegisterWorldUi(bar.Canvas);
+            AbsoluteZero.Core.Combat.DuelSpriteFacing.RegisterWorldUi(r.ReadyCanvas);
             return r;
         }
 
@@ -43,7 +46,7 @@ namespace AbsoluteZero.UI.Game.Build
             BuildClockTimer(r, root);
 
             r.PhaseText = CreateText(root, "PhaseText",
-                new Vector2(0, -30), new Vector2(400, 50), "WAITING", 28);
+                new Vector2(0, -30), new Vector2(400, 50), "참가자 대기", 28);
             AnchorTopCenter(r.PhaseText.GetComponent<RectTransform>());
 
             BuildProgressHud(r, root, seatCount);
@@ -52,6 +55,10 @@ namespace AbsoluteZero.UI.Game.Build
                 new Vector2(0, 30), new Vector2(600, 35), "Waiting for players...", 20);
             r.StatusText.color = new Color(0.8f, 0.8f, 0.8f);
             AnchorBottomCenter(r.StatusText.GetComponent<RectTransform>());
+
+            bool showDiagnostics = seatCount <= 2 || GameplayDebugDisplay.Enabled;
+            r.PhaseText.gameObject.SetActive(showDiagnostics);
+            r.StatusText.gameObject.SetActive(showDiagnostics);
 
             BuildEnvironmentPanel(r, root);
             BuildCinematicOverlay(r, root);
@@ -132,9 +139,6 @@ namespace AbsoluteZero.UI.Game.Build
 
             BuildGiftLines(container.transform);
 
-            r.MyTempText = CreateText(container.transform, "MyTemp",
-                new Vector2(0, -55), new Vector2(200, 24), "37°", 20);
-            r.MyTempText.alignment = TextAlignmentOptions.Center;
         }
 
         static void BuildGiftLines(Transform parent)
@@ -248,39 +252,25 @@ namespace AbsoluteZero.UI.Game.Build
             r.TimerText.color = Color.white;
             r.TimerText.fontStyle = FontStyles.Bold;
 
-            r.TimeAlarmObj = new GameObject("TimeAlarm");
-            r.TimeAlarmObj.transform.SetParent(root, false);
-            var alarmRect = r.TimeAlarmObj.AddComponent<RectTransform>();
-            alarmRect.anchoredPosition = new Vector2(0, 386);
-            alarmRect.sizeDelta = new Vector2(483, 198);
-            alarmRect.anchorMin = new Vector2(0.5f, 0.5f);
-            alarmRect.anchorMax = new Vector2(0.5f, 0.5f);
-            alarmRect.pivot = new Vector2(0.5f, 0.5f);
-            r.TimeAlarmImage = r.TimeAlarmObj.AddComponent<Image>();
-            r.TimeAlarmImage.sprite = GameSprites.Get(GameSprites.ALARM);
-            r.TimeAlarmImage.preserveAspect = true;
-            r.TimeAlarmImage.raycastTarget = false;
-            r.TimeAlarmObj.SetActive(false);
         }
 
-        static void BuildOppBarWorldUI(GameHudRefs r)
+        static void BuildOppBarWorldUI(GameHudRefs r, bool multi)
         {
             const int MAX_OPP_BARS = 3;
             for (int i = 0; i < MAX_OPP_BARS; i++)
             {
-                var entry = BuildSingleOppBar(i);
+                var entry = BuildSingleOppBar(i, multi ? 0.8f : 1f);
                 r.OppBars.Add(entry);
                 entry.Canvas.gameObject.SetActive(false);
             }
 
             var first = r.OppBars[0];
             r.OppBarCanvas = first.Canvas;
-            r.OppTempText = first.TempText;
             r.OppHpSlider = first.HpSlider;
             r.OppHpFillImage = first.HpFillImage;
         }
 
-        static OppBarEntry BuildSingleOppBar(int index)
+        static OppBarEntry BuildSingleOppBar(int index, float scale)
         {
             var canvasGO = new GameObject($"EnemyCanvas_{index}");
             var canvas = canvasGO.AddComponent<Canvas>();
@@ -288,7 +278,7 @@ namespace AbsoluteZero.UI.Game.Build
 
             var rt = canvasGO.GetComponent<RectTransform>();
             rt.sizeDelta = new Vector2(100, 100);
-            canvasGO.transform.localScale = Vector3.one * OPP_BAR_SCALE;
+            canvasGO.transform.localScale = Vector3.one * (OPP_BAR_SCALE * scale);
 
             canvasGO.AddComponent<CanvasScaler>();
             // Display-only world HUD. Its invisible text rect must not intercept
@@ -364,13 +354,9 @@ namespace AbsoluteZero.UI.Game.Build
 
             BuildOppDividerLines(hpBar.transform);
 
-            var tempText = CreateText(canvasGO.transform, "OppTemp",
-                new Vector2(0, -70), new Vector2(360, 32), "37°", 26);
-
             return new OppBarEntry
             {
                 Canvas = canvas,
-                TempText = tempText,
                 HpSlider = slider,
                 HpFillImage = fillImg
             };
@@ -408,6 +394,8 @@ namespace AbsoluteZero.UI.Game.Build
             var canvasGO = new GameObject("ReadyWorldCanvas");
             r.ReadyCanvas = canvasGO.AddComponent<Canvas>();
             r.ReadyCanvas.renderMode = RenderMode.WorldSpace;
+            r.ReadyCanvas.overrideSorting = true;
+            r.ReadyCanvas.sortingOrder = WorldInteractionLayer.ButtonOrder;
 
             var rt = canvasGO.GetComponent<RectTransform>();
             rt.sizeDelta = new Vector2(300, 180);
@@ -425,6 +413,7 @@ namespace AbsoluteZero.UI.Game.Build
             btnRect.sizeDelta = new Vector2(560, 320);
 
             var btnImg = btnGO.AddComponent<Image>();
+            btnImg.material = WorldInteractionLayer.Material;
             if (readySprite != null)
             {
                 btnImg.sprite = readySprite;
@@ -442,105 +431,143 @@ namespace AbsoluteZero.UI.Game.Build
             r.ReadyCanvas.gameObject.SetActive(false);
         }
 
-        static readonly float[][] NameBoxXPositions =
-        {
-            new[] { -145f, 145f },
-            new[] { -180f, 0f, 180f },
-            new[] { -210f, -70f, 70f, 210f }
-        };
-
         static void BuildProgressHud(GameHudRefs r, Transform root, int seatCount)
         {
             seatCount = Mathf.Clamp(seatCount, 2, 4);
-            var container = new GameObject("ProgressHud");
+            const float gap = 10, cardHeight = 84;
+            float width = seatCount == 2 ? 360 : 530;
+            float cardWidth = (width - gap * (seatCount - 1)) / seatCount;
+            var container = new GameObject("ProgressHud", typeof(RectTransform));
             container.transform.SetParent(root, false);
-            var cRect = container.AddComponent<RectTransform>();
-            cRect.anchoredPosition = new Vector2(0, -75);
-            float containerWidth = seatCount <= 2 ? 400 : seatCount == 3 ? 500 : 560;
-            cRect.sizeDelta = new Vector2(containerWidth, 30);
-            AnchorTopCenter(cRect);
-
-            var boxColor = new Color(0.15f, 0.15f, 0.2f, 0.8f);
-            int layoutIdx = Mathf.Clamp(seatCount - 2, 0, NameBoxXPositions.Length - 1);
-            var xPositions = NameBoxXPositions[layoutIdx];
-
-            r.NameBoxes = new Image[seatCount];
-            r.NameTexts = new TextMeshProUGUI[seatCount];
-
+            var rect = container.GetComponent<RectTransform>();
+            AnchorTopCenter(rect);
+            // The wider Multi row otherwise overlaps the authored HP outline.
+            rect.anchoredPosition = new Vector2(seatCount > 2 ? 24 : 0, -120);
+            rect.sizeDelta = new Vector2(width, cardHeight);
+            r.NameBoxes = new Image[seatCount]; r.NameTexts = new TextMeshProUGUI[seatCount];
+            r.SeatLabels = new TextMeshProUGUI[seatCount]; r.ActionLabels = new TextMeshProUGUI[seatCount];
+            r.ScoreLabels = new TextMeshProUGUI[seatCount];
+            r.ActionBadges = new Image[seatCount]; r.ActiveFrames = new Image[seatCount];
+            r.ActionBadgeRoots = new GameObject[seatCount];
+            var bannerFrame = Resources.Load<Sprite>("UI/ParticipantBannerFrame");
+            var bannerFont = Resources.Load<TMP_FontAsset>("UI/Fonts/GmarketBanner");
+            var ink = new Color(.23f, .20f, .18f);
             for (int i = 0; i < seatCount; i++)
             {
-                float xPos = i < xPositions.Length ? xPositions[i] : xPositions[xPositions.Length - 1];
-                r.NameBoxes[i] = CreatePanel(container.transform, $"P{i}Box",
-                    new Vector2(xPos, 0), new Vector2(130, 28), boxColor);
-                r.NameTexts[i] = CreateText(r.NameBoxes[i].transform, $"P{i}Name",
-                    Vector2.zero, new Vector2(120, 24), $"Player {i + 1}", 14);
-                r.NameTexts[i].alignment = TextAlignmentOptions.Center;
+                float x = -width / 2 + cardWidth / 2 + i * (cardWidth + gap);
+                var box = CreatePanel(rect, $"P{i}Box", new Vector2(x, 0), new Vector2(cardWidth, cardHeight), Color.clear);
+                box.raycastTarget = false;
+                var activeFrame = CreatePanel(box.transform, "ActiveHighlight", Vector2.zero,
+                    box.rectTransform.sizeDelta + new Vector2(4, 4), new Color(1f, .74f, .27f));
+                activeFrame.sprite = bannerFrame;
+                activeFrame.type = Image.Type.Sliced;
+                activeFrame.raycastTarget = false;
+                activeFrame.enabled = false;
+                r.ActiveFrames[i] = activeFrame;
+                r.NameBoxes[i] = BuildCartoonBanner(box.rectTransform, bannerFrame, new Color(.74f, .86f, .82f));
+                var badge = CreatePanel(box.transform, "ActionBadge", new Vector2(0, -22),
+                    new Vector2(cardWidth - 24, 24), Color.clear);
+                badge.raycastTarget = false;
+                badge.gameObject.AddComponent<RectMask2D>();
+                r.ActionBadgeRoots[i] = badge.gameObject;
+                r.ActionBadges[i] = CreatePanel(badge.transform, "BadgeFill", Vector2.zero,
+                    badge.rectTransform.sizeDelta - new Vector2(8, 8), new Color(1f, .94f, .76f));
+                r.ActionBadges[i].raycastTarget = false;
+                var badgeBorder = CreatePanel(badge.transform, "BadgeBorder", Vector2.zero,
+                    badge.rectTransform.sizeDelta, Color.white);
+                badgeBorder.sprite = bannerFrame;
+                badgeBorder.type = Image.Type.Sliced;
+                badgeBorder.pixelsPerUnitMultiplier = 2.5f;
+                badgeBorder.raycastTarget = false;
+                // Gmarket's full-height Korean glyphs need smaller point sizes than
+                // Dongle. Keep the identity, nickname and action rows visually separate.
+                r.SeatLabels[i] = CreateText(box.transform, "Seat", new Vector2(-19, 28.5f), new Vector2(cardWidth - 62, 22), $"P{i + 1}", 11);
+                r.SeatLabels[i].enableAutoSizing = true; r.SeatLabels[i].fontSizeMin = 8; r.SeatLabels[i].fontSizeMax = 11;
+                r.ScoreLabels[i] = CreateText(box.transform, "Score", new Vector2(cardWidth / 2 - 28, 28.5f), new Vector2(36, 22), "", 14);
+                r.ScoreLabels[i].enableAutoSizing = true; r.ScoreLabels[i].fontSizeMin = 10; r.ScoreLabels[i].fontSizeMax = 14;
+                r.NameTexts[i] = CreateText(box.transform, $"P{i}Name", new Vector2(0, 6), new Vector2(cardWidth - 16, 36), "빈 자리", 22);
+                r.NameTexts[i].enableAutoSizing = true; r.NameTexts[i].fontSizeMin = 12; r.NameTexts[i].fontSizeMax = 22;
+                r.ActionLabels[i] = CreateText(badge.transform, "Action", Vector2.zero,
+                    new Vector2(badge.rectTransform.sizeDelta.x - 16, 20), "", 14);
+                r.ActionLabels[i].enableAutoSizing = true;
+                r.ActionLabels[i].fontSizeMin = 10;
+                r.ActionLabels[i].fontSizeMax = 14;
+                foreach (var label in new[] { r.SeatLabels[i], r.ScoreLabels[i], r.NameTexts[i], r.ActionLabels[i] })
+                {
+                    if (bannerFont != null) label.font = bannerFont;
+                    label.alignment = TextAlignmentOptions.Midline;
+                    label.raycastTarget = false; label.richText = false; label.color = ink;
+                    label.textWrappingMode = TextWrappingModes.NoWrap; label.overflowMode = TextOverflowModes.Ellipsis;
+                }
+                StyleBannerTitle(r.NameTexts[i]);
+                r.SeatLabels[i].fontStyle = FontStyles.Normal;
+                r.SeatLabels[i].alignment = TextAlignmentOptions.MidlineLeft;
+                r.SeatLabels[i].color = new Color(.34f, .30f, .26f);
+                r.ScoreLabels[i].alignment = TextAlignmentOptions.MidlineRight;
+                StyleBannerTitle(r.ScoreLabels[i]);
+                r.ActionLabels[i].fontStyle = FontStyles.Normal;
+                badge.gameObject.SetActive(false);
             }
-
-            r.P1NameBox = r.NameBoxes[0];
-            r.P2NameBox = r.NameBoxes.Length > 1 ? r.NameBoxes[1] : null;
-            r.P1NameText = r.NameTexts[0];
-            r.P2NameText = r.NameTexts.Length > 1 ? r.NameTexts[1] : null;
-
-            r.ScoreText = CreateText(container.transform, "ScoreText",
-                Vector2.zero, new Vector2(80, 30), "0 : 0", 20);
-            r.ScoreText.color = new Color(0.9f, 0.9f, 0.6f);
-
-            r.CrownText = CreateText(container.transform, "Crown",
-                new Vector2(-80, 0), new Vector2(24, 24), "", 18);
-            r.CrownText.raycastTarget = false;
-            var crownGO = new GameObject("CrownIcon", typeof(RectTransform));
-            crownGO.transform.SetParent(r.CrownText.transform, false);
-            var crownRect = crownGO.GetComponent<RectTransform>();
-            crownRect.anchorMin = Vector2.zero;
-            crownRect.anchorMax = Vector2.one;
-            crownRect.offsetMin = Vector2.zero;
-            crownRect.offsetMax = Vector2.zero;
-            var crownImage = crownGO.AddComponent<Image>();
-            crownImage.sprite = GetCrownSprite();
-            crownImage.color = new Color(1f, 0.85f, 0.2f);
-            crownImage.raycastTarget = false;
-            r.CrownText.gameObject.SetActive(false);
+            r.P1NameBox = r.NameBoxes[0]; r.P2NameBox = r.NameBoxes[1];
+            r.P1NameText = r.NameTexts[0]; r.P2NameText = r.NameTexts[1];
+            // Keep the round above the cards, with room below the phase diagnostics.
+            // The row's bottom remains above the former combined score ribbon.
+            var roundPanel = CreatePanel(rect, "RoundRibbon", new Vector2(0, 65), new Vector2(138, 26), Color.clear);
+            roundPanel.raycastTarget = false;
+            BuildCartoonBanner(roundPanel.rectTransform, bannerFrame, new Color(.96f, .89f, .75f));
+            r.RoundText = CreateText(roundPanel.transform, "RoundText", Vector2.zero, new Vector2(122, 20), "라운드 0", 14);
+            r.RoundText.raycastTarget = false;
+            r.RoundText.richText = false;
+            r.RoundText.textWrappingMode = TextWrappingModes.NoWrap;
+            if (bannerFont != null) r.RoundText.font = bannerFont;
+            r.RoundText.alignment = TextAlignmentOptions.Midline;
+            r.RoundText.color = ink;
+            StyleBannerTitle(r.RoundText);
         }
 
-        static Sprite GetCrownSprite()
+        static void StyleBannerTitle(TextMeshProUGUI label)
         {
-            if (_crownSprite != null) return _crownSprite;
-            const int size = 48;
-            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false)
-            {
-                filterMode = FilterMode.Bilinear,
-                wrapMode = TextureWrapMode.Clamp
-            };
-            var outline = new[]
-            {
-                new Vector2(6, 11), new Vector2(5, 36), new Vector2(17, 25),
-                new Vector2(24, 42), new Vector2(31, 25), new Vector2(43, 36),
-                new Vector2(42, 11)
-            };
-            for (int y = 0; y < size; y++)
-            for (int x = 0; x < size; x++)
-            {
-                bool inside = y >= 5 && y <= 10 && x >= 6 && x <= 42;
-                if (!inside)
-                {
-                    bool crossing = false;
-                    for (int i = 0, j = outline.Length - 1; i < outline.Length; j = i++)
-                    {
-                        var a = outline[i];
-                        var b = outline[j];
-                        if ((a.y > y) != (b.y > y)
-                            && x < (b.x - a.x) * (y - a.y) / (b.y - a.y) + a.x)
-                            crossing = !crossing;
-                    }
-                    inside = crossing;
-                }
-                texture.SetPixel(x, y, inside ? Color.white : Color.clear);
-            }
-            texture.Apply(false, true);
-            _crownSprite = Sprite.Create(texture, new Rect(0, 0, size, size),
-                new Vector2(0.5f, 0.5f), size);
-            return _crownSprite;
+            // The selected font already supplies its native Bold weight.
+            // Do not stack TMP synthetic bold on top and close the small counters.
+            label.fontStyle = FontStyles.Normal;
+            label.characterSpacing = 0;
+            // Vertex colors preserve the shared font material and Korean fallback atlas.
+            label.color = Color.white;
+            label.enableVertexGradient = true;
+            var top = new Color(.35f, .27f, .20f);
+            var bottom = new Color(.16f, .12f, .10f);
+            label.colorGradient = new VertexGradient(top, top, bottom, bottom);
+        }
+
+        // Generated frame and solid fill are separate: active-seat colors never tint
+        // the white outline, and the generated center's alpha never obscures text.
+        static Image BuildCartoonBanner(RectTransform root, Sprite frame, Color color)
+        {
+            bool compact = root.sizeDelta.y < 40;
+            var shadow = CreatePanel(root, "BannerShadow", new Vector2(0, -3), root.sizeDelta,
+                new Color(.12f, .16f, .17f, .35f));
+            shadow.sprite = frame;
+            shadow.type = Image.Type.Sliced;
+            shadow.pixelsPerUnitMultiplier = compact ? 1.5f : 1f;
+            shadow.raycastTarget = false;
+            if (frame == null) shadow.enabled = false;
+            var fill = CreatePanel(root, "PastelFill", Vector2.zero, root.sizeDelta - new Vector2(10, 10), color);
+            fill.raycastTarget = false;
+            float sheenHeight = compact ? 7 : 24;
+            var sheen = CreatePanel(root, "TopSheen", new Vector2(0, root.sizeDelta.y / 2 - 7 - sheenHeight / 2),
+                new Vector2(root.sizeDelta.x - 16, sheenHeight), new Color(1f, 1f, 1f, .23f));
+            sheen.raycastTarget = false;
+            var glint = CreatePanel(root, "TopGlint", new Vector2(0, root.sizeDelta.y / 2 - 8),
+                new Vector2(root.sizeDelta.x - 30, 2), new Color(1f, 1f, 1f, .72f));
+            glint.raycastTarget = false;
+            var border = CreatePanel(root, "WhiteFrame", Vector2.zero, root.sizeDelta, Color.white);
+            border.raycastTarget = false;
+            border.sprite = frame;
+            border.type = Image.Type.Sliced;
+            // The thinner score strip uses the same source with smaller corners.
+            border.pixelsPerUnitMultiplier = compact ? 1.5f : 1f;
+            if (frame == null) border.color = Color.clear;
+            return fill;
         }
 
         static void BuildCinematicOverlay(GameHudRefs r, Transform root)
@@ -556,24 +583,32 @@ namespace AbsoluteZero.UI.Game.Build
             r.CinematicOverlay.color = new Color(0f, 0f, 0f, 0f);
             r.CinematicOverlay.raycastTarget = false;
 
+            r.CinematicPlate = CreatePanel(overlayGO.transform, "ResultPlate",
+                new Vector2(0, 20), new Vector2(880, 160), new Color(1, 1, 1, 0));
+            CasualUiSkin.Surface(r.CinematicPlate, new Color(1, 1, 1, 0));
+            r.CinematicPlate.raycastTarget = false;
             r.CinematicText = CreateText(overlayGO.transform, "CinematicText",
                 new Vector2(0, 20), new Vector2(800, 100), "", 64);
-            r.CinematicText.fontStyle = FontStyles.Bold;
+            CasualUiSkin.Label(r.CinematicText);
+            r.CinematicText.enableAutoSizing = true; r.CinematicText.fontSizeMin = 32; r.CinematicText.fontSizeMax = 64;
             r.CinematicText.color = new Color(1f, 1f, 1f, 0f);
 
             r.LobbyButton = CreateButton(overlayGO.transform, "LobbyBtn",
-                new Vector2(110, -60), new Vector2(200, 45), "로비로",
+                new Vector2(150, -110), new Vector2(270, 60), "로비로",
                 new Color(0.5f, 0.3f, 0.3f));
             r.LobbyButton.gameObject.SetActive(false);
 
             r.RematchButton = CreateButton(overlayGO.transform, "RematchBtn",
-                new Vector2(-110, -60), new Vector2(200, 45), "재대결",
+                new Vector2(-150, -110), new Vector2(270, 60), "재대결",
                 new Color(0.3f, 0.5f, 0.3f));
             r.RematchButton.gameObject.SetActive(false);
 
             r.RematchStatusText = CreateText(overlayGO.transform, "RematchStatus",
-                new Vector2(0, -110), new Vector2(400, 30), "", 18);
+                new Vector2(0, -170), new Vector2(820, 75), "", 18);
             r.RematchStatusText.gameObject.SetActive(false);
+            CasualUiSkin.Button(r.LobbyButton, CasualUiSkin.Peach);
+            CasualUiSkin.Button(r.RematchButton, CasualUiSkin.Mint);
+            CasualUiSkin.Label(r.RematchStatusText, new Color(.96f, .94f, .88f));
 
             overlayGO.SetActive(false);
         }
@@ -583,36 +618,61 @@ namespace AbsoluteZero.UI.Game.Build
             var panel = new GameObject("GhostSkillPanel");
             panel.transform.SetParent(root, false);
             var panelRect = panel.AddComponent<RectTransform>();
-            panelRect.anchoredPosition = new Vector2(0, 180);
-            panelRect.sizeDelta = new Vector2(440, 140);
+            panelRect.anchoredPosition = new Vector2(0, 140);
+            panelRect.sizeDelta = new Vector2(420, 100);
             AnchorBottomCenter(panelRect);
 
             CreatePanel(panel.transform, "GhostBg",
-                Vector2.zero, new Vector2(440, 140),
+                Vector2.zero, new Vector2(420, 100),
                 new Color(0.1f, 0.05f, 0.15f, 0.85f));
 
             r.GhostStatusText = CreateText(panel.transform, "GhostStatus",
-                new Vector2(0, 45), new Vector2(400, 30), "Ghost Mode — select a skill", 16);
+                new Vector2(0, 65), new Vector2(400, 30), "", 16);
             r.GhostStatusText.color = new Color(0.7f, 0.8f, 1f);
 
             r.FrostStrikeButton = CreateButton(panel.transform, "FrostStrikeBtn",
-                new Vector2(-110, -15), new Vector2(190, 50), "귀신의 한",
+                new Vector2(-100, 12), new Vector2(190, 50), "귀신의 한",
                 new Color(0.2f, 0.4f, 0.7f));
 
             r.FrostStrikeCooldownText = CreateText(panel.transform, "FrostCD",
-                new Vector2(-110, -50), new Vector2(190, 20), "", 14);
+                new Vector2(-100, -25), new Vector2(190, 20), "", 14);
             r.FrostStrikeCooldownText.color = new Color(0.6f, 0.7f, 1f);
 
             r.ChillAuraButton = CreateButton(panel.transform, "ChillAuraBtn",
-                new Vector2(110, -15), new Vector2(190, 50), "빙의",
+                new Vector2(100, 12), new Vector2(190, 50), "빙의",
                 new Color(0.3f, 0.2f, 0.6f));
 
             r.ChillAuraCooldownText = CreateText(panel.transform, "ChillCD",
-                new Vector2(110, -50), new Vector2(190, 20), "", 14);
+                new Vector2(100, -25), new Vector2(190, 20), "", 14);
             r.ChillAuraCooldownText.color = new Color(0.6f, 0.7f, 1f);
 
+            CasualUiSkin.At(panel.transform, "GhostBg", CasualUiSkin.Lavender);
+            CasualUiSkin.Labels(panel.transform);
+            CasualUiSkin.Button(r.FrostStrikeButton, CasualUiSkin.Sky);
+            CasualUiSkin.Button(r.ChillAuraButton, CasualUiSkin.Lavender);
+            AddGhostSkillIcon(r.FrostStrikeButton, "skill_han");
+            AddGhostSkillIcon(r.ChillAuraButton, "skill_capture");
             r.GhostSkillPanel = panel;
             panel.SetActive(false);
+        }
+
+        static void AddGhostSkillIcon(Button button, string resource)
+        {
+            var sprite = Resources.Load<Sprite>(resource);
+            if (sprite == null) return;
+            var iconObject = new GameObject("SkillIcon", typeof(RectTransform), typeof(UnityEngine.UI.Image));
+            iconObject.transform.SetParent(button.transform, false);
+            var icon = iconObject.GetComponent<UnityEngine.UI.Image>();
+            icon.sprite = sprite;
+            icon.preserveAspect = true;
+            icon.raycastTarget = false;
+            var rect = icon.rectTransform;
+            rect.anchorMin = rect.anchorMax = new Vector2(0f, .5f);
+            rect.anchoredPosition = new Vector2(30f, 0f);
+            rect.sizeDelta = new Vector2(42f, 42f);
+            var label = button.GetComponentInChildren<TextMeshProUGUI>();
+            label.rectTransform.offsetMin = new Vector2(56f, 0f);
+            label.rectTransform.offsetMax = new Vector2(-8f, 0f);
         }
 
         static void BuildEnvironmentPanel(GameHudRefs r, Transform root)
@@ -633,6 +693,8 @@ namespace AbsoluteZero.UI.Game.Build
             r.EnvText.fontStyle = FontStyles.Bold;
             r.EnvText.color = new Color(1f, 0.85f, 0.3f);
 
+            CasualUiSkin.At(r.EnvPanel.transform, "EnvBg", CasualUiSkin.Butter);
+            CasualUiSkin.Label(r.EnvText);
             r.EnvPanel.SetActive(false);
         }
 

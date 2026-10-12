@@ -22,7 +22,7 @@ MonoBehaviour:
   DropWeight: 12
   IsFreeAction: 0
   AnimTrigger: fan
-  OpponentAnimTrigger: swing
+  OpponentAnimTrigger: attack
   AnimDuration: 1.5
   EffectDelay: 0.75
   EffectHitCount: 1

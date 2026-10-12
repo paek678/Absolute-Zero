@@ -1,171 +1,157 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace AbsoluteZero.UI.Game.Presenters
 {
-    /// <summary>
-    /// Client-local targeting ribbon. It renders in screen space and never owns gameplay state.
-    /// </summary>
+    /// <summary>Local aim feedback only. Target identity and input remain owned by GameUIManager.</summary>
     public sealed class TargetingArrowPresenter : MonoBehaviour
     {
         Canvas _canvas;
         RectTransform _canvasRect;
-        TargetingArrowGraphic _graphic;
+        Graphic _graphic;
+        Vector2 _size = new(46, 54);
+        readonly List<SpriteRenderer> _renderers = new();
+        readonly Vector3[] _corners = new Vector3[4];
+        public bool IsVisible => isActiveAndEnabled && _graphic != null && _graphic.gameObject.activeInHierarchy;
 
-        public bool IsVisible => _graphic != null && _graphic.gameObject.activeSelf;
-
-        public void Initialize()
+        public void Initialize(Sprite sprite = null, float size = 64f)
         {
             if (_canvas != null) return;
-
-            var canvasObject = new GameObject("TargetingArrowCanvas", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler));
-            canvasObject.transform.SetParent(transform, false);
-            _canvas = canvasObject.GetComponent<Canvas>();
+            var root = new GameObject("TargetingArrowCanvas", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler));
+            root.transform.SetParent(transform, false);
+            _canvas = root.GetComponent<Canvas>();
             _canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             _canvas.overrideSorting = true;
             _canvas.sortingOrder = -10;
-
-            var scaler = canvasObject.GetComponent<CanvasScaler>();
+            var scaler = root.GetComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920f, 1080f);
-            scaler.matchWidthOrHeight = 0.5f;
-            _canvasRect = canvasObject.GetComponent<RectTransform>();
-
-            var graphicObject = new GameObject("TargetingRibbon", typeof(RectTransform), typeof(TargetingArrowGraphic));
-            graphicObject.transform.SetParent(canvasObject.transform, false);
-            var rect = graphicObject.GetComponent<RectTransform>();
-            rect.anchorMin = Vector2.zero;
-            rect.anchorMax = Vector2.one;
-            rect.offsetMin = Vector2.zero;
-            rect.offsetMax = Vector2.zero;
-
-            _graphic = graphicObject.GetComponent<TargetingArrowGraphic>();
+            scaler.referenceResolution = new Vector2(1920, 1080);
+            scaler.matchWidthOrHeight = .5f;
+            _canvasRect = root.GetComponent<RectTransform>();
+            var go = new GameObject("TargetMarker", typeof(RectTransform));
+            go.transform.SetParent(root.transform, false);
+            var rt = go.GetComponent<RectTransform>();
+            rt.anchorMin = rt.anchorMax = new Vector2(.5f, .5f);
+            rt.pivot = new Vector2(.5f, 0);
+            if (sprite != null)
+            {
+                var icon = go.AddComponent<Image>();
+                icon.sprite = sprite; icon.preserveAspect = true;
+                _graphic = icon; _size = Vector2.one * size;
+            }
+            else _graphic = go.AddComponent<TargetingArrowGraphic>();
+            rt.sizeDelta = _size;
             _graphic.raycastTarget = false;
-            _graphic.gameObject.SetActive(false);
+            Hide();
         }
 
-        public void Show(Vector2 tailScreen, Vector2 headScreen, bool straight, float bendDirection)
+        public static bool TryProjectVisible(Camera camera, Vector3 world, out Vector2 screen)
+        {
+            screen = default;
+            if (camera == null) return false;
+            Vector3 point = camera.WorldToScreenPoint(world);
+            if (point.z <= camera.nearClipPlane || point.z >= camera.farClipPlane
+                || !camera.pixelRect.Contains(new Vector2(point.x, point.y))) return false;
+            screen = point;
+            return true;
+        }
+
+        public bool Show(Camera camera, Transform target, RectTransform healthBar)
         {
             Initialize();
-            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(_canvasRect, tailScreen, null, out var tail)
-                || !RectTransformUtility.ScreenPointToLocalPointInRectangle(_canvasRect, headScreen, null, out var head))
-            {
-                Hide();
-                return;
-            }
+            if (!isActiveAndEnabled || target == null || !target.gameObject.activeInHierarchy
+                || !TryProjectVisible(camera, target.position + Vector3.up, out var head))
+            { Hide(); return false; }
 
-            _graphic.SetPath(tail, head, straight, Mathf.Approximately(bendDirection, 0f) ? 1f : Mathf.Sign(bendDirection));
+            // List overload reuses storage, including after appearance children are replaced.
+            target.GetComponentsInChildren(false, _renderers);
+            float top = head.y;
+            foreach (var renderer in _renderers)
+            {
+                if (!renderer.enabled || renderer.sprite == null) continue;
+                var name = renderer.name;
+                if (Excluded(name)) continue;
+                var bounds = renderer.bounds;
+                if (_graphic is Image && name == "head") head.x = camera.WorldToScreenPoint(bounds.center).x;
+                for (int i = 0; i < 8; i++)
+                {
+                    var corner = bounds.center + Vector3.Scale(bounds.extents,
+                        new Vector3((i & 1) == 0 ? -1 : 1, (i & 2) == 0 ? -1 : 1, (i & 4) == 0 ? -1 : 1));
+                    var screen = camera.WorldToScreenPoint(corner);
+                    if (screen.z > camera.nearClipPlane) top = Mathf.Max(top, screen.y);
+                }
+            }
+            if (healthBar != null && healthBar.gameObject.activeInHierarchy)
+            {
+                healthBar.GetWorldCorners(_corners);
+                foreach (var corner in _corners)
+                {
+                    var screen = camera.WorldToScreenPoint(corner);
+                    if (screen.z > camera.nearClipPlane) top = Mathf.Max(top, screen.y);
+                }
+            }
+            float scale = Mathf.Sqrt(Screen.width / 1920f * (Screen.height / 1080f));
+            head.y = top + 10 * scale;
+            var viewport = camera.pixelRect;
+            if (head.y + _size.y * scale > viewport.yMax || head.x - _size.x * .5f * scale < viewport.xMin
+                || head.x + _size.x * .5f * scale > viewport.xMax)
+            { Hide(); return false; }
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(_canvasRect, head, null, out var local))
+            { Hide(); return false; }
+            _graphic.rectTransform.anchoredPosition = local;
+            _graphic.gameObject.SetActive(true);
+            return true;
+        }
+
+        static bool Excluded(string name) => Contains(name, "item") || Contains(name, "fan")
+            || Contains(name, "effect") || Contains(name, "outline") || Contains(name, "freeze")
+            || Contains(name, "ghost") || Contains(name, "arrow") || Contains(name, "indicator");
+        static bool Contains(string value, string word) => value.IndexOf(word, StringComparison.OrdinalIgnoreCase) >= 0;
+        public void Hide() { if (_graphic != null) _graphic.gameObject.SetActive(false); }
+        public void ShowAtScreen(Vector2 screen)
+        {
+            if (_canvasRect == null || !isActiveAndEnabled) { Hide(); return; }
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(_canvasRect, screen, null, out var local);
+            _graphic.rectTransform.anchoredPosition = local;
             _graphic.gameObject.SetActive(true);
         }
-
-        public void Hide()
+        public Rect ScreenRect
         {
-            if (_graphic != null)
-                _graphic.gameObject.SetActive(false);
+            get
+            {
+                if (_graphic == null) return default;
+                _graphic.rectTransform.GetWorldCorners(_corners);
+                return Rect.MinMaxRect(_corners[0].x, _corners[0].y, _corners[2].x, _corners[2].y);
+            }
         }
+        void OnDisable() => Hide();
     }
 
     [RequireComponent(typeof(CanvasRenderer))]
     sealed class TargetingArrowGraphic : MaskableGraphic
     {
-        const int SegmentCount = 28;
-        static readonly Color32 OutlineColor = new(70, 34, 5, 255);
-        static readonly Color32 FillColor = new(255, 202, 18, 255);
-
-        Vector2 _tail;
-        Vector2 _head;
-        bool _straight;
-        float _bendDirection = 1f;
-
-        public void SetPath(Vector2 tail, Vector2 head, bool straight, float bendDirection)
-        {
-            _tail = tail;
-            _head = head;
-            _straight = straight;
-            _bendDirection = bendDirection;
-            SetVerticesDirty();
-        }
-
+        static readonly Color32 Outline = new(53, 20, 19, 255);
+        static readonly Color32 Fill = new(232, 59, 51, 255);
         protected override void OnPopulateMesh(VertexHelper vh)
         {
             vh.Clear();
-            Vector2 delta = _head - _tail;
-            float distance = delta.magnitude;
-            if (distance < 24f) return;
-
-            Vector2 direction = delta / distance;
-            float outerHeadLength = Mathf.Clamp(distance * 0.16f, 34f, 62f);
-            Vector2 curveEnd = _head - direction * outerHeadLength * 0.62f;
-            GetControls(_tail, curveEnd, distance, out var c1, out var c2);
-
-            AddRibbon(vh, _tail, c1, c2, curveEnd, 34f, OutlineColor);
-            AddRibbon(vh, _tail, c1, c2, curveEnd, 23f, FillColor);
-
-            Vector2 tangent = (curveEnd - Cubic(_tail, c1, c2, curveEnd, 0.94f)).normalized;
-            if (tangent.sqrMagnitude < 0.01f) tangent = direction;
-            Vector2 normal = new(-tangent.y, tangent.x);
-            AddTriangle(vh, _head, curveEnd - tangent * 9f + normal * 34f,
-                curveEnd - tangent * 9f - normal * 34f, OutlineColor);
-            AddTriangle(vh, _head - tangent * 5f, curveEnd + normal * 23f,
-                curveEnd - normal * 23f, FillColor);
+            Quad(vh, -8, 24, 8, 54, Outline);
+            Triangle(vh, new(-23, 26), new(23, 26), Vector2.zero, Outline);
+            Quad(vh, -5, 21, 5, 51, Fill);
+            Triangle(vh, new(-17, 23), new(17, 23), new(0, 5), Fill);
         }
-
-        void GetControls(Vector2 start, Vector2 end, float distance, out Vector2 c1, out Vector2 c2)
+        static void Quad(VertexHelper vh, float left, float bottom, float right, float top, Color32 color)
         {
-            if (_straight)
-            {
-                c1 = Vector2.Lerp(start, end, 0.34f);
-                c2 = Vector2.Lerp(start, end, 0.68f);
-                return;
-            }
-
-            float bend = Mathf.Clamp(distance * 0.58f, 150f, 430f) * _bendDirection;
-            float rise = Mathf.Max(80f, Mathf.Abs(end.y - start.y) * 0.42f);
-            c1 = start + new Vector2(bend, rise);
-            c2 = end + new Vector2(bend * 0.72f, -rise * 0.28f);
+            Triangle(vh, new(left,bottom), new(left,top), new(right,top), color);
+            Triangle(vh, new(left,bottom), new(right,top), new(right,bottom), color);
         }
-
-        static void AddRibbon(VertexHelper vh, Vector2 p0, Vector2 p1, Vector2 p2, Vector2 p3,
-            float width, Color32 color)
+        static void Triangle(VertexHelper vh, Vector2 a, Vector2 b, Vector2 c, Color32 color)
         {
-            int first = vh.currentVertCount;
-            float half = width * 0.5f;
-            for (int i = 0; i <= SegmentCount; i++)
-            {
-                float t = i / (float)SegmentCount;
-                Vector2 point = Cubic(p0, p1, p2, p3, t);
-                Vector2 tangent = CubicTangent(p0, p1, p2, p3, t).normalized;
-                if (tangent.sqrMagnitude < 0.01f) tangent = Vector2.up;
-                Vector2 normal = new(-tangent.y, tangent.x);
-                vh.AddVert(point + normal * half, color, Vector2.zero);
-                vh.AddVert(point - normal * half, color, Vector2.zero);
-                if (i == 0) continue;
-                int current = first + i * 2;
-                int previous = current - 2;
-                vh.AddTriangle(previous, previous + 1, current);
-                vh.AddTriangle(current, previous + 1, current + 1);
-            }
-        }
-
-        static void AddTriangle(VertexHelper vh, Vector2 a, Vector2 b, Vector2 c, Color32 color)
-        {
-            int first = vh.currentVertCount;
-            vh.AddVert(a, color, Vector2.zero);
-            vh.AddVert(b, color, Vector2.zero);
-            vh.AddVert(c, color, Vector2.zero);
-            vh.AddTriangle(first, first + 1, first + 2);
-        }
-
-        static Vector2 Cubic(Vector2 p0, Vector2 p1, Vector2 p2, Vector2 p3, float t)
-        {
-            float u = 1f - t;
-            return u * u * u * p0 + 3f * u * u * t * p1 + 3f * u * t * t * p2 + t * t * t * p3;
-        }
-
-        static Vector2 CubicTangent(Vector2 p0, Vector2 p1, Vector2 p2, Vector2 p3, float t)
-        {
-            float u = 1f - t;
-            return 3f * u * u * (p1 - p0) + 6f * u * t * (p2 - p1) + 3f * t * t * (p3 - p2);
+            int start = vh.currentVertCount;
+            vh.AddVert(a,color,Vector2.zero); vh.AddVert(b,color,Vector2.zero); vh.AddVert(c,color,Vector2.zero);
+            vh.AddTriangle(start,start+1,start+2);
         }
     }
 }

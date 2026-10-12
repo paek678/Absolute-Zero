@@ -54,9 +54,18 @@ namespace AbsoluteZero.Core.Solo
                     actor.SlotStates.Add(Copy(firstId, 250)); target.SlotStates.Add(Copy(firstId, 10));
                     uint retainedCopy = actor.SlotStates[0].CopyId;
                     Steal();
-                    Require(actor.SlotStates.Count == 1 && actor.SlotStates[0].RemainingUses == 254
-                        && actor.SlotStates[0].CopyId == retainedCopy && target.SlotStates[0].IsEmpty,
-                        "stack saturates below unlimited and retains destination identity policy=" + policy);
+                    Require(actor.SlotStates.Count == 2 && actor.SlotStates[0].RemainingUses == 250
+                        && actor.SlotStates[0].CopyId == retainedCopy && actor.SlotStates[1].RemainingUses == 10
+                        && actor.SlotStates[1].CopyId != retainedCopy && target.SlotStates[0].IsEmpty,
+                        "stolen duplicate has separate identity and original uses policy=" + policy);
+
+                    // Capacity is about occupied copies, including a hole in a full list.
+                    while (actor.SlotStates.Count < 12) actor.GrantSpecificItem(firstId);
+                    actor.SlotStates[5] = ItemSlotNetData.Empty;
+                    target.SlotStates.Clear(); target.SlotStates.Add(Copy(firstId, 2));
+                    Steal();
+                    Require(actor.SlotStates.Count == 12 && actor.SlotStates[5].RemainingUses == 2
+                        && target.SlotStates[0].IsEmpty, "steal reuses one vacant slot without merging policy=" + policy);
 
                     if (prepared)
                     {
@@ -68,6 +77,12 @@ namespace AbsoluteZero.Core.Solo
                         var beforeApply = Random.state;
                         Require(!plan.TryApply() && actor.SlotStates.Count == 0 && target.SlotStates[0].Equals(changed)
                             && Random.state.Equals(beforeApply), "stale steal rejects atomically without another draw");
+                        actor.SlotStates.Add(ItemSlotNetData.Empty);
+                        Require(mutator.TryPrepareMutation(InventoryMutationType.StealFromTarget, 0, 1, out plan),
+                            "vacant destination steal prepared");
+                        actor.GrantSpecificItem(firstId);
+                        Require(!plan.TryApply() && target.SlotStates[0].Equals(changed),
+                            "prepared steal rejects a destination filled after preparation");
                     }
 
                     actor.SlotStates.Clear();
@@ -75,7 +90,7 @@ namespace AbsoluteZero.Core.Solo
                         item => item != null && item.SlotType == ItemSlotType.Main);
                     Require(mainId >= 0, "reroll fixture resolves a real Main item");
                     var untouchedMain = Copy(mainId, 2);
-                    var untouchedUnlimited = Copy(subId, 255);
+                    var untouchedUnlimited = Copy(secondId == subId ? firstId : secondId, 255);
                     actor.SlotStates.Add(untouchedMain); actor.SlotStates.Add(Copy(subId, 2));
                     actor.SlotStates.Add(untouchedUnlimited); actor.SlotStates.Add(ItemSlotNetData.Empty);
                     actor.SlotStates.Add(Copy(subId, 1));
@@ -97,6 +112,42 @@ namespace AbsoluteZero.Core.Solo
                         && actor.SlotStates[3].IsEmpty && actor.SlotStates[1].CopyId != rerollCopy1
                         && actor.SlotStates[4].CopyId != rerollCopy4,
                         "reroll draws once per finite Sub in slot order and replaces copy identities policy=" + policy);
+
+                    // At-cap rerolls exclude the replaced copy; generated replacements count immediately.
+                    actor.SlotStates.Clear();
+                    for (int i = 0; i < 3; i++) actor.GrantSpecificItem(subId);
+                    uint atCap = actor.CurrentFingerprint();
+                    Reroll();
+                    Require(actor.SlotStates.Count == 3 && actor.CurrentFingerprint() != atCap,
+                        "reroll can replace each of three capped copies policy=" + policy);
+                    actor.GrantSpecificItem(subId);
+                    uint overCap = actor.CurrentFingerprint(); before = Random.state;
+                    Reroll();
+                    Require(actor.CurrentFingerprint() == overCap && Random.state.Equals(before),
+                        "over-cap reroll preserves copies and RNG when no candidate fits policy=" + policy);
+                    if (prepared)
+                    {
+                        actor.SlotStates.Clear(); actor.GrantSpecificItem(subId);
+                        actor.GrantSpecificItem(mainId);
+                        var reroll = new SeatInventoryMutator(players, Match.MatchCompositionRoot.Instance.Roster, rerollTable, _count);
+                        Require(reroll.TryPrepareMutation(InventoryMutationType.RerollTarget, 1, 0, out var pending),
+                            "reroll staged before unrelated slot change");
+                        var changed = actor.SlotStates[1]; changed.RemainingUses = 42; actor.SlotStates[1] = changed;
+                        uint changedState = actor.CurrentFingerprint();
+                        Require(!pending.TryApply() && actor.CurrentFingerprint() == changedState,
+                            "reroll revalidates all slots used for copy eligibility");
+                    }
+
+                    void Reroll()
+                    {
+                        if (prepared)
+                        {
+                            var reroll = new SeatInventoryMutator(players, Match.MatchCompositionRoot.Instance.Roster, rerollTable, _count);
+                            Require(reroll.TryPrepareMutation(InventoryMutationType.RerollTarget, 1, 0, out var plan)
+                                && plan.TryApply(), "capped prepared reroll transaction");
+                        }
+                        else actor.RerollAllRandom(rerollTable);
+                    }
 
                     void Steal()
                     {

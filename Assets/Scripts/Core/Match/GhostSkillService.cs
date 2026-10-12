@@ -55,6 +55,9 @@ namespace AbsoluteZero.Core.Match
             float after = Mathf.Max(TemperatureSystem.MIN_TEMP, before - GRUDGE_DAMAGE);
             if (!_ledger.TryCommitGrudge(ghostSeat, targetSeat)) return false;
             players[targetSeat].Temperature.Value = after;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Solo.PlaytestTelemetry.Current?.Temperature("ghost_grudge:source=" + ghostSeat, targetSeat, before, after, -GRUDGE_DAMAGE);
+#endif
             netState.ServerSetCooldown(ghostSeat, SKILL_GRUDGE, GRUDGE_COOLDOWN_TURNS);
             netState.ServerPublishGhostLedger(_ledger);
 

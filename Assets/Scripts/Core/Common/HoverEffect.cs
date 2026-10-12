@@ -93,8 +93,12 @@ namespace AbsoluteZero.Core.Common
             outlineGO.transform.localScale = Vector3.one * OutlineExpand;
             _outlineRenderer = outlineGO.AddComponent<SpriteRenderer>();
             _outlineRenderer.sprite = source.sprite;
+            _outlineRenderer.sharedMaterial = source.sharedMaterial;
+            _outlineRenderer.sortingLayerID = source.sortingLayerID;
             _outlineRenderer.color = HoverOutlineColor;
             _outlineRenderer.sortingOrder = source.sortingOrder - 1;
+            if (source.sharedMaterial == WorldInteractionLayer.Material)
+                WorldInteractionLayer.Apply(_outlineRenderer, source.sortingOrder - 1);
             _outlineRenderer.enabled = false;
         }
     }

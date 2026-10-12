@@ -321,9 +321,18 @@ namespace AbsoluteZero.Core.Solo
                 Check(_report.hugGestureToImpactSeconds >= .49f, "hug impact waits for the authored half-second contact pose");
             }
             if (!_actorVisual.IsLocalHuman)
-                CheckClip("ActorWorld", "playerA_" + _actorVisual.DebugLastCombatTrigger);
+            {
+                // Assert the role contract, not the configured trigger under test.
+                // The feed clip is the recipient's flinch, never the remote giver's gesture.
+                CheckClip("ActorWorld", hug ? "playerA_hug" : "playerA_attack");
+                if (!hug)
+                    Check(!_report.clipSamples.Any(s => s.role == "ActorWorld"
+                        && (s.clip == "playerA_feed" || s.clip == "playerA_damage")),
+                        "food giver never plays recipient feed or damage reaction");
+            }
             if (!hug && !_targetVisual.IsLocalHuman)
-                CheckClip("TargetWorld", "playerA_" + _targetVisual.DebugLastCombatTrigger);
+                CheckClip("TargetWorld", _report.defenseMatched
+                    ? "playerA_" + _targetVisual.DebugLastCombatTrigger : "playerA_feed");
             Capture("after");
             await Barrier("finished");
             if (NetworkManager.Singleton.IsServer)

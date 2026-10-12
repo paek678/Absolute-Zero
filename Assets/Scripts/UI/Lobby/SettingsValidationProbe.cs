@@ -89,7 +89,7 @@ namespace AbsoluteZero.UI.LobbyUI
             Check(AudioListener.volume == listener, "listener volume is not multiplied again");
             var audio = GameAudioManager.Instance;
             audio.PlayBGM(); audio.StartFanLoop(); audio.PlayClockTick(); audio.PlayButtonClick(); audio.PlayFreeze();
-            audio.PlayEnvironment(AbsoluteZero.Core.Item.EnvironmentType.CicadaSong);
+            audio.PlayEnvironment(AbsoluteZero.Core.Item.EnvironmentType.SunnyDay);
             yield return null;
             foreach (string name in new[] { "Audio_BGM", "Audio_FanLoop", "Audio_Clock", "Audio_ENV" })
                 Check(sources.Single(s => s.name == name).isPlaying, name + " keeps playback with settings control");

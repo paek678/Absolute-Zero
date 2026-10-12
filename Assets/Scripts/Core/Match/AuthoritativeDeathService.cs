@@ -48,6 +48,9 @@ namespace AbsoluteZero.Core.Match
 
             _pendingDeathMask |= (byte)(1 << victimSeat);
             _deathQueue.Add((victimSeat, source));
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Solo.PlaytestTelemetry.Current?.Record("death", "source=" + source.AttackerSeat + ";origin=" + source.Origin, victimSeat);
+#endif
             Debug.Log($"[DeathService] Seat {victimSeat} killed by seat {source.AttackerSeat} ({source.Origin})");
             return true;
         }

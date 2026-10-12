@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using AbsoluteZero.Core.Cosmetic;
 using UnityEngine;
+using AbsoluteZero.UI.Common;
 using UnityEngine.UI;
 
 namespace AbsoluteZero.UI.LobbyUI
@@ -73,6 +74,7 @@ namespace AbsoluteZero.UI.LobbyUI
                 if (!_cells.TryGetValue(item.Id, out var cell))
                 {
                     cell = new Cell { View = UnityEngine.Object.Instantiate(_bindings.ItemTemplate, _bindings.Content) };
+                    CasualLobbySkin.Cell(cell.View);
                     var captured = cell;
                     cell.Click = () => { if (!_disposed && captured.Item != null) OnItemSelected?.Invoke(captured.Item); };
                     cell.View.Button.onClick.AddListener(cell.Click);
@@ -117,9 +119,7 @@ namespace AbsoluteZero.UI.LobbyUI
         {
             for (int i = 0; i < _bindings.Tabs.Length; i++)
             {
-                var colors = _bindings.Tabs[i].colors;
-                colors.normalColor = i == (int)CurrentTab ? new Color(.35f, .53f, .53f) : new Color(.19f, .39f, .40f);
-                _bindings.Tabs[i].colors = colors;
+                CasualUiSkin.Button(_bindings.Tabs[i], i == (int)CurrentTab ? CasualUiSkin.Mint : CasualUiSkin.Cream);
             }
         }
         public void SetVisible(bool visible)

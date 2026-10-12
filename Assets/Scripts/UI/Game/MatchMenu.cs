@@ -6,6 +6,7 @@ using AbsoluteZero.UI.Game.Build;
 using TMPro;
 using Unity.Netcode;
 using UnityEngine;
+using AbsoluteZero.UI.Common;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -45,11 +46,16 @@ namespace AbsoluteZero.UI.Game
             _message = Text(panel.transform, "Message", new Vector2(0, 23), new Vector2(510, 104), "", 21);
             var notice = Text(panel.transform, "LiveNotice", new Vector2(0, -52), new Vector2(520, 34),
                 "창을 열어도 게임과 제한 시간은 계속 진행됩니다.", 17);
-            notice.color = new Color(0.78f, 0.86f, 0.85f);
+            notice.color = CasualUiSkin.Muted;
             _continue = GameHudBuilder.CreateButton(panel.transform, "Continue", new Vector2(-132, -112),
                 new Vector2(236, 55), "계속하기", new Color(0.24f, 0.39f, 0.41f));
             _leave = GameHudBuilder.CreateButton(panel.transform, "Leave", new Vector2(132, -112),
                 new Vector2(236, 55), "로비로 나가기", new Color(0.59f, 0.23f, 0.19f));
+            CasualUiSkin.Surface(panel, CasualUiSkin.Cream);
+            CasualUiSkin.Labels(panel.transform);
+            CasualUiSkin.Label(notice, CasualUiSkin.Muted);
+            CasualUiSkin.Button(_continue, CasualUiSkin.Mint);
+            CasualUiSkin.Button(_leave, CasualUiSkin.Peach);
             _continue.onClick.AddListener(Close);
             _leave.onClick.AddListener(ConfirmLeave);
             _canvas.SetActive(false);

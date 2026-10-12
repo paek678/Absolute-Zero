@@ -66,7 +66,7 @@ namespace AbsoluteZero.Core.Combat
                             food = _resources.Own(new GameObject("FeedSprite"));
                             var renderer = food.AddComponent<SpriteRenderer>();
                             renderer.sprite = sprite;
-                            renderer.sortingOrder = 90;
+                            WorldInteractionLayer.Apply(renderer);
                             food.transform.position = ContactPoint(target, _services.Item.TargetSeat, true);
                             food.transform.localScale = Vector3.one * 0.8f;
                         }

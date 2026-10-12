@@ -87,6 +87,7 @@ namespace AbsoluteZero.Core.Combat
 
         public T Own<T>(T value) where T : UnityEngine.Object
         {
+            if (value is GameObject root) DuelSpriteFacing.Register(root);
             OnRelease(() => DestroyOwned(value));
             return value;
         }

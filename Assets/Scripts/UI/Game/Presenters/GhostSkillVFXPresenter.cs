@@ -18,8 +18,6 @@ namespace AbsoluteZero.UI.Game.Presenters
         static Sprite _orbSprite;
         static Sprite _ringSprite;
         readonly System.Collections.Generic.List<GameObject> _liveEffects = new();
-        readonly GameObject[] _possessionMarkers = new GameObject[4];
-
         public static event Action<byte, byte, byte> PresentationStarted;
         public static event Action<byte, byte, byte> PresentationImpact;
 
@@ -39,38 +37,12 @@ namespace AbsoluteZero.UI.Game.Presenters
             foreach (var effect in _liveEffects)
                 if (effect != null) Destroy(effect);
             _liveEffects.Clear();
-            for (int i = 0; i < _possessionMarkers.Length; i++)
-            {
-                if (_possessionMarkers[i] != null) Destroy(_possessionMarkers[i]);
-                _possessionMarkers[i] = null;
-            }
             if (Instance == this) Instance = null;
         }
 
         void Update()
         {
             if (!IsCurrent) { if (Instance == this) OnDisable(); return; }
-            byte possessed = _match.NetworkState?.GhostPossessedMask.Value ?? 0;
-            for (byte seat = 0; seat < _possessionMarkers.Length; seat++)
-            {
-                bool active = (possessed & (1 << seat)) != 0;
-                var marker = _possessionMarkers[seat];
-                if (!active)
-                {
-                    if (marker != null) Destroy(marker);
-                    _possessionMarkers[seat] = null;
-                    continue;
-                }
-                Vector3 position = ResolveSeatPosition(seat) + Vector3.up * 0.15f;
-                if (marker == null)
-                {
-                    marker = CreateSprite($"PossessedSeat{seat}", GetRingSprite(), position,
-                        new Color(0.56f, 0.38f, 0.96f, 0.75f), 114);
-                    marker.transform.localScale = Vector3.one * 1.4f;
-                    _possessionMarkers[seat] = marker;
-                }
-                else marker.transform.position = position;
-            }
         }
 
         public void ShowSuppressedItemCue(byte actorSeat)

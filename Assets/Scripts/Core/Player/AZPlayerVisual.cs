@@ -10,8 +10,10 @@ using AbsoluteZero.Core.Maps;
 using AbsoluteZero.Core.Network;
 using AbsoluteZero.Core.Player.Identity;
 using AbsoluteZero.Core.Session;
+using AbsoluteZero.Core.Turn;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.U2D.Animation;
 
 namespace AbsoluteZero.Core.Player
 {
@@ -22,7 +24,7 @@ namespace AbsoluteZero.Core.Player
             { "use", "attack" },
             { "gun", "attack" },
             { "tape", "attack" },
-            { "fan", "swing" },
+            { "fan", "attack" },
             { "mask", "defence" },
             { "feed", "attack" },
             { "disappoint", "damage" },
@@ -37,6 +39,7 @@ namespace AbsoluteZero.Core.Player
         Material[] _cachedMaterials;
         Coroutine _flashCoroutine;
         Coroutine _animEndCoroutine;
+        uint _animationVersion;
         Coroutine _deathCoroutine;
         Coroutine _bindCoroutine;
         IReadOnlyPlayerRegistry _registry;
@@ -62,10 +65,18 @@ namespace AbsoluteZero.Core.Player
         bool _deathPresentationCompleted;
         bool _pendingGhostTransition;
         bool _isGhost;
+        bool _characterVisible = true;
         float _ghostAlpha = 1f;
         GameObject _ghostPlaceholder;
         SpriteRenderer _ghostPlaceholderRenderer;
-        static Sprite _ghostPlaceholderSprite;
+        Animator _ghostAnimator;
+        const float GhostVisualScale = 0.78f;
+        const float GhostGrowDuration = 0.6f;
+        static readonly Vector3 GhostRestPosition = new(0f, 0.25f, -0.08f);
+        float _ghostGrowStartedAt = -1f;
+        float _ghostBottomLocalY;
+        static readonly int GhostIdleState = Animator.StringToHash("Base Layer.Ghost_Idle");
+        static readonly int GhostAttackState = Animator.StringToHash("Base Layer.Ghost_Attack");
         public bool IsDead => _isDead;
         public bool IsGhost => _isGhost;
         public bool IsGhostTransitionPending => _pendingGhostTransition;
@@ -91,7 +102,8 @@ namespace AbsoluteZero.Core.Player
         readonly WaitForSeconds _waitAnimEnd = new(0.6f);
         static readonly WaitForSeconds _waitFreezeTick = new(0.167f);
         static readonly WaitForSeconds _waitFreezeHold = new(1.5f);
-        static readonly WaitForSeconds _waitBreakHide = new(0.4f);
+        public const float GhostRevealDelay = 0.5f;
+        static readonly WaitForSeconds _waitGhostReveal = new(GhostRevealDelay);
         static readonly int FlashAmount = Shader.PropertyToID("_FlashAmount");
         static readonly int IsWindHash = Animator.StringToHash("isWind");
         static readonly int DegreeHash = Animator.StringToHash("degree");
@@ -106,6 +118,7 @@ namespace AbsoluteZero.Core.Player
             if (_playerState != null) _playerState.BindingReady += OnBindingReady;
             TryResolveRole();
             _bindCoroutine = StartCoroutine(DeferredBindRoutine());
+            TurnManager.OnGhostSkillUsedSequenced += OnGhostSkillUsed;
         }
 
         void OnBindingReady(PlayerBinding binding) => TryResolveRole();
@@ -123,6 +136,11 @@ namespace AbsoluteZero.Core.Player
 
         public override void OnNetworkDespawn()
         {
+            TurnManager.OnGhostSkillUsedSequenced -= OnGhostSkillUsed;
+            HideGhostPlaceholder();
+            _ghostPlaceholder = null;
+            _ghostPlaceholderRenderer = null;
+            _ghostAnimator = null;
             StopAllCoroutines();
             _bindCoroutine = null;
             _flashCoroutine = _animEndCoroutine = _deathCoroutine = null;
@@ -142,6 +160,7 @@ namespace AbsoluteZero.Core.Player
             _visualRoot = null;
             _animator = null;
             _isDead = _deathPresentationCompleted = _pendingGhostTransition = _isGhost = false;
+            _characterVisible = true;
             base.OnNetworkDespawn();
         }
 
@@ -412,14 +431,14 @@ namespace AbsoluteZero.Core.Player
             if (_animEndCoroutine != null)
                 StopCoroutine(_animEndCoroutine);
 
-            _animator.SetTrigger(triggerName);
-            _animEndCoroutine = StartCoroutine(AnimEndRoutine());
+            BeginAnimation(triggerName);
+            _animEndCoroutine = StartCoroutine(AnimEndRoutine(_animationVersion));
         }
 
-        IEnumerator AnimEndRoutine()
+        IEnumerator AnimEndRoutine(uint version)
         {
             yield return _waitAnimEnd;
-            if (_animator != null)
+            if (_animator != null && version == _animationVersion)
                 _animator.SetTrigger("end");
             _animEndCoroutine = null;
         }
@@ -427,7 +446,8 @@ namespace AbsoluteZero.Core.Player
         public void SetWind(bool active)
         {
             if (_animator != null)
-                _animator.SetBool(IsWindHash, active);
+                _animator.SetBool(IsWindHash, active
+                    && MatchCompositionRoot.Instance?.ActiveConfig?.Mode != GameMode.Multi);
         }
 
         public void PlayDamageFlash(bool preserveCombatAnimation = false)
@@ -440,8 +460,12 @@ namespace AbsoluteZero.Core.Player
 
         IEnumerator DamageFlashRoutine(bool preserveCombatAnimation)
         {
+            uint version = _animationVersion;
             if (_animator != null && !preserveCombatAnimation)
-                _animator.SetTrigger("damage");
+            {
+                BeginAnimation("damage");
+                version = _animationVersion;
+            }
 
             float duration = 0.15f;
             float elapsed = 0f;
@@ -457,7 +481,7 @@ namespace AbsoluteZero.Core.Player
             SetFlashAmount(0f);
             yield return _waitFlashEnd;
 
-            if (_animator != null && !preserveCombatAnimation)
+            if (_animator != null && !preserveCombatAnimation && version == _animationVersion)
                 _animator.SetTrigger("end");
 
             _flashCoroutine = null;
@@ -493,7 +517,7 @@ namespace AbsoluteZero.Core.Player
 
             if (_animator != null)
             {
-                _animator.SetBool(IsWindHash, _playerState.IsFanActive.Value);
+                SetWind(_playerState.IsFanActive.Value);
                 float degree = temp >= 20f ? 0f : temp >= 10f ? 1f : 2f;
                 _animator.SetFloat(DegreeHash, degree);
             }
@@ -504,9 +528,25 @@ namespace AbsoluteZero.Core.Player
 
         bool _endsMatch;
 
+        void LateUpdate()
+        {
+            UpdateGhostGrowth();
+            // The freeze clip also keys freezeice active state. Presentation owns
+            // the break boundary, so the clip cannot uncover the body early.
+            if (_deathCoroutine != null && _freezeRenderer != null)
+                _freezeRenderer.gameObject.SetActive(_characterVisible);
+            if (!_characterVisible)
+            {
+                SetCharacterRenderersVisible(false);
+                if (_freezeRenderer != null) _freezeRenderer.gameObject.SetActive(false);
+                if (_itemRenderer != null) _itemRenderer.gameObject.SetActive(false);
+            }
+        }
+
         public void PlayDeathSequence(bool endsMatch = false)
         {
             if (_deathCoroutine != null || _deathPresentationCompleted) return;
+            ++_animationVersion;
             Debug.Log($"[PlayerVisual] PlayDeathSequence START (endsMatch={endsMatch})");
             _endsMatch = endsMatch;
             _deathSavedPos = _visualRoot != null ? _visualRoot.position : transform.position;
@@ -533,7 +573,8 @@ namespace AbsoluteZero.Core.Player
 
             _isDead = true;
             _ghostAlpha = 1f;
-            if (_ghostPlaceholder != null) _ghostPlaceholder.SetActive(false);
+            SetCharacterRenderersVisible(true);
+            HideGhostPlaceholder();
             _deathCoroutine = StartCoroutine(DeathRoutine());
         }
 
@@ -589,24 +630,22 @@ namespace AbsoluteZero.Core.Player
             GameAudioManager.Instance?.PlayIceBreak();
             CameraShake.Instance?.Shake(0.5f, 0.3f);
             PlayBreakParticles(_endsMatch);
-
-            if (_endsMatch)
-            {
-                yield return _waitFreezeHold;
-                ApplyGhostAppearanceAfterDeath();
-                _deathPresentationCompleted = true;
-                _deathCoroutine = null;
-                yield break;
-            }
-
+            // Hide in the same frame as emission; never disable the visual root,
+            // because its particles and eventual ghost must keep rendering.
+            _ghostAlpha = 0f;
+            SetCharacterRenderersVisible(false);
             if (_freezeRenderer != null)
                 _freezeRenderer.gameObject.SetActive(false);
+            if (_itemRenderer != null)
+                _itemRenderer.gameObject.SetActive(false);
+
+            yield return _waitGhostReveal;
 
             var mcr = MatchCompositionRoot.Instance;
             bool isMulti = mcr != null && mcr.ActiveConfig != null
                            && mcr.ActiveConfig.Mode == GameMode.Multi;
 
-            if (isMulti)
+            if (isMulti || _endsMatch)
                 ApplyGhostAppearanceAfterDeath();
 
             if (_animator != null)
@@ -619,6 +658,7 @@ namespace AbsoluteZero.Core.Player
         public void ReviveVisual()
         {
             if (!_isDead) return;
+            ++_animationVersion;
             Debug.Log("[PlayerVisual] ReviveVisual");
 
             if (_deathCoroutine != null)
@@ -650,7 +690,7 @@ namespace AbsoluteZero.Core.Player
             _isGhost = false;
             _ghostAlpha = 1f;
             SetCharacterRenderersVisible(true);
-            if (_ghostPlaceholder != null) _ghostPlaceholder.SetActive(false);
+            HideGhostPlaceholder();
         }
 
         void SyncGhostFromLifeState(bool initialSnapshot = false)
@@ -674,7 +714,7 @@ namespace AbsoluteZero.Core.Player
                 }
                 _isDead = true;
                 _isGhost = true;
-                ShowGhostPlaceholder();
+                ShowGhostPlaceholder(animate: !initialSnapshot);
                 _pendingGhostTransition = false;
             }
             else
@@ -683,7 +723,7 @@ namespace AbsoluteZero.Core.Player
                 _isGhost = false;
                 _ghostAlpha = 1f;
                 SetCharacterRenderersVisible(true);
-                if (_ghostPlaceholder != null) _ghostPlaceholder.SetActive(false);
+                HideGhostPlaceholder();
             }
         }
 
@@ -702,33 +742,112 @@ namespace AbsoluteZero.Core.Player
             if (existing == null)
                 _ghostPlaceholder.transform.SetParent(_visualRoot, false);
 
-            _ghostPlaceholder.transform.localPosition = new Vector3(0f, 0.72f, -0.08f);
+            // Keep the authored Ghost_Sprite curves relative to their own animator.
+            // Size/seat placement belongs to the parent, preserving the sprite aspect ratio.
+            _ghostPlaceholder.transform.localPosition = GhostRestPosition;
             _ghostPlaceholder.transform.localRotation = Quaternion.identity;
-            _ghostPlaceholder.transform.localScale = new Vector3(1.15f, 1.55f, 1f);
-            _ghostPlaceholderRenderer = _ghostPlaceholder.GetComponent<SpriteRenderer>();
-            if (_ghostPlaceholderRenderer == null)
-                _ghostPlaceholderRenderer = _ghostPlaceholder.AddComponent<SpriteRenderer>();
-            _ghostPlaceholderRenderer.sprite = GetGhostPlaceholderSprite();
-            _ghostPlaceholderRenderer.color = new Color(0.55f, 0.88f, 1f, 0.72f);
+            _ghostPlaceholder.transform.localScale = Vector3.one * GhostVisualScale;
+            var artwork = _ghostPlaceholder.transform.Find("Ghost_Sprite");
+            if (artwork == null)
+            {
+                artwork = new GameObject("Ghost_Sprite").transform;
+                artwork.SetParent(_ghostPlaceholder.transform, false);
+            }
+            _ghostPlaceholderRenderer = artwork.GetComponent<SpriteRenderer>();
+            if (_ghostPlaceholderRenderer == null) _ghostPlaceholderRenderer = artwork.gameObject.AddComponent<SpriteRenderer>();
+            _ghostPlaceholderRenderer.sprite = Resources.LoadAll<Sprite>("ghost").FirstOrDefault(sprite => sprite.name == "ghost_0");
+            _ghostPlaceholderRenderer.color = Color.white;
+            var bodyRenderer = _spriteRenderers?.FirstOrDefault(renderer => renderer != null && renderer != _ghostPlaceholderRenderer);
+            if (bodyRenderer != null) _ghostPlaceholderRenderer.sharedMaterial = bodyRenderer.sharedMaterial;
             _ghostPlaceholderRenderer.sortingOrder = 85;
+            _ghostAnimator = _ghostPlaceholder.GetComponent<Animator>();
+            if (_ghostAnimator == null) _ghostAnimator = _ghostPlaceholder.AddComponent<Animator>();
+            _ghostAnimator.runtimeAnimatorController = Resources.Load<RuntimeAnimatorController>("GhostA");
+            _ghostAnimator.applyRootMotion = false;
+            _ghostAnimator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
             _ghostPlaceholder.SetActive(false);
         }
 
-        void ShowGhostPlaceholder()
+        void ShowGhostPlaceholder(bool animate = true)
         {
             EnsureGhostPlaceholder();
             _ghostAlpha = 0f;
             SetCharacterRenderersVisible(false);
             if (_ghostPlaceholder != null)
             {
+                bool wasVisible = _ghostPlaceholder.activeSelf;
                 _ghostPlaceholder.SetActive(true);
                 _ghostPlaceholderRenderer.enabled = true;
-                _ghostPlaceholderRenderer.color = new Color(0.55f, 0.88f, 1f, 0.72f);
+                _ghostPlaceholderRenderer.color = Color.white;
+                if (!wasVisible)
+                {
+                    CompleteGhostGrowth();
+                    if (_ghostAnimator.runtimeAnimatorController != null)
+                    {
+                        _ghostAnimator.Play(GhostIdleState, 0, 0f);
+                        _ghostAnimator.Update(0f);
+                    }
+                    if (animate && _ghostPlaceholderRenderer.sprite != null)
+                    {
+                        // Pin the idle sprite's bottom, preserving both axes equally.
+                        // Freeze the authored bob until the emergence has completed.
+                        _ghostBottomLocalY = _ghostPlaceholderRenderer.sprite.bounds.min.y;
+                        _ghostAnimator.speed = 0f;
+                        _ghostGrowStartedAt = Time.unscaledTime;
+                        UpdateGhostGrowth();
+                    }
+                }
             }
+        }
+
+        void UpdateGhostGrowth()
+        {
+            if (_ghostGrowStartedAt < 0f || _ghostPlaceholder == null) return;
+            if (!_ghostPlaceholder.activeInHierarchy)
+            {
+                CompleteGhostGrowth();
+                return;
+            }
+            float t = Mathf.Clamp01((Time.unscaledTime - _ghostGrowStartedAt) / GhostGrowDuration);
+            float scale = GhostVisualScale * Mathf.Lerp(0.05f, 1f, Mathf.SmoothStep(0f, 1f, t));
+            _ghostPlaceholder.transform.localScale = Vector3.one * scale;
+            _ghostPlaceholder.transform.localPosition = GhostRestPosition
+                + Vector3.up * (_ghostBottomLocalY * (GhostVisualScale - scale));
+            if (t >= 1f) CompleteGhostGrowth();
+        }
+
+        void CompleteGhostGrowth()
+        {
+            _ghostGrowStartedAt = -1f;
+            if (_ghostPlaceholder != null)
+            {
+                _ghostPlaceholder.transform.localScale = Vector3.one * GhostVisualScale;
+                _ghostPlaceholder.transform.localPosition = GhostRestPosition;
+            }
+            if (_ghostAnimator != null) _ghostAnimator.speed = 1f;
+        }
+
+        void HideGhostPlaceholder()
+        {
+            CompleteGhostGrowth();
+            if (_ghostPlaceholder != null) _ghostPlaceholder.SetActive(false);
+        }
+
+        void OnGhostSkillUsed(byte ghostSeat, byte skillIndex, byte targetSeat, uint castId)
+        {
+            // Observe the accepted, sequenced skill event for this logical seat only.
+            // The local human uses the first-person view and has no world avatar.
+            if (!_isGhost || !IsPresentationReady || IsLocalHuman || !isActiveAndEnabled
+                || _playerState.PlayerIndex != ghostSeat || _ghostAnimator == null
+                || !_ghostAnimator.isActiveAndEnabled || _ghostAnimator.runtimeAnimatorController == null) return;
+            // An immediately accepted skill must not wait for a cosmetic reveal.
+            CompleteGhostGrowth();
+            _ghostAnimator.Play(GhostAttackState, 0, 0f);
         }
 
         void SetCharacterRenderersVisible(bool visible)
         {
+            _characterVisible = visible;
             var atlas = _visualRoot != null ? _visualRoot.GetComponent<CosmeticAtlasRenderer>() : null;
             if (atlas != null) atlas.LayersVisible = visible;
             if (_spriteRenderers == null) return;
@@ -739,24 +858,6 @@ namespace AbsoluteZero.Core.Player
                     continue;
                 renderer.enabled = visible;
             }
-        }
-
-        static Sprite GetGhostPlaceholderSprite()
-        {
-            if (_ghostPlaceholderSprite != null) return _ghostPlaceholderSprite;
-            var texture = new Texture2D(8, 8, TextureFormat.RGBA32, false)
-            {
-                name = "GhostPlaceholderTexture",
-                filterMode = FilterMode.Point,
-                wrapMode = TextureWrapMode.Clamp
-            };
-            var pixels = new Color32[64];
-            for (int i = 0; i < pixels.Length; i++) pixels[i] = Color.white;
-            texture.SetPixels32(pixels);
-            texture.Apply();
-            _ghostPlaceholderSprite = Sprite.Create(texture, new Rect(0, 0, 8, 8), new Vector2(0.5f, 0.5f), 8f);
-            _ghostPlaceholderSprite.name = "GhostPlaceholderSprite";
-            return _ghostPlaceholderSprite;
         }
 
         void PlayBreakParticles(bool heavy = false)
@@ -790,7 +891,17 @@ namespace AbsoluteZero.Core.Player
         public void SetItemSprite(Sprite sprite)
         {
             if (_itemRenderer == null) return;
+            TakeItemSpriteOwnership();
             _itemRenderer.sprite = sprite;
+            WorldInteractionLayer.ApplyHeld(_itemRenderer);
+        }
+
+        void TakeItemSpriteOwnership()
+        {
+            // The authored prop resolver selects a tea cup whenever animation
+            // enables this object. Combat owns the prop image; body resolvers remain active.
+            var resolver = _itemRenderer != null ? _itemRenderer.GetComponent<SpriteResolver>() : null;
+            if (resolver != null) resolver.enabled = false;
         }
 
         public void PrepareDefenseSprite(Sprite sprite)
@@ -802,6 +913,7 @@ namespace AbsoluteZero.Core.Player
 
         public void ClearItemSprite()
         {
+            TakeItemSpriteOwnership();
             if (_itemRenderer != null)
                 _itemRenderer.sprite = null;
             if (_itemTransform != null)
@@ -832,7 +944,7 @@ namespace AbsoluteZero.Core.Player
                 Debug.Log($"[PlayerVisual] PlayCombatAnimation: '{triggerName}' found in animator → direct trigger");
             }
 
-            _animator.SetTrigger(resolved);
+            BeginAnimation(resolved);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             DebugLastCombatTrigger = resolved;
             DebugCombatAnimationCount++;
@@ -847,8 +959,30 @@ namespace AbsoluteZero.Core.Player
             return false;
         }
 
+        void ResetAnimationTriggers()
+        {
+            foreach (var p in _animator.parameters)
+                if (p.type == AnimatorControllerParameterType.Trigger)
+                    _animator.ResetTrigger(p.nameHash);
+        }
+
+        void BeginAnimation(string trigger)
+        {
+            ++_animationVersion;
+            ResetAnimationTriggers();
+            // Authored actions leave only through "end". Start from their entry
+            // pose so a previous damage/action state cannot queue this action behind it.
+            if (_animator.HasState(0, Animator.StringToHash("Idle_Tree")))
+            {
+                _animator.Play("Idle_Tree", 0, 0f);
+                _animator.Update(0f);
+            }
+            _animator.SetTrigger(trigger);
+        }
+
         public void ReturnToIdle()
         {
+            ++_animationVersion;
             Debug.Log("[PlayerVisual] ReturnToIdle");
             if (_animEndCoroutine != null)
             {
@@ -857,9 +991,7 @@ namespace AbsoluteZero.Core.Player
             }
             if (_animator != null)
             {
-                foreach (var p in _animator.parameters)
-                    if (p.type == AnimatorControllerParameterType.Trigger)
-                        _animator.ResetTrigger(p.nameHash);
+                ResetAnimationTriggers();
                 _animator.SetTrigger("end");
             }
             ClearItemSprite();
@@ -904,8 +1036,8 @@ namespace AbsoluteZero.Core.Player
         void SynchronizeAppearance()
         {
             RefreshRendererCache();
-            var atlas = _visualRoot != null ? _visualRoot.GetComponent<CosmeticAtlasRenderer>() : null;
-            if (atlas != null) atlas.LayersVisible = _ghostPlaceholder == null || !_ghostPlaceholder.activeSelf;
+            // A cosmetic refresh during the half-second gap must not reveal the body.
+            SetCharacterRenderersVisible(_characterVisible);
             if (_playerState == null || _spriteRenderers == null) return;
             var tint = Color.Lerp(new Color(.7f, .85f, 1f), Color.white, Mathf.Clamp01(_playerState.Temperature.Value / 37f));
             tint.a = _ghostAlpha;

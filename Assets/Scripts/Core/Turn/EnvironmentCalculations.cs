@@ -1,6 +1,7 @@
 using System;
 using AbsoluteZero.Core.Combat;
 using AbsoluteZero.Core.Item;
+using AbsoluteZero.Core.Network;
 
 namespace AbsoluteZero.Core.Turn
 {
@@ -8,12 +9,20 @@ namespace AbsoluteZero.Core.Turn
     {
         static readonly EnvironmentType[] Pool =
         {
-            EnvironmentType.SunnyDay, EnvironmentType.CoolBreeze, EnvironmentType.CicadaSong,
+            EnvironmentType.SunnyDay, EnvironmentType.CoolBreeze,
             EnvironmentType.Kids, EnvironmentType.Ambulance, EnvironmentType.SummerVacation,
             EnvironmentType.HeatWaveWarning
         };
-        internal static int PoolCount => Pool.Length;
-        internal static EnvironmentType Select(int draw) => Pool[draw];
+        // Multi uses the night pavilion, including three-player and 4 -> 3 continuation.
+        // These effects need no sunlight/cicada/heat-wave daytime staging.
+        static readonly EnvironmentType[] NightPool =
+        {
+            EnvironmentType.CoolBreeze, EnvironmentType.Kids,
+            EnvironmentType.Ambulance, EnvironmentType.SummerVacation
+        };
+        static EnvironmentType[] PoolFor(GameMode mode) => mode == GameMode.Multi ? NightPool : Pool;
+        internal static int PoolCountFor(GameMode mode) => PoolFor(mode).Length;
+        internal static EnvironmentType Select(int draw, GameMode mode) => PoolFor(mode)[draw];
         internal static float PrepDuration(EnvironmentType env, float duration)
             => env == EnvironmentType.SummerVacation ? 10f : duration;
         internal static float RecoveryRate(EnvironmentType env) => env switch

@@ -1,6 +1,7 @@
 using System;
 using AbsoluteZero.Core.Common;
 using UnityEngine;
+using AbsoluteZero.UI.Common;
 
 namespace AbsoluteZero.UI.LobbyUI
 {
@@ -55,6 +56,8 @@ namespace AbsoluteZero.UI.LobbyUI
             _bindings.Sfx.SetValueWithoutNotify(value.Sfx);
             _bindings.Shake.SetIsOnWithoutNotify(value.Shake);
             _bindings.Fullscreen.SetIsOnWithoutNotify(Screen.fullScreen);
+            CasualUiSkin.Toggle(_bindings.Fullscreen);
+            CasualUiSkin.Toggle(_bindings.Shake);
             _bindings.Fullscreen.interactable = _display != null && !_display.ScreenPending;
             _bindings.MasterValue.text = Mathf.RoundToInt(value.Master * 100) + "%";
             _bindings.BgmValue.text = Mathf.RoundToInt(value.Bgm * 100) + "%";

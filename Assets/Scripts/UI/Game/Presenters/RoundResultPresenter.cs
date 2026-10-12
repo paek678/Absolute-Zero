@@ -10,6 +10,7 @@ using AbsoluteZero.UI.Game.Build;
 using TMPro;
 using Unity.Netcode;
 using UnityEngine;
+using AbsoluteZero.UI.Common;
 using UnityEngine.UI;
 using GameMode = AbsoluteZero.Core.Network.GameMode;
 
@@ -30,6 +31,7 @@ namespace AbsoluteZero.UI.Game.Presenters
         readonly ILocalPlayerCommands _commands;
         readonly MonoBehaviour _host;
         readonly Image _overlay;
+        readonly Image _plate;
         readonly TextMeshProUGUI _text;
         readonly RectTransform _textRT;
         readonly Vector2 _textBasePos;
@@ -59,6 +61,7 @@ namespace AbsoluteZero.UI.Game.Presenters
             _commands = commands;
             _host = host;
             _overlay = refs.CinematicOverlay;
+            _plate = refs.CinematicPlate;
             _text = refs.CinematicText;
             _textRT = _text.GetComponent<RectTransform>();
             _textBasePos = _textRT.anchoredPosition;
@@ -268,6 +271,7 @@ namespace AbsoluteZero.UI.Game.Presenters
                 _overlay.color = Color.black;
                 _overlay.raycastTarget = true;
                 _text.text = "";
+                if (_plate != null) _plate.color = Color.clear;
                 _rematchButton.gameObject.SetActive(false);
                 _lobbyButton.gameObject.SetActive(false);
                 _rematchStatusText.gameObject.SetActive(true);
@@ -487,13 +491,24 @@ namespace AbsoluteZero.UI.Game.Presenters
             _matchCompleteCinematicFinished = true;
         }
 
+        void SetResultColor(Color stateColor, float alpha)
+        {
+            var ink = CasualUiSkin.Ink;
+            _text.color = new Color(ink.r, ink.g, ink.b, alpha);
+            if (_plate != null)
+            {
+                var tint = Color.Lerp(Color.white, stateColor, .20f);
+                _plate.color = new Color(tint.r, tint.g, tint.b, alpha);
+            }
+        }
+
         IEnumerator CinematicRoutine(string text, Color textColor, bool isMatchEnd)
         {
             _overlay.gameObject.SetActive(true);
             _overlay.raycastTarget = true;
             _overlay.color = new Color(0f, 0f, 0f, 0f);
             _text.text = text;
-            _text.color = new Color(textColor.r, textColor.g, textColor.b, 0f);
+            SetResultColor(textColor, 0f);
             _textRT.anchoredPosition = _textBasePos;
             _lobbyButton.gameObject.SetActive(false);
             _rematchButton.gameObject.SetActive(false);
@@ -515,11 +530,11 @@ namespace AbsoluteZero.UI.Game.Presenters
             {
                 t += Time.deltaTime;
                 float p = Mathf.SmoothStep(0f, 1f, t / TEXT_RISE_DURATION);
-                _text.color = new Color(textColor.r, textColor.g, textColor.b, p);
+                SetResultColor(textColor, p);
                 _textRT.anchoredPosition = new Vector2(_textBasePos.x, Mathf.Lerp(startY, _textBasePos.y, p));
                 yield return null;
             }
-            _text.color = textColor;
+            SetResultColor(textColor, 1f);
             _textRT.anchoredPosition = _textBasePos;
 
             if (isMatchEnd)
@@ -588,12 +603,12 @@ namespace AbsoluteZero.UI.Game.Presenters
                 t += Time.deltaTime;
                 float a = Mathf.SmoothStep(1f, 0f, t / FADE_IN_DURATION);
                 _overlay.color = new Color(0f, 0f, 0f, a);
-                _text.color = new Color(textColor.r, textColor.g, textColor.b, a);
+                SetResultColor(textColor, a);
                 yield return null;
             }
 
             _overlay.color = new Color(0f, 0f, 0f, 0f);
-            _text.color = new Color(textColor.r, textColor.g, textColor.b, 0f);
+            SetResultColor(textColor, 0f);
             _overlay.raycastTarget = false;
             _overlay.gameObject.SetActive(false);
             _cinematic = null;

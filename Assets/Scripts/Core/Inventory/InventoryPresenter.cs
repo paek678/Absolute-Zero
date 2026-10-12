@@ -4,6 +4,7 @@ using AbsoluteZero.Core.Common;
 using AbsoluteZero.Core.Item;
 using AbsoluteZero.Core.Item.Data;
 using AbsoluteZero.Core.Match;
+using AbsoluteZero.Core.Maps;
 using AbsoluteZero.Core.Network;
 using AbsoluteZero.Core.Player;
 using AbsoluteZero.Core.Player.Identity;
@@ -35,6 +36,8 @@ namespace AbsoluteZero.Core.Inventory
         // --- Local item views ---
         ItemWorldView[] _localViews;
         readonly InventoryViewReconciler<ItemWorldView> _localReconciler = new();
+        readonly InventoryPresentationSlots _localPresentationSlots = new();
+        readonly InventoryPresentationSlots _opponentPresentationSlots = new();
         readonly InventoryViewReconciler<GameObject> _opponentReconciler = new();
         BoundInventoryReader _opponentReader;
         int _confirmedSlotIndex = -1;
@@ -42,6 +45,8 @@ namespace AbsoluteZero.Core.Inventory
         public ItemSelectionStage SelectionStage => _interaction.Stage;
         bool _needsLocalRebuild;
         bool _fullRedistribute;
+        bool _multiSeatingViewCaptured;
+        Quaternion _multiSeatingView;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         bool _debugFullRebuild;
         public int DebugRebuildCreates { get; private set; }
@@ -295,6 +300,7 @@ namespace AbsoluteZero.Core.Inventory
             }
 
             _localBound = false;
+            _multiSeatingViewCaptured = false;
             _localBinding = null;
             _localPlayer = null;
             _localInventory = null;
@@ -468,11 +474,11 @@ namespace AbsoluteZero.Core.Inventory
             bool animateAll = _fullRedistribute;
             _fullRedistribute = false;
 
-            var previousSlots = new HashSet<int>();
+            var previousViews = new HashSet<ItemWorldView>();
             if (!animateAll && _localViews != null)
             {
                 for (int i = 0; i < _localViews.Length; i++)
-                    if (_localViews[i] != null) previousSlots.Add(i);
+                    if (_localViews[i] != null) previousViews.Add(_localViews[i]);
             }
 
             // Same copy keeps its object; full rebuild remains a legacy fallback.
@@ -490,7 +496,7 @@ namespace AbsoluteZero.Core.Inventory
             if (animateAll)
                 TriggerIceboxAnimation();
             else
-                TriggerIceboxAnimationPartial(previousSlots);
+                TriggerIceboxAnimationPartial(previousViews);
 
             UpdateSelectionVisuals();
             UpdateBannedOverlays();
@@ -513,17 +519,49 @@ namespace AbsoluteZero.Core.Inventory
                     if (!LocalSlot(i).IsEmpty) result[i] = CreateLocalView(i, LocalItem(i));
             }
             _localViews = result;
-            int randomCount = 0;
-            foreach (var candidate in _localViews)
-                if (candidate != null && candidate.Item.Persistence == ItemPersistence.RandomConsumable) randomCount++;
+            _localPresentationSlots.Refresh(_localSnapshot,
+                id => ItemManager.Instance.GetItemData(id)?.Persistence == ItemPersistence.RandomConsumable);
             int random = 0, basic = 0;
             for (int i = 0; i < _localViews.Length; i++)
             {
                 var view = _localViews[i];
                 if (view == null) continue;
                 int marker = view.Item.Persistence == ItemPersistence.RandomConsumable ? random++ : 8 + basic++;
-                PositionLocalView(view.transform, marker, i, LocalCount, randomCount);
+                int fixedSlot = _localPresentationSlots.Get(LocalSlot(i).CopyId);
+                if (fixedSlot >= 0) marker = fixedSlot;
+                PositionLocalView(view.transform, marker, i, LocalCount);
+                if (IsMultiMode())
+                {
+                    if (!_multiSeatingViewCaptured)
+                    {
+                        var bindings = MatchViewBindings.ForScene(gameObject.scene);
+                        var camera = bindings != null ? bindings.GameplayCamera : Camera.main;
+                        if (camera != null)
+                        {
+                            _multiSeatingView = camera.transform.rotation;
+                            _multiSeatingViewCaptured = true;
+                        }
+                    }
+                    if (_multiSeatingViewCaptured)
+                    {
+                        var bindings = MatchViewBindings.ForScene(gameObject.scene);
+                        var a = bindings != null ? bindings.GetItemAnchor(true, 8) : null;
+                        var b = bindings != null ? bindings.GetItemAnchor(true, 11) : null;
+                        var rack = a != null && b != null ? (a.position + b.position) * .5f : Vector3.zero;
+                        view.SetPresentationFacing(MultiItemFacing.RackFacing(rack,
+                            MultiPerspectiveLayout.IceboxCenter, _multiSeatingView), _multiSeatingView);
+
+                    }
+                }
+                InventoryFloorContact.Bind(view.gameObject, view.GetComponentInChildren<SpriteRenderer>(), ItemFloorHeight());
             }
+        }
+
+        float ItemFloorHeight()
+        {
+            var views = MatchViewBindings.ForScene(gameObject.scene);
+            var mode = IsMultiMode() ? MapLayoutMode.Multi : MapLayoutMode.Duel;
+            return views?.MapLayout?.GetAnchor(mode, MapAnchorRole.RemoteVisual, 0)?.transform.position.y ?? 0f;
         }
 
         ItemWorldView CreateLocalView(int index, ItemDataSO item)
@@ -541,27 +579,15 @@ namespace AbsoluteZero.Core.Inventory
             return view;
         }
 
-        void PositionLocalView(Transform target, int markerIndex, int index, int count, int randomCount)
+        void PositionLocalView(Transform target, int markerIndex, int index, int count)
         {
             var views = MatchViewBindings.ForScene(gameObject.scene);
-            if (IsMultiMode() && markerIndex < 8 && randomCount > 0 && views != null)
-            {
-                var first = views.GetItemAnchor(true, 0);
-                var last = views.GetItemAnchor(true, 7);
-                if (first != null && last != null)
-                {
-                    // Preserve the designer's row endpoints. Center ordinary four
-                    // slots; a steal may fill all eight, still inside these bounds.
-                    var center = (first.position + last.position) * 0.5f;
-                    var step = (last.position - first.position) / Mathf.Max(5, randomCount - 1);
-                    target.position = center + step * (markerIndex - (randomCount - 1) * 0.5f);
-                    return;
-                }
-            }
             var marker = views != null ? views.GetItemAnchor(true, markerIndex)
                 : GameObject.Find($"PlayerItem{markerIndex + 1}")?.transform;
             if (marker != null) target.position = marker.position;
-            else target.localPosition = new Vector3(-(count - 1) * FALLBACK_SPACING / 2f + index * FALLBACK_SPACING, FALLBACK_Y, 0f);
+            else target.localPosition = IsMultiMode()
+                ? new Vector3((markerIndex - (InventoryPresentationSlots.Capacity - 1) * .5f) * FALLBACK_SPACING, FALLBACK_Y, 0f)
+                : new Vector3(-(count - 1) * FALLBACK_SPACING / 2f + index * FALLBACK_SPACING, FALLBACK_Y, 0f);
         }
 
         static void DestroyLocalView(ItemWorldView view)
@@ -574,6 +600,7 @@ namespace AbsoluteZero.Core.Inventory
         void DestroyLocalViews()
         {
             _localReconciler.Clear(_ => { });
+            _localPresentationSlots.Clear();
             if (_localViews != null) foreach (var view in _localViews) DestroyLocalView(view);
             _localViews = null;
         }
@@ -583,24 +610,31 @@ namespace AbsoluteZero.Core.Inventory
         void RebuildOpponentItems()
         {
             if (_opponentReader == null || !_opponentReader.TryRead(out var snapshot)) return;
+            _opponentPresentationSlots.Refresh(snapshot,
+                id => ItemManager.Instance.GetItemData(id)?.Persistence == ItemPersistence.RandomConsumable);
             int random = 0, basic = 0;
             _opponentItemObjects = _opponentReconciler.Reconcile(snapshot,
                 (i, slot) => {
                     if (ItemManager.Instance?.GetItemData(slot.ItemId) == null) return null;
                     var go = new GameObject();
                     go.transform.SetParent(transform, false);
-                    go.AddComponent<SpriteRenderer>().sortingOrder = 5;
+                    WorldInteractionLayer.Apply(go.AddComponent<SpriteRenderer>());
                     return go;
                 },
                 (go, i, slot) => {
                     var item = ItemManager.Instance.GetItemData(slot.ItemId);
                     go.name = $"OppItem_{i}_{item.ItemName}";
+                    // Duel/Solo opponent art only; fixed anchors and local/Multi racks stay unchanged.
+                    go.transform.localScale = Vector3.one * 0.7f;
                     go.GetComponent<SpriteRenderer>().sprite = GameSprites.GetItemSpriteFor(item);
                     int markerIndex = item.Persistence == ItemPersistence.RandomConsumable ? random++ : 8 + basic++;
+                    int fixedSlot = _opponentPresentationSlots.Get(slot.CopyId);
+                    if (fixedSlot >= 0) markerIndex = fixedSlot;
                     var views = MatchViewBindings.ForScene(gameObject.scene);
                     var marker = views != null ? views.GetItemAnchor(false, markerIndex)
                         : GameObject.Find($"EnemyItem{markerIndex + 1}")?.transform;
                     if (marker != null) go.transform.position = marker.position;
+                    InventoryFloorContact.Bind(go, go.GetComponent<SpriteRenderer>(), ItemFloorHeight());
                 }, DestroyRemoteView, go => go != null) ?? _opponentItemObjects;
             OnOpponentInventoryChanged?.Invoke();
         }
@@ -613,6 +647,7 @@ namespace AbsoluteZero.Core.Inventory
         }
         void DestroyOpponentViews()
         {
+            _opponentPresentationSlots.Clear();
             _opponentReconciler.Clear(DestroyRemoteView);
             _opponentItemObjects = null;
         }
@@ -674,7 +709,7 @@ namespace AbsoluteZero.Core.Inventory
                 new Vector2(0.5f, 0f),
                 100f);
             _arrowRenderer.color = new Color(1f, 0.85f, 0.2f);
-            _arrowRenderer.sortingOrder = 95;
+            WorldInteractionLayer.Apply(_arrowRenderer, WorldInteractionLayer.SelectionOrder);
             _selectionArrow.transform.localScale = new Vector3(0.5f, 0.5f, 1f);
             _selectionArrow.SetActive(false);
         }
@@ -833,21 +868,21 @@ namespace AbsoluteZero.Core.Inventory
             icebox.PlayDistribution(transforms);
         }
 
-        void TriggerIceboxAnimationPartial(HashSet<int> previousSlots)
+        void TriggerIceboxAnimationPartial(HashSet<ItemWorldView> previousViews)
         {
             var icebox = IceboxController.Instance;
             if (icebox == null || _localViews == null) return;
 
             int count = 0;
             for (int i = 0; i < _localViews.Length; i++)
-                if (_localViews[i] != null && !previousSlots.Contains(i)) count++;
+                if (_localViews[i] != null && !previousViews.Contains(_localViews[i])) count++;
 
             if (count == 0) return;
 
             var transforms = new Transform[count];
             int idx = 0;
             for (int i = 0; i < _localViews.Length; i++)
-                if (_localViews[i] != null && !previousSlots.Contains(i))
+                if (_localViews[i] != null && !previousViews.Contains(_localViews[i]))
                     transforms[idx++] = _localViews[i].transform;
 
             icebox.PlayDistribution(transforms);

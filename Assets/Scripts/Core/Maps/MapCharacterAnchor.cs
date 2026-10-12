@@ -41,6 +41,20 @@ namespace AbsoluteZero.Core.Maps
             target.SetPositionAndRotation(VisualPosition, transform.rotation);
             var parentScale = target.parent != null ? target.parent.lossyScale : Vector3.one;
             target.localScale = new Vector3(_visualScale.x / parentScale.x, _visualScale.y / parentScale.y, _visualScale.z / parentScale.z);
+            if (_mode == MapLayoutMode.Multi && _role == MapAnchorRole.RemoteVisual)
+            {
+                // Keep authored sprite pivots/bones intact. Seat the lower-body mesh
+                // on the floor anchor instead of assuming a fixed root-to-foot distance.
+                var lower = target.Find("lowerbody")?.GetComponent<SpriteRenderer>();
+                if (lower != null && lower.sprite != null)
+                {
+                    float bottom = float.PositiveInfinity;
+                    foreach (var vertex in lower.sprite.vertices)
+                        bottom = Mathf.Min(bottom, lower.transform.TransformPoint(vertex).y);
+                    if (!float.IsInfinity(bottom))
+                        target.position += Vector3.up * (transform.position.y + .025f - bottom);
+                }
+            }
         }
     }
 }

@@ -94,6 +94,8 @@ namespace AbsoluteZero.Core.Common
         {
             blades = bladesTf;
             playerIndex = index;
+            _baseCaptured = false;
+            CaptureBase();
         }
 
         private PlayerState GetPlayerState()

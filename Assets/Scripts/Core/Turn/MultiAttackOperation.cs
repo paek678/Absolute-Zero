@@ -43,6 +43,9 @@ namespace AbsoluteZero.Core.Turn
             _order = resolver.BuildActionOrder(initial, _intents, initial.SeatCount);
             _aggregate = MultiCombatResolution.Create(initial.SeatCount);
             System.Array.Copy(_order, _aggregate.ActionOrder, _order.Length);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Solo.PlaytestTelemetry.Current?.ActionOrder(_order);
+#endif
             var inventory = new SeatInventoryMutator(capture.Players, capture.Roster, dropTable, initial.SeatCount);
             _applicator = new MultiCombatApplicator(capture.Roster, deaths, buffs, inventory);
         }
@@ -56,6 +59,9 @@ namespace AbsoluteZero.Core.Turn
                 var evt = defense.OrderedEvents[i];
                 _aggregate.AddEvent(evt);
                 _aggregate.MainItemIds[evt.SourcePlayer] = evt.ItemId;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                Solo.PlaytestTelemetry.Current?.Record("defense_applied", "item=" + evt.ItemId, evt.SourcePlayer);
+#endif
             }
             return true;
         }
@@ -68,13 +74,34 @@ namespace AbsoluteZero.Core.Turn
                 return default;
             var intent = _capture.BuildActionIntentForSeat(actor);
             if (intent.IsEmpty) return default;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            var traceInventory = _capture.Players[actor]?.GetInventory();
+            uint traceCopy = traceInventory != null && intent.SlotIndex < traceInventory.SlotStates.Count
+                ? traceInventory.SlotStates[intent.SlotIndex].CopyId : 0;
+            using var balanceAction = Solo.PlaytestTelemetry.BeginItem(actor, intent.TargetSeat, intent.ItemId, traceCopy);
+            using var observation = Solo.PlaytestTelemetry.Observe(actor, "multi_action:item=" + intent.ItemId + ";target=" + intent.TargetSeat, traceCopy);
+#endif
             var snapshot = _capture.BuildSnapshot(_rules);
             var resolution = _resolver.ResolveMultiAction(snapshot, intent);
-            if (resolution.EventCount == 0) return default;
+            if (resolution.EventCount == 0)
+            {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                observation.Verdict("NoEvents");
+#endif
+                return default;
+            }
             int[] before = _capture.CaptureKillScores();
             if (!_applicator.Apply(resolution, snapshot))
+            {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                observation.Verdict("ApplyFailed");
+#endif
                 return new MultiAttackStep(false, true, actor, intent.ItemId);
+            }
             AppendCommittedResolution(_aggregate, resolution, actor);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            observation.Verdict("Committed");
+#endif
             _deaths.ConsumeDeathMask();
             byte winners = _capture.Rule == null ? (byte)0 : MultiVictoryRules.FindThresholdCrossings(
                 before, _capture.CaptureKillScores(), _capture.Rule.KillsToWin);

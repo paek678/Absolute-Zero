@@ -57,7 +57,7 @@ namespace AbsoluteZero.Core.Item
 
             if (eligibleWeight <= 0f) return null;
 
-            float roll = UnityEngine.Random.Range(0f, eligibleWeight);
+            float roll = Common.GameplayRandom.Range("item-drop", 0f, eligibleWeight);
             return SelectEligible(eligibility, roll);
         }
 
@@ -81,7 +81,7 @@ namespace AbsoluteZero.Core.Item
         {
             if (_entries.Length == 0) return null;
 
-            float roll = UnityEngine.Random.Range(0f, _totalWeight);
+            float roll = Common.GameplayRandom.Range("item-drop", 0f, _totalWeight);
             return Select(roll);
         }
 

@@ -83,9 +83,42 @@ namespace AbsoluteZero.Core.Solo
             try
             {
                 a.SlotStates.Clear(); b.SlotStates.Clear();
+                Require(a.GrantSpecificItem(attack) && a.GrantSpecificItem(alternate) && a.GrantSpecificItem(attack),
+                    "duplicate acquisitions accepted as separate copies");
+                Require(a.SlotStates.Count == 3 && a.SlotStates[0].ItemId == attack
+                    && a.SlotStates[1].ItemId == alternate && a.SlotStates[2].ItemId == attack
+                    && Enumerable.Range(0, 3).Select(i => a.SlotStates[i].CopyId).Distinct().Count() == 3,
+                    "acquisition order and independent duplicate copy identities preserved");
+                var untouchedCopy = a.SlotStates[0];
+                a.ConsumeItem(2);
+                Require(a.SlotStates[0].Equals(untouchedCopy) && a.SlotStates[2].IsEmpty,
+                    "consuming second duplicate leaves the first duplicate intact");
+                Require(a.GrantSpecificItem(attack) && a.SlotStates.Count == 3 && a.SlotStates[0].Equals(untouchedCopy),
+                    "grant refills vacant copy slot without stacking");
+                a.SlotStates.Clear();
+                a.GrantRandomItems(3, new ItemDropTable(new[] { items[attack] }));
+                Require(a.SlotStates.Count == 3 && Enumerable.Range(0, 3).All(i => a.SlotStates[i].ItemId == attack
+                    && a.SlotStates[i].RemainingUses == items[attack].MaxUses), "random duplicate draws occupy three separate slots");
+                uint capped = a.CurrentFingerprint();
+                var cappedRandom = UnityEngine.Random.state;
+                a.GrantRandomItems(20, new ItemDropTable(new[] { items[attack] }));
+                Require(a.SlotStates.Count == 3 && a.CurrentFingerprint() == capped
+                    && UnityEngine.Random.state.Equals(cappedRandom), "capped pool grants nothing and draws no RNG");
+                a.GrantRandomItems(20, new ItemDropTable(new[] { items[attack], items[alternate] }));
+                Require(a.SlotStates.Count == 6 && Enumerable.Range(3, 3).All(i => a.SlotStates[i].ItemId == alternate),
+                    "batch generation uses remaining eligible pool and stops at three per type");
+                // Explicit fixture grants intentionally bypass the generated-copy cap.
+                while (a.SlotStates.Count < 12) Require(a.GrantSpecificItem(attack), "capacity fixture grant");
+                uint full = a.CurrentFingerprint();
+                Require(a.SlotStates.Count == 12 && !a.GrantSpecificItem(attack) && a.CurrentFingerprint() == full,
+                    "full inventory rejects duplicate grant without modifying existing copies");
+                a.ConsumeItem(5);
+                Require(a.GrantSpecificItem(attack) && a.SlotStates.Count == 12 && !a.SlotStates[5].IsEmpty,
+                    "full network list still reuses an empty item slot");
+                a.SlotStates.Clear(); b.SlotStates.Clear();
                 a.GrantSpecificItem(attack);
                 var copy = a.SlotStates[0]; copy.RemainingUses = 2; a.SlotStates[0] = copy;
-                a.SlotStates.Add(copy); a.SlotStates.Add(copy);
+                a.SlotStates.Add(a.AssignNewCopyId(copy)); a.SlotStates.Add(a.AssignNewCopyId(copy));
                 var constrained = new ItemDropTable(new[] { items[attack], items[alternate] });
                 Require(a.FillRandomSlotsWithSeparateCopies(4, constrained) == 1, "top-up grants only one empty place");
                 Require(a.SlotStates.Count == 4 && a.SlotStates[0].RemainingUses == 2
@@ -181,7 +214,7 @@ namespace AbsoluteZero.Core.Solo
                 queue.SetSelected(0, items[sub], 1);
                 a.RerollAllRandom(new ItemDropTable(new[] { items[sub] }));
                 Require(!queue.selectedAction.HasValue, "reroll cancels even same-ID replacement");
-                a.SlotStates.Clear(); a.SlotStates.Add(ItemSlotNetData.Empty); a.GrantSpecificItem(attack);
+                a.SlotStates.Clear(); a.GrantSpecificItem(attack); a.SlotStates.Insert(0, ItemSlotNetData.Empty);
                 queue.SetSelected(1, items[attack], 1);
                 a.CompactSlots();
                 Require(queue.selectedAction.HasValue && queue.selectedAction.Value.SlotIndex == 0,

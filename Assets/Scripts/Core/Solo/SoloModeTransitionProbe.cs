@@ -36,6 +36,7 @@ namespace AbsoluteZero.Core.Solo
         NetworkTransport _onlineTransport;
         string _directory;
         bool _expectedFailure;
+        int _cycle;
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void Install()
         {
@@ -48,6 +49,7 @@ namespace AbsoluteZero.Core.Solo
         {
             DontDestroyOnLoad(gameObject); Application.runInBackground = true;
             _directory = Path.GetFullPath(Arg("--plan036-output", "."));
+            string reportDirectory = _directory;
             _report.peer = int.Parse(Arg("--plan036-peer", "0")); Directory.CreateDirectory(_directory);
             Application.logMessageReceived += Log;
             try
@@ -55,7 +57,16 @@ namespace AbsoluteZero.Core.Solo
                 await Until(() => AppBootstrapper.Instance?.IsReady == true && Button() != null, 20, "local app/menu");
                 _app = AppBootstrapper.Instance; _manager = NetworkManager.Singleton; _onlineTransport = _manager.NetworkConfig.NetworkTransport;
                 Check(UnityServices.State == ServicesInitializationState.Uninitialized, "cold boot does not authenticate");
-                if (_report.peer == 0) await Host(); else await Client();
+                int cycles = Mathf.Clamp(int.Parse(Arg("--plan036-transition-cycles", "1")), 1, 5);
+                for (_cycle = 0; _cycle < cycles; _cycle++)
+                {
+                    _directory = cycles == 1 ? reportDirectory : Path.Combine(reportDirectory, "cycle" + _cycle);
+                    Directory.CreateDirectory(_directory);
+                    if (_report.peer == 0) await Host(); else await Client();
+                    Write("cycle-done-" + _report.peer, "done");
+                    for (int peer = 0; peer < 4; peer++) await Exists("cycle-done-" + peer, 60);
+                    Check(true, "completed cycle " + (_cycle + 1) + "/" + cycles);
+                }
                 _report.passed = _report.errors.Count == 0;
             }
             catch (Exception error) { _report.failure = error.ToString(); File.WriteAllText(Path.Combine(_directory, "abort"), "peer " + _report.peer + ": " + error.Message); }
@@ -64,14 +75,14 @@ namespace AbsoluteZero.Core.Solo
                 try { if (_app?.SessionRouter.Current != null) await _app.SessionRouter.StopAsync(); }
                 catch (Exception error) { _report.errors.Add("Final cleanup: " + error); _report.passed = false; }
                 Application.logMessageReceived -= Log;
-                File.WriteAllText(Path.Combine(_directory, "peer" + _report.peer + "-report.json"), JsonUtility.ToJson(_report, true));
+                File.WriteAllText(Path.Combine(reportDirectory, "peer" + _report.peer + "-report.json"), JsonUtility.ToJson(_report, true));
                 Application.Quit(_report.passed ? 0 : 2);
             }
         }
         async Task Host()
         {
             await Solo("cold", false);
-            Check(UnityServices.State == ServicesInitializationState.Uninitialized, "cold real Solo graph makes no UGS initialization");
+            if (_cycle == 0) Check(UnityServices.State == ServicesInitializationState.Uninitialized, "cold real Solo graph makes no UGS initialization");
             for (int count = 2; count <= 4; count++)
             {
                 var coordinator = NetworkSessionCoordinator.Instance;

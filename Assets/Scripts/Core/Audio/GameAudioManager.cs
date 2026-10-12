@@ -214,9 +214,6 @@ namespace AbsoluteZero.Core.Audio
 
             switch (env)
             {
-                case Item.EnvironmentType.CicadaSong:
-                    PlayEnvLoop("SFX_cicada");
-                    break;
                 case Item.EnvironmentType.SunnyDay:
                     PlayEnvLoop("SFX_cicada");
                     break;

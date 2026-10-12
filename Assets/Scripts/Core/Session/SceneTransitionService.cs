@@ -17,12 +17,14 @@ namespace AbsoluteZero.Core.Session
 
         public void LoadTitleScene()
         {
+            if (!ApplicationLifetime.CanNavigate) return;
             SceneManager.LoadScene(_titleSceneName);
             Debug.Log($"[SceneTransition] Loaded: {_titleSceneName}");
         }
 
         public async Task LoadTitleSceneAsync()
         {
+            if (!ApplicationLifetime.CanNavigate) return;
             if (_pendingLoad != null && _pendingLoad.isDone) _pendingLoad = null;
             if (_pendingLoad == null)
             {
@@ -33,6 +35,7 @@ namespace AbsoluteZero.Core.Session
             double deadline = Time.realtimeSinceStartupAsDouble + 35;
             while (!_pendingLoad.isDone)
             {
+                if (!ApplicationLifetime.CanNavigate) { _pendingLoad = null; return; }
                 if (Time.realtimeSinceStartupAsDouble >= deadline)
                     throw new TimeoutException("Menu scene load is still pending; cleanup must retain session ownership");
                 await Task.Delay(20);
