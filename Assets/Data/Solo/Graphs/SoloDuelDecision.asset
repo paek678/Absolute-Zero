@@ -117,8 +117,8 @@ MonoBehaviour:
           rid: 2503091644929671411
         BlackboardGroupReferences: []
         Root:
-          rid: 3734561718230843392
-        m_VersionTimestamp: 639267589876460157
+          rid: 3734561872381214732
+        m_VersionTimestamp: 639273477220977303
     - rid: 2503091644929671411
       type: {class: BlackboardReference, ns: Unity.Behavior, asm: Unity.Behavior}
       data:
@@ -129,14 +129,14 @@ MonoBehaviour:
       type: {class: Blackboard, ns: Unity.Behavior, asm: Unity.Behavior}
       data:
         m_Variables:
-        - rid: 3734561718230843394
-        - rid: 3734561718230843395
-        - rid: 3734561718230843396
-        - rid: 3734561718230843397
-        - rid: 3734561718230843398
-        - rid: 3734561718230843399
-        - rid: 3734561718230843400
-    - rid: 3734561718230843392
+        - rid: 3734561872381214734
+        - rid: 3734561872381214735
+        - rid: 3734561872381214736
+        - rid: 3734561872381214737
+        - rid: 3734561872381214738
+        - rid: 3734561872381214739
+        - rid: 3734561872381214740
+    - rid: 3734561872381214732
       type: {class: Start, ns: Unity.Behavior, asm: Unity.Behavior}
       data:
         ID:
@@ -147,10 +147,10 @@ MonoBehaviour:
         m_Parent:
           rid: -2
         m_Child:
-          rid: 3734561718230843393
+          rid: 3734561872381214733
         Repeat: 0
         AllowMultipleRepeatsPerTick: 0
-    - rid: 3734561718230843393
+    - rid: 3734561872381214733
       type: {class: SelectorComposite, ns: Unity.Behavior, asm: Unity.Behavior}
       data:
         ID:
@@ -159,11 +159,11 @@ MonoBehaviour:
         Graph:
           rid: 2503091644929671410
         m_Parent:
-          rid: 3734561718230843392
+          rid: 3734561872381214732
         m_Children:
-        - rid: 3734561718230843401
+        - rid: 3734561872381214741
         m_RegisteredObservers: []
-    - rid: 3734561718230843394
+    - rid: 3734561872381214734
       type: {class: 'BlackboardVariable`1[[UnityEngine.GameObject, UnityEngine.CoreModule]]', ns: Unity.Behavior, asm: Unity.Behavior}
       data:
         GUID:
@@ -171,7 +171,7 @@ MonoBehaviour:
           m_Value1: 0
         Name: Self
         m_Value: {fileID: 0}
-    - rid: 3734561718230843395
+    - rid: 3734561872381214735
       type: {class: 'BlackboardVariable`1[[System.Int32, mscorlib]]', ns: Unity.Behavior, asm: Unity.Behavior}
       data:
         GUID:
@@ -179,7 +179,7 @@ MonoBehaviour:
           m_Value1: 8604161192171239579
         Name: Round
         m_Value: 0
-    - rid: 3734561718230843396
+    - rid: 3734561872381214736
       type: {class: 'BlackboardVariable`1[[System.Int32, mscorlib]]', ns: Unity.Behavior, asm: Unity.Behavior}
       data:
         GUID:
@@ -187,7 +187,7 @@ MonoBehaviour:
           m_Value1: 15198175942916973272
         Name: Turn
         m_Value: 0
-    - rid: 3734561718230843397
+    - rid: 3734561872381214737
       type: {class: 'BlackboardVariable`1[[System.Single, mscorlib]]', ns: Unity.Behavior, asm: Unity.Behavior}
       data:
         GUID:
@@ -195,7 +195,7 @@ MonoBehaviour:
           m_Value1: 9989865495470712084
         Name: Own temperature
         m_Value: 0
-    - rid: 3734561718230843398
+    - rid: 3734561872381214738
       type: {class: 'BlackboardVariable`1[[System.Single, mscorlib]]', ns: Unity.Behavior, asm: Unity.Behavior}
       data:
         GUID:
@@ -203,7 +203,7 @@ MonoBehaviour:
           m_Value1: 17649454797532248713
         Name: Opponent temperature
         m_Value: 0
-    - rid: 3734561718230843399
+    - rid: 3734561872381214739
       type: {class: 'BlackboardVariable`1[[System.Single, mscorlib]]', ns: Unity.Behavior, asm: Unity.Behavior}
       data:
         GUID:
@@ -211,7 +211,7 @@ MonoBehaviour:
           m_Value1: 6971789250166759624
         Name: Remaining seconds
         m_Value: 0
-    - rid: 3734561718230843400
+    - rid: 3734561872381214740
       type: {class: 'BlackboardVariable`1[[System.String, mscorlib]]', ns: Unity.Behavior, asm: Unity.Behavior}
       data:
         GUID:
@@ -219,7 +219,7 @@ MonoBehaviour:
           m_Value1: 18187025951826881353
         Name: Selected copy
         m_Value: 
-    - rid: 3734561718230843401
+    - rid: 3734561872381214741
       type: {class: SequenceComposite, ns: Unity.Behavior, asm: Unity.Behavior}
       data:
         ID:
@@ -228,11 +228,11 @@ MonoBehaviour:
         Graph:
           rid: 2503091644929671410
         m_Parent:
-          rid: 3734561718230843393
+          rid: 3734561872381214733
         m_Children:
-        - rid: 3734561718230843402
+        - rid: 3734561872381214742
         m_RegisteredObservers: []
-    - rid: 3734561718230843402
+    - rid: 3734561872381214742
       type: {class: SequenceComposite, ns: Unity.Behavior, asm: Unity.Behavior}
       data:
         ID:
@@ -241,11 +241,11 @@ MonoBehaviour:
         Graph:
           rid: 2503091644929671410
         m_Parent:
-          rid: 3734561718230843401
+          rid: 3734561872381214741
         m_Children:
-        - rid: 3734561718230843403
+        - rid: 3734561872381214743
         m_RegisteredObservers: []
-    - rid: 3734561718230843403
+    - rid: 3734561872381214743
       type: {class: SelectorComposite, ns: Unity.Behavior, asm: Unity.Behavior}
       data:
         ID:
@@ -254,7 +254,7 @@ MonoBehaviour:
         Graph:
           rid: 2503091644929671410
         m_Parent:
-          rid: 3734561718230843402
+          rid: 3734561872381214742
         m_Children: []
         m_RegisteredObservers: []
 --- !u!114 &11400000
@@ -291,7 +291,7 @@ MonoBehaviour:
   - rid: 2503091644929671439
   - rid: 2503091644929671440
   - rid: 2503091644929671441
-  m_VersionTimestamp: 639267589876460157
+  m_VersionTimestamp: 639273477220977303
   m_SerializedVersion: 3
   m_DebugInfo: {fileID: 2812620193214149252}
   m_RuntimeGraph: {fileID: -828625310525461982}
@@ -490,7 +490,7 @@ MonoBehaviour:
   m_SubgraphsInfo: []
   m_BlackboardMissingManagedRef: 0
   m_GraphMissingManagedRef: 0
-  m_HasMissingTypeInManagedRef: 1
+  m_HasMissingTypeInManagedRef: 0
   m_EnumDependencyCache:
     Entries: []
   references:
