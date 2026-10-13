@@ -12,6 +12,8 @@ namespace AbsoluteZero.Core.Player
         public NetworkList<ItemSlotNetData> SlotStates;
 
         const int MAX_SLOTS = 12;
+        // Total slots including basics; a new item that cannot stack needs a free slot.
+        public const int SlotCapacity = MAX_SLOTS;
         const int MAX_DUPLICATE_COPIES = 3;
 
         ItemDataSO[] _itemRegistry;

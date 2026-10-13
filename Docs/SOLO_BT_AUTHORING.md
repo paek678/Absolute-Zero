@@ -1,6 +1,6 @@
 # Solo BT authoring guide
 
-Verified against repository source and the saved production graph on **2026-09-29**. Installed package: **Unity Behavior 1.0.16**. This is a guide to the existing Solo implementation; the code samples below have **not** been installed into the game.
+Verified against repository source and the saved production graph on **2026-09-29**; decision model, graph and profiles updated for the approved two-difficulty bot on **2026-10-13** ([PLAN_046](Plans/PLAN_046_solo_bot_difficulty.md)). Installed package: **Unity Behavior 1.0.16**. This is a guide to the existing Solo implementation; the code samples below have **not** been installed into the game.
 
 **Start here:** [play and configuration guide](SOLO_BOT_SETUP.md). Scope and existing evidence: [implementation plan](Plans/PLAN_036_solo_detailed_implementation.md), [validation results](Validation/PLAN_036_results.md).
 
@@ -8,10 +8,12 @@ Verified against repository source and the saved production graph on **2026-09-2
 
 | I want to change... | Edit... | Responsibility |
 |---|---|---|
-| Which tactic is tried first | `Assets/Data/Solo/Graphs/SoloDuelDecision.asset` or a duplicate | Graph: decision order |
-| Which legal item a tactic prefers | `Assets/Scripts/Core/Solo/BotDecisionModel.cs` | Pure observation/scoring code |
-| A reusable step visible in the graph | `Assets/Scripts/Core/Solo/SoloBehaviorNodes.cs` or a new adjacent C# file | Thin action node calling the controller |
-| Thinking, item delay, Ready policy, noise | Difficulty and item-use assets under `Assets/Data/Solo/` | Configuration resolved when launching a match |
+| Which branch (crisis / lethal / odds) is tried first | `Assets/Data/Solo/Graphs/SoloDuelDecision.asset` or a duplicate | Graph: decision order |
+| How an item is scored or picked | `Assets/Scripts/Core/Solo/BotDecisionModel.cs` | Pure observation/scoring code |
+| A reusable step or guard visible in the graph | `SoloBehaviorNodes.cs` / `SoloBehaviorConditions.cs` or a new adjacent C# file | Thin action node or condition calling the controller |
+| Success rates, pick odds, lookahead, multipliers, extra delay, thinking, Ready | Difficulty assets (`Beginner.asset`, `Advanced.asset`) | Configuration resolved when launching a match |
+| Item delays | `StandardItemUsePolicy.asset` (2 s / 4 s) | Configuration resolved when launching a match |
+| Opponent item worth, mini-game tier, formula coefficients | `Assets/Data/Solo/Knowledge/DefaultItemKnowledge.asset` | The per-item sheet; row order breaks ties |
 
 `BotTurnController` connects these pieces. It observes public state, builds legal candidates, runs the graph and submits requests. Keep actual item effects, consumption and combat in the shared game systems.
 
@@ -26,7 +28,7 @@ flowchart LR
     Delay --> Shared[PlayerState and shared combat]
 ```
 
-The bot uses the existing 1v1 rules in `GameScene_Solo`. One process runs an internal NGO host with a human and a logical bot participant. The BT decides the bot's input; `TurnManager` remains the only phase owner. The bot does not play mini-games or simulate mini-game success percentages.
+The bot uses the existing 1v1 rules in `GameScene_Solo`. One process runs an internal NGO host with a human and a logical bot participant. The BT decides the bot's input; `TurnManager` remains the only phase owner. The bot plays no mini-game UI. For a mini-game item, the trusted command boundary rolls success from the difficulty's tier rate when the delayed request starts. A failure is consumed through the same `PlayerState` path as a failed human mini-game. Once the human is Ready, the pending delay ends immediately.
 
 ## 2. Open and safely change a graph
 
@@ -42,11 +44,14 @@ The bot uses the existing 1v1 rules in `GameScene_Solo`. One process runs an int
 
 **Execution order matters:** in the installed package, outgoing child connections are compiled in ascending horizontal position (`GraphAssetProcessor.GetSortedConnections`). Keep sibling nodes at distinct X positions, left to right in execution order. Moving them for presentation can change behavior. Verify the compiled order and a trace after rearranging; do not rely on wire creation order or equal-X placement.
 
-**Do not use `Plan036BotGraphBuilder.CreateAndBind()` as a routine save/refresh command.** It rewrites the default bot binding, default/per-item delays, difficulty timing/retry values and encounter readiness, and saves the Solo scene. An existing graph's topology is not rebuilt by that method. Its separate `Validate()` imports and checks the **default** asset with an exact 19-node expectation; it is not a general validator for a customized graph.
+**`Plan046SoloBotBuilder.Build()` is a one-time creator, not a save/refresh command.**
+- It refuses to run when any of its assets exist: the graph, item knowledge, standard delays, beginner/advanced difficulties and both encounters.
+- It also binds `DefaultBot` (graph and knowledge), sets the development baseline to repeatable judgement (no random rolls), and writes the lobby profile list.
+- Its `Validate()` is read-only. It checks the **default** graph with an exact 22-node expectation, both guards, the step order, launch resolution of beginner/advanced/baseline, knowledge coverage and the lobby list. It is not a general validator for a customized graph.
 
 ## 3. Current graph: exact execution structure
 
-The saved default graph has 19 nodes including its start and flow nodes:
+The saved default graph has 22 nodes including its start and flow nodes. Numbers in brackets are the spec's decision steps:
 
 ```text
 On Start [Repeat = false]
@@ -54,21 +59,26 @@ On Start [Repeat = false]
    ├─ Bounded Solo retry
    │  └─ Sequence
    │     ├─ Capture own and public observation
-   │     ├─ Build legal own item candidates
+   │     ├─ Build legal own item candidates                 [1]
+   │     ├─ Score candidates by difficulty                  [2]
    │     ├─ Try In Order
-   │     │  ├─ Survival tactic
-   │     │  ├─ Finish tactic
-   │     │  ├─ Counter tactic
-   │     │  ├─ Resource tactic
-   │     │  └─ General tactic
+   │     │  ├─ Sequence
+   │     │  │  ├─ Conditional Guard: Bot is in mortal danger
+   │     │  │  └─ Pick best recovery or defense             [3]
+   │     │  ├─ Sequence
+   │     │  │  ├─ Conditional Guard: Lethal attack must be taken
+   │     │  │  └─ Pick lethal attack                        [4]
+   │     │  └─ Pick by difficulty odds                      [5]
    │     ├─ Wait for bounded thinking
-   │     ├─ Submit delayed item request
-   │     ├─ Await authoritative item result
+   │     ├─ Decide mini-game outcome and submit delayed item [6]
+   │     ├─ Await item delay or opponent Ready              [7]
    │     ├─ Choose Ready timing
    │     ├─ Wait for safe Ready time
    │     └─ Submit authoritative Ready
    └─ Fallback Ready without item
 ```
+
+The guards are the package's built-in **Conditional Guard (Action)** with project conditions (`SoloInCrisis`, `SoloMustFinish`) that read the latest score sheet.
 
 - **Sequence:** continue after each successful step; a failed step fails the sequence.
 - **Try In Order:** try the next child when a child fails; stop at the first success. It is not random selection and does not continuously rescore every branch while a later step runs.
@@ -83,16 +93,17 @@ All custom actions are in `Action/Absolute Zero/Solo`; the retry modifier is in 
 
 | Node class | Controller call | Result |
 |---|---|---|
-| `SoloObserve` | `CaptureObservation()` | Copy own/public state |
-| `SoloCandidates` | `BuildCandidates()` | Validate usable own inventory entries and estimate effects |
-| `SoloSurvival` | `Choose(BotTactic.Survival)` | Choose a healing candidate under the current threshold |
-| `SoloFinish` | `Choose(BotTactic.Finish)` | Choose estimated lethal damage |
-| `SoloCounter` | `Choose(BotTactic.Counter)` | Choose defense against public pressure |
-| `SoloResource` | `Choose(BotTactic.Resource)` | Prefer a permanent damaging item in the current safe range |
-| `SoloGeneral` | `Choose(BotTactic.General)` | General scoring fallback |
-| `SoloThinking` | `Think()` | Running until thinking ends; may fail for urgent re-observation |
-| `SoloSubmitUse` | `Submit()` | Start one delayed item request |
-| `SoloAwaitUse` | `AwaitUse()` | Running while pending; success when the selection is queued |
+| `SoloObserve` | `CaptureObservation()` | Copy own state and public opponent state, including the held item list |
+| `SoloCandidates` | `BuildCandidates()` | Validate usable own inventory entries, delays and current heals |
+| `SoloScore` | `ScoreCandidates()` | Score sheet: danger, recovery/defense multiplier, ranked positive items |
+| `SoloInCrisis` (condition) | `InCrisis` | True in mortal danger |
+| `SoloPickCrisis` | `PickCrisis()` | Best recovery/defense (odds only when the difficulty may miss in crisis) |
+| `SoloMustFinish` (condition) | `MustTakeLethal` | True when a lethal attack exists and the difficulty never misses it |
+| `SoloPickLethal` | `PickLethal()` | Best lethal attack |
+| `SoloPickWeighted` | `PickWeighted()` | Best / second / any positive item by difficulty odds |
+| `SoloThinking` | `Think()` | Running until thinking ends; fails to re-observe when mortal danger newly appears; succeeds at once if the opponent is Ready |
+| `SoloSubmitUse` | `Submit()` | Start one delayed item request; the boundary rolls mini-game success here |
+| `SoloAwaitUse` | `AwaitUse()` | Running while pending; success when queued, or when a failed roll consumed the item |
 | `SoloChooseReady` | `ChooseReadyTime()` | Set the intended Ready time |
 | `SoloWaitReady` | `WaitReady()` | Wait until that time or urgent temperature |
 | `SoloReady` | `SubmitReady()` | Success only on authoritative Ready acceptance |
@@ -101,43 +112,69 @@ All custom actions are in `Action/Absolute Zero/Solo`; the retry modifier is in 
 
 ## 4. Understand the current decision rules before tuning
 
-These are implementation values, **not final difficulty/balance approval**. The formulas live in `BotDecisionModel.TryChoose`.
+The approved spec is recorded in [PLAN_046](Plans/PLAN_046_solo_bot_difficulty.md). The formulas live in `BotDecisionModel.Score`.
 
-| Tactic | Eligibility | Positive candidate score |
-|---|---|---|
-| Survival | Own temperature <= 12 | Estimated healing |
-| Finish | Estimated damage >= opponent temperature | Estimated damage |
-| Counter | Own temperature <= 20 and opponent fan speed > 1 | Estimated defense |
-| Resource | Both temperatures > 20 and candidate is permanent | Estimated damage |
-| General | Any legal, affordable candidate | Damage + healing × 0.7 + utility + defense × 0.1 |
+- **Score unit:** temperature. Item effect values come from the item assets.
+- **Success:** 1 for items without a human mini-game; otherwise the difficulty's tier rate (easy / normal / hard).
+- **Lookahead:** applies to effects on a later turn.
+- **Recovery/defense multiplier:** crisis multiplier in mortal danger; comfort multiplier when own temperature − opponent temperature ≥ comfort margin; otherwise 1.
 
-Every tactic also rejects an item when `item delay + Ready reserve + 0.05 >= observed remaining seconds`. Zero/nonpositive scores cannot win. Ranking is `score × tactic weight + random noise`, with noise sampled from the bot's private RNG. Equal scores keep the first encountered candidate because replacement uses a strict greater-than comparison.
+| Item effect (examples) | Score |
+|---|---|
+| Direct attack (Fan, Ice Cream, Water Gun, Iced Americano, Hand Fan) | damage × success × (1 − block chance) |
+| Hug T-shirt | (opponent temperature − own temperature) × success; ≤ 0 is excluded |
+| Windbreaker / Mask | opponent's highest usable tool / food damage × opponent attack chance × recovery/defense multiplier |
+| Recovery (Warm Tea, Hot Pack, Hot Americano, Smartphone current use) | min(heal, 37 − own temperature) × success × recovery/defense multiplier |
+| Buldak / Soda | (min(next-turn heal, 37 − (own temperature − own cost)) × lookahead − own cost) × success × recovery/defense multiplier; Soda is excluded when its −5 would cause mortal danger |
+| Samgyetang | (next-turn damage × lookahead − immediate target heal) × success × (1 − food block chance) |
+| Cat | sum of opponent random item worth × 0.4 × lookahead |
+| Claw | highest stealable opponent item worth × 2 × lookahead × success; excluded when own inventory is full |
+| Blue Tape | 3 × lookahead × success |
+| Red Card | highest opponent item worth × 0.7 × success |
+| Screwdriver | opponent cooling per Prep × (boosted fan / current fan − 1) × 2 turns × lookahead × success; excluded when already boosted |
 
-**Weights are not branch probabilities or priorities.** Setting a branch's weight to zero disables it. With noise zero, multiplying every candidate score in a branch by the same positive weight does not change its winner. A high Finish weight cannot bypass an earlier successful Survival branch. Change graph order to change priority; change scoring to distinguish candidates differently.
+Supporting definitions:
+- **Block chance** is the difficulty's opponent block chance. It applies only while the opponent can use the matching Windbreaker (tool) or Mask (food).
+- **Mortal danger:** own temperature − own cooling until Ready − opponent's highest usable attack ≤ 0.
+  - Own cooling until Ready = own fan speed × shortest affordable item delay, or 0 once the opponent is Ready.
+- **Lethal:** a direct attack whose score is at least the opponent's temperature. It gains `kill bonus × success`.
+- **Opponent cooling per Prep:** the publicly observed drop from the opponent's Prep-start temperature to their Ready (average of the last 3). Before the first observation it is half the Prep window at the opponent's fan speed.
 
-For example, a copied aggressive graph could put Finish before Survival. That changes the choice when both are eligible and needs explicit tuning review. It is an authoring option, not a change made by this guide. Preserve Observe, legal validation, delayed submission, Ready and bounded fallback around the tactic selector.
+Each item is ranked once even when several copies are held. Items whose final score is ≤ 0 are never picked. Ties keep the item knowledge row order. Every candidate must still fit `delay + Ready reserve + 0.05 < remaining seconds` (the delay counts as zero once the opponent is Ready).
+
+Branch rules:
+- **Crisis guard:** the best positive Recovery or Defense item, or the odds pick among them when the difficulty may miss in crisis.
+- **Lethal guard:** only when the difficulty never misses a lethal attack (advanced). Beginner keeps the bonus but uses the odds.
+- **Odds:** with probability best → first, best + second → second, otherwise uniform among all positive items. The bot's private per-Prep RNG decides.
+- **Change priority** by editing the graph order, and the values by editing the difficulty/knowledge assets. Preserve Observe, legal validation, delayed submission, Ready and the bounded fallback around the selector.
 
 ### Estimates are deliberately limited
 
-- Observation contains own inventory candidates plus public temperatures, fan speeds and opponent Ready state. Opponent Ready is currently captured but not used in scoring.
-- No unrevealed opponent inventory or selected item enters the decision model.
-- Estimated damage is not a guarantee of a kill: shared combat can still apply defense, timing and other effects.
-- Healing is clamped to the current maximum of 37. Defense estimation is capped at 10; selected utility effects get heuristic scores. These constants are presently code, not Inspector settings.
-- Reveal and extra-action items do not have a completed look-ahead/follow-up strategy. Do not invent hidden-state knowledge or a second queued action to make them appear smarter.
+- **Observation** contains:
+  - own candidates;
+  - public temperatures and fan speeds;
+  - opponent Ready;
+  - Blue Tape state;
+  - the opponent's held item identities, which are shown on screen (Q15).
+- **Never observed:** the opponent's selected item, queue and use counts (Q22).
+- **Scores are expectations, not guarantees.** Shared combat still applies defense, order and timing. In code, the Windbreaker is a −2 reduction, while the spec formula treats it as a block chance.
+- **Reveal and extra-action items** (disabled Tarot) have no strategy and no knowledge row.
 
-The controller has additional safety thresholds: thinking can re-observe after crossing from above 12 to 12 or below; at 5 or below optional thinking ends immediately. NearDeadline Ready waits only while temperature is above 10 and uses at least 0.15 seconds of reserve. If these thresholds become configurable, update both controller and scoring from one resolved policy and test the boundaries together.
+Additional controller safety thresholds:
+- Thinking re-observes when mortal danger newly appears, and ends at once at 5° or below or once the opponent is Ready.
+- NearDeadline Ready waits only while the temperature is above 10 and the opponent is not Ready, and uses at least 0.15 seconds of reserve.
 
 ## 5. Configure a bot without adding C#
 
 | Asset / field | Meaning and constraints |
 |---|---|
 | `BotDefinitionSO.graph` | Compiled graph for this bot |
-| `BotDefinitionSO.tacticalDefaults` | Five nonnegative weights with a finite positive total |
-| `BotDifficultyProfileSO.overrideTacticalWeights` | When true, difficulty weights replace the bot weights; otherwise they are ignored at runtime |
-| `minimumThinkSeconds`, `maximumThinkSeconds` | Finite, nonnegative; maximum >= minimum. Thinking is shortened when the available preparation time is insufficient |
+| `BotDefinitionSO.itemKnowledge` | Required for normal launches (optional for fixtures): per-item opponent worth, mini-game tier (required for mini-game items), score coefficients; unique current-catalog items; row order breaks ties |
+| `BotDifficultyProfileSO.judgement` | Success rates per tier, best/second pick chances (sum ≤ 1), lookahead, opponent block/attack chances (all 0..1), kill bonus, crisis/comfort multipliers and comfort margin (≥ 0), may-miss-lethal / may-miss-crisis |
+| `extraItemDelaySeconds` | Finite, nonnegative; added to every effective item delay (beginner 2) |
+| `minimumThinkSeconds`, `maximumThinkSeconds` | Finite, nonnegative; maximum >= minimum. Thinking is shortened when the available preparation time is insufficient. Approved profiles use 0 |
 | `readyPolicy` | `AfterSelection` or `NearDeadline`; the latter can affect ordinary 1v1 initiative/cooling |
 | `readyReserveSeconds` | Nonnegative and shorter than the shared Prep duration |
-| `decisionNoise` | Finite 0..1 additive ranking noise; not a mini-game success rate |
 | `retryBudget` | Integer 0..32; zero means no retry after the initial attempt |
 | `BotItemUsePolicySO.defaultDelaySeconds` | Finite and strictly positive; used when an item has no override |
 | `BotItemUsePolicySO.overrides` | Unique current-catalog item references and positive delays |
@@ -146,7 +183,11 @@ The controller has additional safety thresholds: thinking can re-observe after c
 
 The resolver validates both weight sets and both referenced item policies even when an override determines the effective values. Keep unused-but-referenced profiles valid too.
 
-Current default tuning is provisional: 0.2–0.45 seconds thinking, 0.75 seconds ordinary item delay, 1.5 seconds for items whose human path requires a mini-game, 0.25 seconds Ready reserve, zero noise, two retries, AfterSelection Ready, and all tactic weights at 1. Per-item override entries take precedence over the default: changing only the default does not change an item that already has an override.
+Player profiles (`BeginnerSoloDuel`, `AdvancedSoloDuel`) share `DefaultBot`, the production graph and `StandardItemUsePolicy` (2 s instant, 4 s mini-game). They differ only in their difficulty asset: beginner adds 2 s. Both use 0 thinking, 0.25 s Ready reserve, two retries and AfterSelection Ready, and remain `provisionalTuning` until play-tested.
+
+The development baseline (`DefaultSoloDuel` / `NeutralBaseline`) keeps 0.2–0.45 s thinking and the 0.75 s / 1.5 s delays. It uses the advanced judgement with success rates 1 and best pick chance 1, so fixtures stay repeatable.
+
+Per-item override entries take precedence over the default: changing only the default does not change an item that already has an override.
 
 ### Settings that are not ready for Inspector-only customization
 
@@ -160,7 +201,7 @@ Ordinary Editor/Development entry accepts the current provisional tuning. Non-de
 
 First reuse an existing node when it already expresses the required step. For a genuinely new step, keep the node thin: obtain the controller, call its narrow operation, return the correct status. Unity's wizard supports **right-click empty graph space → Create new → Action** and generates the node class and lifecycle methods; see [Unity's custom-node instructions](https://docs.unity3d.com/Packages/com.unity.behavior@1.0/manual/create-custom-node.html).
 
-The example below wraps the **existing Finish decision** to show the project integration pattern. It adds no new intelligence and is unnecessary if `SoloFinish` already fits.
+The example below wraps the **existing lethal pick** to show the project integration pattern. It adds no new intelligence and is unnecessary if `SoloPickLethal` already fits.
 
 Suggested location if intentionally installed: `Assets/Scripts/Core/Solo/Nodes/SoloChooseFinishExample.cs`. Keep it in the existing `AbsoluteZero.Core` assembly; controller decision methods are `internal`. A file in an unrelated assembly cannot call them simply by importing the namespace.
 
@@ -188,7 +229,7 @@ namespace AbsoluteZero.Core.Solo
             if (controller == null || !controller.CanAct())
                 return Status.Failure;
 
-            return controller.Choose(BotTactic.Finish)
+            return controller.PickLethal()
                 ? Status.Success
                 : Status.Failure;
         }
@@ -199,7 +240,7 @@ namespace AbsoluteZero.Core.Solo
 - Generate a different unique node ID for each new node type; keep an existing type's ID stable. The shown ID belongs to this example only. PowerShell can generate one with `[guid]::NewGuid().ToString('N')`.
 - Keep `[Serializable, GeneratePropertyBag]`, `partial` and the node metadata. Resolve compilation errors before adding the node to a graph.
 - The graph's owner GameObject is the controller object. It is not necessarily the bot's character GameObject; do not obtain the actor with `GameObject.GetComponent<PlayerState>()`.
-- Place this kind of selection node inside the tactic selector **after Observe and Candidates**, before Thinking/Submit.
+- Place this kind of selection node inside the pick selector **after Observe, Candidates and Score**, before Thinking/Submit.
 - `Success` here means a legal candidate was chosen, not that its damage has happened.
 
 ### Waiting and asynchronous operations
@@ -218,24 +259,24 @@ protected override Status OnUpdate() =>
 
 This is an excerpt from an existing class, not another standalone script to paste into the project. Submission happens once in the preceding `SoloSubmitUse`; the waiting node only polls that operation. Do not submit again every frame, add another timer, or play a fake mini-game. `BotItemUseOperation` already owns the authoritative delay. `BotTurnController.StopRun` aborts pending work on cancellation/invalid context. Do not indiscriminately abort that shared operation from every action's `OnEnd`, which also runs at normal action completion.
 
-## 7. Add an actually new tactic or smarter scoring
+## 7. Add a new branch or smarter scoring
 
 Use this order for a focused implementation task:
 
-1. **Define the decision in plain language.** State the public inputs, legal candidate set, priority, fallback and expected examples. Example: prefer an already legal utility item under a particular public fan condition. Do not begin by creating new RPCs.
-2. **Prefer an existing tactic when sufficient.** A scoring adjustment to General needs no new graph node. Adding another branch is useful only when it has distinct eligibility/priority.
-3. **Extend the pure model.** Use `BotObservation` and `BotCandidate`, not scene searches or `PlayerState` inside scoring. Add missing public observations through the controller, copying them into an immutable snapshot. Do not leak hidden human state.
-4. **For a new tactic enum member**, append a stable `BotTactic` value and handle it explicitly in both eligibility/scoring and weight selection. The current default switch arm falls back to General, so adding an enum alone is incomplete.
-5. **For new profile knobs**, add serialization/defaults, resolver range checks and a copied field in `ResolvedSoloSettings`. Update configuration versions and existing-profile migration/default behavior. If extending `BotTacticalWeights`, update Neutral, resolver total/range checks, overrides and affected assets together.
-6. **Expose it through the controller.** Reuse `Choose(newTactic)` where sufficient. A different operation needs its own narrow controller method with `CanAct` and existing session/key checks.
-7. **Add the thin node and graph branch.** Assign a unique type ID and intentional left-to-right position. Preserve the single submission/await/Ready sequence.
+1. **Define the decision in plain language.** State the public inputs, legal candidate set, priority, fallback and expected examples. Do not begin by creating new RPCs.
+2. **Prefer data when sufficient.** Changing success rates, odds, multipliers, item worth or coefficients needs only the difficulty/knowledge assets. A new branch is useful only when it has distinct eligibility/priority.
+3. **Extend the pure model.** Use `BotObservation`, `BotCandidate` and `BotItemProfile`, not scene searches or `PlayerState` inside scoring. Add missing public observations through the controller, copying them into an immutable snapshot. Do not read the opponent's selection, queue or use counts.
+4. **For a new item effect**, map it in `BotDecisionModel.Profile` (formula, category, kind) and give it a score case. Unknown effects stay unchosen; do not assign invented damage.
+5. **For new profile knobs**, add serialization/defaults, resolver range checks and a copied field in `ResolvedSoloSettings`. Update configuration versions and existing-profile defaults together.
+6. **Expose it through the controller.** A new pick or guard needs its own narrow controller member with `CanAct` and the existing session/key checks.
+7. **Add the thin node or condition and graph branch.** Assign a unique type ID and intentional left-to-right position. Preserve the single submission/await/Ready sequence.
 8. **Add decision tests first**, then verify the saved graph, authoritative delay/cancellation and ordinary matches. Preserve baseline online 1v1/Multi behavior whenever shared code is touched.
 
-For a newly introduced item subtype, also implement its `ItemEffectRuleSnapshot` mapping, shared effect handling and a conservative bot estimate. An unsupported effect fails Solo configuration resolution today. Do not silence that failure by assigning invented damage to all unknown items.
+For a newly introduced item subtype, also implement its `ItemEffectRuleSnapshot` mapping and shared effect handling. An unsupported effect fails Solo configuration resolution today.
 
 ### Example decision test
 
-This illustrative test uses current internal APIs. If adopted, place it in the existing `Assets/Tests/Editor` assembly (`AbsoluteZero.EditorTests` already has friend access). The fixture tests the scorer, not graph wiring or actual combat. Similar coverage already exists in `Plan036BotDecisionTests`; avoid adding a duplicate test without a new behavior to protect.
+This illustrative test uses current internal APIs. If adopted, place it in the existing `Assets/Tests/Editor` assembly (`AbsoluteZero.EditorTests` already has friend access). The fixture tests the scorer, not graph wiring or actual combat. Similar coverage already exists in `Plan036BotDecisionTests` and `Plan046BotJudgementTests` (the spec's worked example with real items); avoid adding a duplicate test without a new behavior to protect.
 
 ```csharp
 using System;
@@ -249,34 +290,27 @@ namespace AbsoluteZero.Tests
     public sealed class SoloAuthoringExampleTests
     {
         [Test]
-        public void FinishSelectsTheOnlyEstimatedLethalCandidate()
+        public void AdvancedTakesTheOnlyLethalAttack()
         {
-            var candidates = new[]
+            var profiles = new[]
             {
-                new BotCandidate(11, 0, 0, 0.75, 2, 0, 0, 0, true),
-                new BotCandidate(12, 0, 1, 0.75, 4, 0, 0, 0, false)
+                new BotItemProfile(0, true, BotItemFormula.DirectAttack, BotItemCategory.Attack, BotAttackKind.Tool, 2, 0, 1, 3, false, false, 0),
+                new BotItemProfile(1, true, BotItemFormula.DirectAttack, BotItemCategory.Attack, BotAttackKind.Food, 4, 0, 1, 5, true, true, 1)
             };
-            var observation = new BotObservation(
-                new PrepInputKey(1, 1, 1, 1),
-                seat: 1, opponent: 0,
-                temperature: 30, opponentTemperature: 3,
-                fan: 1, opponentFan: 1,
-                opponentReady: false, remaining: 10,
-                candidates: candidates);
+            var observation = new BotObservation(new PrepInputKey(1, 1, 1, 1), 1, 0,
+                temperature: 30, opponentTemperature: 3, fan: 1, opponentFan: 1, opponentReady: false, remaining: 10,
+                opponentPrepLoss: 3, ownSlots: 6, slotCapacity: 12, opponentItems: Array.Empty<BotOpponentItem>(),
+                candidates: new[] { new BotCandidate(11, 0, 0, 2), new BotCandidate(12, 0, 1, 2) });
+            var sheet = BotDecisionModel.Score(observation, profiles, BotJudgementSettings.Advanced, BotScoringCoefficients.Approved, 0.25);
 
-            bool found = BotDecisionModel.TryChoose(
-                observation, BotTactic.Finish,
-                BotTacticalWeights.Neutral, 0,
-                new Random(123), 0.25, out var chosen);
-
-            Assert.That(found, Is.True);
+            Assert.That(BotDecisionModel.TryPickLethal(sheet, BotJudgementSettings.Advanced, out var chosen), Is.True);
             Assert.That(chosen.Copy, Is.EqualTo(12u));
         }
     }
 }
 ```
 
-Add cases for no eligible item, exact deadline equality, zero branch weight, temperature thresholds, fixed RNG replay and unchanged source data. To verify first-success priority, also test the graph; scorer tests for isolated tactics do not prove selector order.
+Add cases for no eligible item, exact deadline equality, crisis/lethal thresholds, odds frequencies, fixed RNG replay and unchanged source data. To verify first-success priority, also test the graph; scorer tests do not prove selector order.
 
 ## 8. Inspect decisions while playing
 
@@ -285,9 +319,10 @@ Launch ordinary Solo from the lobby and filter the Unity console or Development 
 Expected event progression is:
 
 ```text
-seed=... -> observe -> legal candidates=...
--> Survival/Finish/Counter/Resource/General copy=... item=... target=...
--> submit Pending:... -> operation Queued:... -> ready ReadyAccepted:...
+start seed=... difficulty=... -> observe remaining=... opponentItems=... -> legal candidates=...
+-> score crisis=... care=... loss=... threat=... ranked=Item:final(! = lethal),...
+-> crisis/lethal/odds copy=... item=... target=... think=...
+-> submit Pending:... due=... -> operation Queued:... (or Cancelled:MiniGameFailed) -> ready ReadyAccepted:...
 ```
 
 This is a schematic, not a captured test result. Actual lines include generation `g`, round `r`, turn `t`, sequence `seq` and server-clock `time`. Record those fields plus encounter/profile versions when reporting a bug. The controller retains its latest 256 trace entries and exposes `RunCount`, `SelectionCount`, `ReadyCount`, `IsRunning` and `RuntimeGraph` for inspection.
@@ -301,6 +336,9 @@ The graph has these debug Blackboard variables:
 | `Own temperature` | float | Captured own temperature |
 | `Opponent temperature` | float | Captured opponent temperature |
 | `Remaining seconds` | float | Captured preparation time remaining |
+| `In crisis` | bool | Latest score sheet's mortal-danger result |
+| `Lethal available` | bool | A lethal attack is in the latest ranking |
+| `Selected item` | string | Chosen item asset name, or empty before selection |
 | `Selected copy` | string | Chosen inventory CopyId, or `0` before selection |
 
 These are observation/debug outputs, refreshed on observation/choice, not continuously live values or Inspector tuning inputs. Editing them does not change the model's private observation. Preserve the graph owner variable and per-run runtime graph isolation; inspect `RuntimeGraph` for live values rather than treating the source asset as runtime state.
@@ -308,14 +346,14 @@ These are observation/debug outputs, refreshed on observation/choice, not contin
 | Symptom | Inspect first |
 |---|---|
 | Bot never starts | Ordinary encounter vs fixture, current host/Prep window, controller present, graph compiled, startup error |
-| Changing weights has no visible effect | Earlier successful tactic, override flag, zero-noise branch scaling, match not restarted |
+| Changing odds or rates has no visible effect | Earlier successful crisis/lethal guard, item not in the knowledge table, edited the wrong difficulty asset, match not restarted |
 | Bot repeatedly uses the same item | Resource branch eligibility, candidate scores/ties, available inventory and legal target |
 | Bot uses no item | No legal candidate, insufficient delay budget, no positive score, retry exhausted |
 | Bot waits longer than expected | Thinking range, per-item override, NearDeadline Ready, remaining server-clock time |
 | New node calls fail to compile | Wrong assembly, missing `partial`/attributes, nonexistent controller API, namespace collision |
 | Graph changes have no effect | Encounter references another bot/graph, duplicate graph runtime reference, stale player build |
 | Start-stat checkbox prevents launch | Deliberate custom stats/loadout guard; feature is still pending |
-| Customized graph fails 19-node validation | Baseline-specific builder check; validate the intended topology with explicit expectations |
+| Customized graph fails 22-node validation | Baseline-specific builder check; validate the intended topology with explicit expectations |
 
 ## Editor authoring workbench (PLAN040 BT01-A)
 
@@ -327,7 +365,7 @@ Open **Absolute Zero > Solo > Bot Authoring**, or select a Solo configuration as
 2. Click **저장된 로비 연결로 다시 검사** after edits. The workbench reads the saved `LobbyScene` item/cosmetic bindings in a temporary preview scene, closes it in `finally`, and checks the enabled Build Settings scene list. It does not include unsaved lobby edits, modify the current scene, or save assets.
 3. Read three separate launch results: ordinary development Solo, release Solo, and explicit fixture entry. They call the existing resolver; a default profile can pass development and still correctly fail release because tuning remains provisional.
 4. Use **수정 위치** to select the encounter, bot, difficulty, graph, stats or item-delay asset. The Inspector explains each configuration type. Runtime editing of these Inspector fields is disabled. Fields still use Unity serialized binding / Undo.
-5. Review the effective values and item timing table. Difficulty item-use overrides replace the whole base policy, while difficulty tactical weights apply only when the override flag is enabled. Disabled Tarot remains in the stable catalog but is marked as excluded.
+5. Review the effective values and item timing table. Difficulty item-use overrides replace the whole base policy, and the difficulty's extra delay is added to every item. Disabled Tarot remains in the stable catalog but is marked as excluded.
 6. The table shows *nominal* think + item delay + Ready reserve. Overflow is a warning, not a new launch rejection: the existing controller shortens thinking, filters unaffordable actions and can fall back to Ready. Frame overhead, observation time, graph correctness and actual inventory still require play tests.
 7. Start settings remain **inherit only**. Turning on an override or adding initial items is rejected until the start/reset/grant policy is approved. The displayed inherited temperature/fan values are taken from the resolved settings, not editable duplicate defaults.
 
@@ -338,7 +376,8 @@ The tool also reports duplicate IDs across saved configuration assets, including
 | Missing/placeholder graph | Bot asset → Graph; compile the intended Behavior graph and check its own topology |
 | Null/duplicate/unsupported catalog entry | Saved LobbyScene → AZLobbyUI → Solo Catalog; preserve network catalog ordering |
 | Unknown cosmetic ID | Bot asset → Cosmetics; validate against the saved lobby registry |
-| Invalid think/range/reserve/weights | Difficulty asset; follow finite ranges and current preparation duration |
+| Invalid think/range/reserve/judgement values | Difficulty asset; chances in [0, 1], best + second ≤ 1, finite nonnegative multipliers and delays |
+| Missing item knowledge / mini-game tier | Bot asset → Item Knowledge; one row per enabled catalog item, tier required for mini-game items |
 | Missing/duplicate item-delay entry | Effective item-use policy; item references must belong to the current catalog |
 | Custom stats/loadouts disabled | Stats asset; keep overrides off and initial items empty until BT01-B decisions |
 | Provisional shipping rejection | Expected while balance is pending; do not turn off the flag merely to clear the warning |
@@ -363,7 +402,8 @@ These are **checks to run after an implementation/tuning change**, not new passe
 
 Run relevant tests from the existing Editor Test Runner/Unity CLI path:
 
-- `Plan036BotDecisionTests`: eligibility, estimates, timing affordability, isolated RNG.
+- `Plan036BotDecisionTests`: affordability, duplicates, unknown items, heal cap, isolated RNG.
+- `Plan046BotJudgementTests`: the approved score sheet's worked example with real items, crisis, lethal, odds frequencies and exclusions.
 - `Plan036BotDelayTests`: delayed operation lifecycle and idempotency.
 - `Plan036ActionAuthorityTests` and `Plan036PrepInputTests`: validated requests, identity and preparation-window boundaries.
 - `Plan036SoloConfigurationTests` and `Plan036SoloConfigurationAssetTests`: configuration/resolution, asset references and release gates.
@@ -372,7 +412,7 @@ Run relevant tests from the existing Editor Test Runner/Unity CLI path:
 ### C. Play Mode and real development player
 
 - [ ] Ordinary lobby → Solo → natural match result → replay → lobby; no fixture replacing decisions.
-- [ ] Each intended tactic actually executes with a recorded legal candidate and target.
+- [ ] Each intended branch (crisis / lethal / odds) actually executes with a recorded legal candidate and target; mini-game failures consume once and Ready follows; the human's Ready ends the bot's delay.
 - [ ] Cooling during thinking triggers the intended re-observation; no stale item submission.
 - [ ] Item disappears/becomes invalid before submission; bounded replanning/fallback works.
 - [ ] Deadline too close for an item; no late consumption or stuck preparation phase.
@@ -405,14 +445,14 @@ Goal / player-visible behavior:
 Target encounter, bot, difficulty and graph assets:
 Allowed own/public observations:
 Eligibility and score examples, including one negative example:
-Priority relative to Survival / Finish / Counter / Resource / General:
+Priority relative to crisis guard / lethal guard / odds pick:
 Think delay / item-delay policy / Ready policy (approved values only):
 Fallback when there is no legal or affordable item:
 New configuration fields or stat/reset decisions required:
 
 Keep BotTurnController as the graph-run owner, TurnManager as phase owner,
 and TrustedBotCommandAdapter/BotItemUseOperation as the action boundary.
-Do not add bot mini-games, hidden-opponent reads, direct effect writes,
+Do not add bot mini-game UI, reads of the opponent's selection/queue, direct effect writes,
 duplicate host/player objects, or unbounded retries.
 
 Implement one small unit, run focused tests and a relevant runtime case,

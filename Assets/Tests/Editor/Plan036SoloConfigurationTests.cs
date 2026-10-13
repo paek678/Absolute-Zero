@@ -26,6 +26,7 @@ namespace AbsoluteZero.Tests
         BotDifficultyProfileSO _difficulty;
         BotStatProfileSO _stats;
         BotItemUsePolicySO _policy;
+        BotItemKnowledgeSO _knowledge;
         GameModeRuleSO _rule;
         BehaviorGraph _graph;
         CosmeticRegistrySO _cosmetics;
@@ -50,9 +51,11 @@ namespace AbsoluteZero.Tests
             _difficulty = Make<BotDifficultyProfileSO>("test.difficulty");
             Set(_difficulty, "minimumThinkSeconds", 0.1f); Set(_difficulty, "maximumThinkSeconds", 0.2f);
             Set(_difficulty, "retryBudget", 2);
+            _knowledge = Make<BotItemKnowledgeSO>("test.knowledge");
+            Knowledge((_catalog[0], 3f, BotMiniGameTier.None), (_catalog[1], 7f, BotMiniGameTier.None), (_catalog[2], 8f, BotMiniGameTier.Hard));
             _bot = Make<BotDefinitionSO>("test.bot");
             Set(_bot, "displayName", "Configuration test"); Set(_bot, "graph", _graph);
-            Set(_bot, "baseStats", _stats); Set(_bot, "itemUsePolicy", _policy);
+            Set(_bot, "baseStats", _stats); Set(_bot, "itemUsePolicy", _policy); Set(_bot, "itemKnowledge", _knowledge);
             _encounter = Make<SoloDuelDefinitionSO>("test.encounter");
             Set(_encounter, "readiness", (int)SoloConfigurationReadiness.ValidationFixture);
             Set(_encounter, "bot", _bot); Set(_encounter, "difficulty", _difficulty);
@@ -77,7 +80,7 @@ namespace AbsoluteZero.Tests
             Assert.That(settings.Graph, Is.SameAs(_graph));
             Assert.That(settings.RuleSnapshot.InitialRandomItems, Is.EqualTo(_rule.InitialRandomItems));
             Assert.That(settings.IsValidationFixture && settings.ProvisionalTuning, Is.True);
-            Assert.That(settings.ConfigurationVersions.Count, Is.EqualTo(5));
+            Assert.That(settings.ConfigurationVersions.Count, Is.EqualTo(6));
             Assert.That(settings.ConfigurationVersions.All(stamp => stamp.Version == 1), Is.True);
             Assert.That(settings.TryGetItemDelay(0, out float delay), Is.True); Assert.That(delay, Is.EqualTo(0.5f));
             Assert.That(settings.TryGetItemDelay(-1, out _), Is.False);
@@ -103,17 +106,58 @@ namespace AbsoluteZero.Tests
         }
 
         [Test]
-        public void DifficultyOverridesAreExplicitAndUnsetValuesInheritBotDefaults()
+        public void DifficultyOverridesAreExplicitAndJudgementComesFromTheDifficulty()
         {
-            Set(_bot, "tacticalDefaults.Survival", 4f);
-            Assert.That(Resolve().TacticalWeights.Survival, Is.EqualTo(4));
+            Assert.That(Resolve().Judgement.BestPickChance, Is.EqualTo(BotJudgementSettings.Advanced.BestPickChance));
             var overridePolicy = Make<BotItemUsePolicySO>("test.override.items");
             Set(overridePolicy, "defaultDelaySeconds", 2f);
             Set(_difficulty, "itemUseOverride", overridePolicy);
-            Set(_difficulty, "overrideTacticalWeights", true); Set(_difficulty, "tacticalWeights.Survival", 7f);
+            Set(_difficulty, "judgement.BestPickChance", .6f); Set(_difficulty, "judgement.HardMiniGameSuccess", .45f);
             var resolved = Resolve();
             Assert.That(resolved.ItemDelaySeconds, Is.EqualTo(new[] { 2f, 2f, 2f }));
-            Assert.That(resolved.TacticalWeights.Survival, Is.EqualTo(7));
+            Assert.That(resolved.Judgement.BestPickChance, Is.EqualTo(.6f));
+            Assert.That(resolved.TryGetMiniGameSuccess(2, out float waterGun), Is.True); Assert.That(waterGun, Is.EqualTo(.45f));
+            Assert.That(resolved.TryGetMiniGameSuccess(0, out float fan), Is.True); Assert.That(fan, Is.EqualTo(1f));
+        }
+
+        [Test]
+        public void ExtraItemDelayIsAddedToEveryEffectiveDelay()
+        {
+            Overrides(_policy, (_catalog[2], 4f));
+            Set(_difficulty, "extraItemDelaySeconds", 2f);
+            Assert.That(Resolve().ItemDelaySeconds, Is.EqualTo(new[] { 2.5f, 2.5f, 6f }));
+        }
+
+        [Test]
+        public void NormalLaunchRequiresItemKnowledgeButFixturesDoNot()
+        {
+            Set(_bot, "itemKnowledge", null);
+            var fixture = Resolve();
+            Assert.That(fixture.HasItemKnowledge, Is.False);
+            Assert.That(fixture.KnowsItem(0), Is.False);
+            Assert.That(fixture.TryGetMiniGameSuccess(2, out float chance) && chance == 1f, Is.True);
+            Set(_encounter, "readiness", (int)SoloConfigurationReadiness.Ready);
+            Set(_difficulty, "provisionalTuning", false); Set(_policy, "provisionalTuning", false);
+            Assert.That(SoloSettingsResolver.TryResolve(_encounter, Context(), out _, out var errors), Is.False);
+            Assert.That(errors.Any(error => error.Contains("item knowledge")), Is.True, string.Join("; ", errors));
+        }
+
+        [Test]
+        public void ItemKnowledgeEntriesAreValidated()
+        {
+            Knowledge((_catalog[0], 3f, BotMiniGameTier.None), (_catalog[0], 3f, BotMiniGameTier.None)); Reject("duplicate");
+            var foreign = Object.Instantiate(_catalog[0]); _created.Add(foreign);
+            Knowledge((foreign, 3f, BotMiniGameTier.None)); Reject("catalog");
+            Knowledge((_catalog[0], -1f, BotMiniGameTier.None)); Reject("opponent value");
+            Knowledge((_catalog[2], 8f, BotMiniGameTier.None)); Reject("mini-game tier");
+            Knowledge((_catalog[0], 3f, BotMiniGameTier.None)); Set(_knowledge, "coefficients.StealValueFactor", float.NaN); Reject("Claw");
+        }
+
+        [Test]
+        public void BestAndSecondPickChancesCannotExceedOne()
+        {
+            Set(_difficulty, "judgement.BestPickChance", .9f); Set(_difficulty, "judgement.SecondPickChance", .2f);
+            Reject("pick chances");
         }
 
         [Test]
@@ -137,13 +181,16 @@ namespace AbsoluteZero.Tests
             _catalog[0] = _catalog[1];
             Set(_policy, "defaultDelaySeconds", 9f); Overrides(_policy, (_catalog[1], 8f));
             Set(_difficulty, "minimumThinkSeconds", 5f); Set(_difficulty, "retryBudget", 8);
-            Set(_bot, "configId", "changed.bot"); Set(_bot, "tacticalDefaults.Survival", 12f);
+            Set(_bot, "configId", "changed.bot"); Set(_difficulty, "judgement.BestPickChance", .1f);
+            Set(_difficulty, "extraItemDelaySeconds", 3f); Knowledge((_catalog[1], 1f, BotMiniGameTier.None));
             Set(_rule, "prepPhaseDuration", 99f);
             Assert.That(resolved.Catalog[0], Is.SameAs(originalItem));
             Assert.That(resolved.ItemDelaySeconds, Is.EqualTo(new[] { 1.25f, 0.5f, 0.5f }));
             Assert.That(resolved.MinimumThinkSeconds, Is.EqualTo(0.1f));
             Assert.That(resolved.RetryBudget, Is.EqualTo(2)); Assert.That(resolved.BotId, Is.EqualTo("test.bot"));
-            Assert.That(resolved.TacticalWeights.Survival, Is.EqualTo(1));
+            Assert.That(resolved.Judgement.BestPickChance, Is.EqualTo(BotJudgementSettings.Advanced.BestPickChance));
+            Assert.That(resolved.ExtraItemDelaySeconds, Is.Zero);
+            Assert.That(resolved.KnowsItem(0) && resolved.KnowsItem(2), Is.True);
             Assert.That(resolved.RuleSnapshot.PrepPhaseDuration, Is.EqualTo(20));
             Assert.Throws<NotSupportedException>(() => ((IList<float>)resolved.ItemDelaySeconds)[0] = 8f);
             Assert.Throws<NotSupportedException>(() => ((IList<ItemDataSO>)resolved.Catalog)[0] = _catalog[1]);
@@ -276,14 +323,18 @@ namespace AbsoluteZero.Tests
         [TestCase("minimumThinkSeconds", float.NaN)]
         [TestCase("maximumThinkSeconds", float.PositiveInfinity)]
         [TestCase("maximumThinkSeconds", 0f)]
-        [TestCase("decisionNoise", -0.1f)]
-        [TestCase("decisionNoise", 1.1f)]
-        [TestCase("decisionNoise", float.NaN)]
         [TestCase("readyReserveSeconds", -1f)]
         [TestCase("readyReserveSeconds", 20f)]
         [TestCase("readyReserveSeconds", float.PositiveInfinity)]
-        [TestCase("tacticalWeights.General", float.NaN)]
-        [TestCase("tacticalWeights.Survival", -1f)]
+        [TestCase("extraItemDelaySeconds", -1f)]
+        [TestCase("extraItemDelaySeconds", float.NaN)]
+        [TestCase("judgement.EasyMiniGameSuccess", 1.1f)]
+        [TestCase("judgement.HardMiniGameSuccess", -0.1f)]
+        [TestCase("judgement.SecondPickChance", float.NaN)]
+        [TestCase("judgement.LookaheadFactor", 1.5f)]
+        [TestCase("judgement.OpponentBlockChance", -1f)]
+        [TestCase("judgement.KillBonus", -1f)]
+        [TestCase("judgement.ComfortMargin", float.PositiveInfinity)]
         public void InvalidDifficultyValuesAreRejected(string field, float value)
         { Set(_difficulty, field, value); Reject(); }
 
@@ -293,14 +344,10 @@ namespace AbsoluteZero.Tests
         { Set(_difficulty, "retryBudget", value); Reject("Retry"); }
 
         [Test]
-        public void UndefinedEnumsAndZeroTacticalWeightsAreRejected()
+        public void UndefinedEnumsAreRejected()
         {
             Set(_difficulty, "readyPolicy", 99); Reject("undefined"); Set(_difficulty, "readyPolicy", 0);
             Set(_encounter, "readiness", 99); Reject("undefined");
-            Set(_encounter, "readiness", (int)SoloConfigurationReadiness.ValidationFixture);
-            foreach (string field in new[] { "Survival", "Finish", "Counter", "Resource", "General" })
-                Set(_bot, "tacticalDefaults." + field, 0f);
-            Reject("positive total");
         }
 
         [TestCase("")]
@@ -372,6 +419,17 @@ namespace AbsoluteZero.Tests
             else if (value is bool flag) field.boolValue = flag;
             else if (value is string text) field.stringValue = text;
             else throw new ArgumentException(path);
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+        void Knowledge(params (ItemDataSO item, float value, BotMiniGameTier tier)[] entries)
+        {
+            var so = new SerializedObject(_knowledge); var array = so.FindProperty("entries"); array.arraySize = entries.Length;
+            for (int i = 0; i < entries.Length; i++)
+            {
+                array.GetArrayElementAtIndex(i).FindPropertyRelative("Item").objectReferenceValue = entries[i].item;
+                array.GetArrayElementAtIndex(i).FindPropertyRelative("OpponentValue").floatValue = entries[i].value;
+                array.GetArrayElementAtIndex(i).FindPropertyRelative("MiniGameTier").intValue = (int)entries[i].tier;
+            }
             so.ApplyModifiedPropertiesWithoutUndo();
         }
         static void Overrides(BotItemUsePolicySO policy, params (ItemDataSO item, float delay)[] entries)

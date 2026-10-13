@@ -112,9 +112,10 @@ namespace AbsoluteZero.UI.LobbyUI
 #endif
             if (!valid) return new SoloProfileStatus(false, string.Join("\n", errors), "현재 설정으로 시작할 수 없습니다. 상세 내용을 확인하세요.");
             string details = settings.BotDisplayName + "\n\n1대1 규칙 · 내 PC에서 진행\n" +
-                "봇은 미니게임 대신 아이템 사용 준비 시간을 가집니다.\n\n" +
+                "봇은 미니게임 화면 없이 난이도별 성공 확률로 결과를 정하고, 아이템을 고른 뒤 준비 시간이 지나야 준비 완료합니다. " +
+                "내가 먼저 준비 완료하면 봇도 바로 준비 완료합니다.\n\n" +
                 "시작 상태와 아이템 지급은 기존 1대1 규칙을 따릅니다.";
-            if (settings.ProvisionalTuning) details += "\n\n개발 조정 중인 기본 설정입니다. 최종 난이도는 추후 적용됩니다.";
+            if (settings.ProvisionalTuning) details += "\n\n플레이 테스트 후 수치가 조정될 수 있는 설정입니다.";
             return new SoloProfileStatus(true, details);
         }
 

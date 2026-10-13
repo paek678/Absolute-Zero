@@ -98,9 +98,13 @@ namespace AbsoluteZero.EditorTools
                 Text($"유효 기본값: 시작 {settings.StartingTemperature:0.##}° / 선풍기 {settings.FanBaseline:0.##} / 아이템은 1대1 지급 유지");
                 Text($"생각 {settings.MinimumThinkSeconds:0.###}~{settings.MaximumThinkSeconds:0.###}초 / " +
                     $"Ready 여유 {settings.ReadyReserveSeconds:0.###}초 / 재시도 한도 {settings.RetryBudget}");
-                var weights = settings.TacticalWeights;
-                Text($"판단 가중치: 생존 {weights.Survival} · 마무리 {weights.Finish} · 대응 {weights.Counter} · 자원 {weights.Resource} · 일반 {weights.General}");
-                Text("가중치는 후보 점수에 적용합니다. 그래프 가지의 우선순위 자체를 변경하지는 않습니다.");
+                var j = settings.Judgement;
+                Text($"미니게임 성공률: 쉬움 {j.EasyMiniGameSuccess:P0} · 보통 {j.NormalMiniGameSuccess:P0} · 어려움 {j.HardMiniGameSuccess:P0} / 추가 지연 {settings.ExtraItemDelaySeconds:0.##}초");
+                Text($"고를 확률: 가장 좋은 것 {j.BestPickChance:P0} · 두 번째 {j.SecondPickChance:P0} · 아무거나 {Mathf.Max(0, 1 - j.BestPickChance - j.SecondPickChance):P0}");
+                Text($"다음 턴 반영 {j.LookaheadFactor:0.##} · 상대 방어 {j.OpponentBlockChance:P0} · 상대 공격 {j.OpponentAttackChance:P0} · 처치 가산점 {j.KillBonus:0.##}");
+                Text($"회복·방어 배율: 위기 {j.CrisisCareMultiplier:0.##} · 여유 {j.ComfortCareMultiplier:0.##} (온도 차 {j.ComfortMargin:0.##} 이상) / " +
+                    $"처치 실수 {(j.MayMissLethal ? "함" : "안 함")} · 위기 실수 {(j.MayMissCrisis ? "함" : "안 함")}");
+                if (!settings.HasItemKnowledge) Message("아이템 판단표가 없어 봇이 아이템을 고르지 않습니다. 검사 전용 설정에서만 허용됩니다.", HelpBoxMessageType.Warning);
                 var versions = new Foldout { text = "설정 ID / 버전 (경기 시작 시 복사)", value = false };
                 foreach (var stamp in settings.ConfigurationVersions) versions.Add(new Label($"{stamp.Kind}: {stamp.Id} v{stamp.Version}"));
                 _content.Add(versions);
@@ -151,9 +155,13 @@ namespace AbsoluteZero.EditorTools
             {
                 var bot = _encounter.Bot;
                 var difficulty = _encounter.Difficulty;
-                Link(refs, "봇 / 외형 / 기본 판단", bot);
-                Link(refs, "난이도 / 생각 시간 / Ready / 가중치", difficulty);
-                if (bot != null) { Link(refs, "Behavior 그래프", bot.Graph); Link(refs, "기본 시작 설정 (상속만 가능)", bot.BaseStats); Link(refs, "기본 아이템 지연", bot.ItemUsePolicy); }
+                Link(refs, "봇 / 외형", bot);
+                Link(refs, "난이도 / 성공률 / 고를 확률 / 추가 지연 / Ready", difficulty);
+                if (bot != null)
+                {
+                    Link(refs, "Behavior 그래프", bot.Graph); Link(refs, "아이템 판단표 (상대 가치 / 미니게임 난이도 / 계수)", bot.ItemKnowledge);
+                    Link(refs, "기본 시작 설정 (상속만 가능)", bot.BaseStats); Link(refs, "기본 아이템 지연", bot.ItemUsePolicy);
+                }
                 if (difficulty != null) { Link(refs, "난이도 시작 설정 (상속만 가능)", difficulty.StatOverride); Link(refs, "난이도 아이템 지연 (우선 적용)", difficulty.ItemUseOverride); }
                 Link(refs, "공용 1대1 규칙 (기존 게임에도 영향)", _encounter.SharedOneVsOneRule);
             }
@@ -182,9 +190,10 @@ namespace AbsoluteZero.EditorTools
             string help = target switch
             {
                 BotStatProfileSO => "현재는 상속 전용입니다. Override를 켜거나 Initial Items를 채우면 실행이 거부됩니다. 시작 온도·선풍기·아이템은 기존 1대1 규칙을 사용합니다.",
-                BotDifficultyProfileSO => "생각 시간·Ready 여유·판단 가중치·지연 프로필을 설정합니다. Provisional Tuning은 개발 조정 중이라는 뜻이며 배포 승인이 아닙니다. 가중치는 후보 점수에 적용하고 그래프 가지 순서는 바꾸지 않습니다.",
-                BotItemUsePolicySO => "봇은 미니게임 대신 양수인 사용 지연을 적용합니다. 아이템 참조는 로비 카탈로그에 있어야 하며 중복 재정의는 불가합니다. 난이도의 정책이 있으면 그 정책 전체를 우선 사용합니다.",
-                BotDefinitionSO => "Behavior 그래프를 연결합니다. 봇은 자기 정보·공개 정보로 판단하며 행동 제출·효과 적용은 기존 서버 경계를 사용합니다. 그래프와 외형 원본은 실행 중 수정하지 않습니다.",
+                BotDifficultyProfileSO => "봇 설정 시트의 난이도 한 열입니다. 미니게임 성공률·고를 확률·다음 턴 반영 비율·상대 방어/공격 확률·처치 가산점·회복/방어 배율·추가 지연·생각 시간·Ready 여유·지연 프로필을 설정합니다. Provisional Tuning은 조정 중이라는 뜻이며 배포 승인이 아닙니다. 가지 우선순위는 그래프 순서로 정합니다.",
+                BotItemUsePolicySO => "아이템을 고른 뒤 준비 완료까지의 사용 지연입니다. 미니게임 결과는 난이도 성공률로 정합니다. 아이템 참조는 로비 카탈로그에 있어야 하며 중복 재정의는 불가합니다. 난이도의 정책이 있으면 그 정책 전체를 우선 사용하고, 난이도 추가 지연을 더합니다.",
+                BotItemKnowledgeSO => "아이템별 사용 기준 시트입니다. 상대가 가진 아이템의 가치와 미니게임 난이도, 점수 계수를 정합니다. 위에 있는 행이 동점일 때 먼저 선택됩니다. 표에 없는 아이템은 봇이 쓰지 않습니다.",
+                BotDefinitionSO => "Behavior 그래프와 아이템 판단표를 연결합니다. 봇은 자기 정보·공개 정보(상대 보유 아이템 포함, 이번 턴 선택은 제외)로 판단하며 행동 제출·효과 적용은 기존 서버 경계를 사용합니다. 그래프와 외형 원본은 실행 중 수정하지 않습니다.",
                 _ => "Draft는 실행 불가, ValidationFixture는 명시적 검사 진입만 가능합니다. Ready라도 그래프·값·배포 승인 검사를 통과해야 합니다. 복제한 자산은 고유 Config Id와 Version을 지정하세요."
             };
             root.Add(new HelpBox(help, HelpBoxMessageType.Info));

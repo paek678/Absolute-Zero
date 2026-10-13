@@ -13,12 +13,13 @@ namespace AbsoluteZero.Core.Solo.Configuration
         [SerializeField] BehaviorGraph graph;
         [SerializeField] BotStatProfileSO baseStats;
         [SerializeField] BotItemUsePolicySO itemUsePolicy;
-        [SerializeField] BotTacticalWeights tacticalDefaults = BotTacticalWeights.Neutral;
+        [Tooltip("Required for normal launches: opponent item worth, mini-game tiers and score coefficients.")]
+        [SerializeField] BotItemKnowledgeSO itemKnowledge;
         public string DisplayName => displayName;
         public BotCosmeticIds Cosmetics => cosmetics;
         public BehaviorGraph Graph => graph;
         public BotStatProfileSO BaseStats => baseStats;
         public BotItemUsePolicySO ItemUsePolicy => itemUsePolicy;
-        public BotTacticalWeights TacticalDefaults => tacticalDefaults;
+        public BotItemKnowledgeSO ItemKnowledge => itemKnowledge;
     }
 }

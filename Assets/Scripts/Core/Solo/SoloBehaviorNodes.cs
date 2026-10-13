@@ -17,7 +17,7 @@ namespace AbsoluteZero.Core.Solo
         protected override Status OnStart() => GameObject.GetComponent<BotTurnController>().BuildCandidates() ? Status.Success : Status.Failure;
     }
     [Serializable, GeneratePropertyBag]
-    [NodeDescription(name: "Submit delayed item request", story: "Submit delayed item request", category: "Action/Absolute Zero/Solo", id: "a0360000000000000000000000000003")]
+    [NodeDescription(name: "Decide mini-game outcome and submit delayed item", story: "Decide mini-game outcome and submit delayed item", category: "Action/Absolute Zero/Solo", id: "a0360000000000000000000000000003")]
     public partial class SoloSubmitUse : Unity.Behavior.Action
     {
         protected override Status OnStart() => GameObject.GetComponent<BotTurnController>().Submit() ? Status.Success : Status.Failure;
@@ -48,7 +48,7 @@ namespace AbsoluteZero.Core.Solo
         protected override Status OnUpdate() => GameObject.GetComponent<BotTurnController>().Think();
     }
     [Serializable, GeneratePropertyBag]
-    [NodeDescription(name: "Await authoritative item result", story: "Await authoritative item result", category: "Action/Absolute Zero/Solo", id: "a0360000000000000000000000000008")]
+    [NodeDescription(name: "Await item delay or opponent Ready", story: "Await item delay or opponent Ready", category: "Action/Absolute Zero/Solo", id: "a0360000000000000000000000000008")]
     public partial class SoloAwaitUse : Unity.Behavior.Action
     {
         protected override Status OnStart() => GameObject.GetComponent<BotTurnController>().AwaitUse();
@@ -62,34 +62,28 @@ namespace AbsoluteZero.Core.Solo
         protected override Status OnUpdate() => GameObject.GetComponent<BotTurnController>().WaitReady();
     }
     [Serializable, GeneratePropertyBag]
-    [NodeDescription(name: "Survival tactic", story: "Survival tactic", category: "Action/Absolute Zero/Solo", id: "a0360000000000000000000000000010")]
-    public partial class SoloSurvival : Unity.Behavior.Action
+    [NodeDescription(name: "Score candidates by difficulty", story: "Score candidates by difficulty", category: "Action/Absolute Zero/Solo", id: "a0460000000000000000000000000001")]
+    public partial class SoloScore : Unity.Behavior.Action
     {
-        protected override Status OnStart() => GameObject.GetComponent<BotTurnController>().Choose(BotTactic.Survival) ? Status.Success : Status.Failure;
+        protected override Status OnStart() => GameObject.GetComponent<BotTurnController>().ScoreCandidates() ? Status.Success : Status.Failure;
     }
     [Serializable, GeneratePropertyBag]
-    [NodeDescription(name: "Finish tactic", story: "Finish tactic", category: "Action/Absolute Zero/Solo", id: "a0360000000000000000000000000011")]
-    public partial class SoloFinish : Unity.Behavior.Action
+    [NodeDescription(name: "Pick best recovery or defense", story: "Pick best recovery or defense", category: "Action/Absolute Zero/Solo", id: "a0460000000000000000000000000002")]
+    public partial class SoloPickCrisis : Unity.Behavior.Action
     {
-        protected override Status OnStart() => GameObject.GetComponent<BotTurnController>().Choose(BotTactic.Finish) ? Status.Success : Status.Failure;
+        protected override Status OnStart() => GameObject.GetComponent<BotTurnController>().PickCrisis() ? Status.Success : Status.Failure;
     }
     [Serializable, GeneratePropertyBag]
-    [NodeDescription(name: "Counter tactic", story: "Counter tactic", category: "Action/Absolute Zero/Solo", id: "a0360000000000000000000000000012")]
-    public partial class SoloCounter : Unity.Behavior.Action
+    [NodeDescription(name: "Pick lethal attack", story: "Pick lethal attack", category: "Action/Absolute Zero/Solo", id: "a0460000000000000000000000000003")]
+    public partial class SoloPickLethal : Unity.Behavior.Action
     {
-        protected override Status OnStart() => GameObject.GetComponent<BotTurnController>().Choose(BotTactic.Counter) ? Status.Success : Status.Failure;
+        protected override Status OnStart() => GameObject.GetComponent<BotTurnController>().PickLethal() ? Status.Success : Status.Failure;
     }
     [Serializable, GeneratePropertyBag]
-    [NodeDescription(name: "Resource tactic", story: "Resource tactic", category: "Action/Absolute Zero/Solo", id: "a0360000000000000000000000000013")]
-    public partial class SoloResource : Unity.Behavior.Action
+    [NodeDescription(name: "Pick by difficulty odds", story: "Pick by difficulty odds", category: "Action/Absolute Zero/Solo", id: "a0460000000000000000000000000004")]
+    public partial class SoloPickWeighted : Unity.Behavior.Action
     {
-        protected override Status OnStart() => GameObject.GetComponent<BotTurnController>().Choose(BotTactic.Resource) ? Status.Success : Status.Failure;
-    }
-    [Serializable, GeneratePropertyBag]
-    [NodeDescription(name: "General tactic", story: "General tactic", category: "Action/Absolute Zero/Solo", id: "a0360000000000000000000000000014")]
-    public partial class SoloGeneral : Unity.Behavior.Action
-    {
-        protected override Status OnStart() => GameObject.GetComponent<BotTurnController>().Choose(BotTactic.General) ? Status.Success : Status.Failure;
+        protected override Status OnStart() => GameObject.GetComponent<BotTurnController>().PickWeighted() ? Status.Success : Status.Failure;
     }
     [Serializable, GeneratePropertyBag]
     [NodeDescription(name: "Bounded Solo retry", story: "Retry within profile and Prep window", category: "Flow/Absolute Zero", id: "a0360000000000000000000000000099")]
@@ -112,4 +106,3 @@ namespace AbsoluteZero.Core.Solo
         }
     }
 }
-

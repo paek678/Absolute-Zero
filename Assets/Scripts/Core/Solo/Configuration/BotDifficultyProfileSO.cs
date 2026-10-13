@@ -13,10 +13,10 @@ namespace AbsoluteZero.Core.Solo.Configuration
         [SerializeField] BotReadyPolicy readyPolicy = BotReadyPolicy.AfterSelection;
         [Tooltip("Finite and nonnegative; strictly less than the shared preparation duration. Reserved after item use.")]
         [SerializeField] float readyReserveSeconds;
-        [SerializeField] bool overrideTacticalWeights;
-        [Tooltip("Nonnegative candidate-score weights with a positive total. Does not reorder Behavior graph branches.")]
-        [SerializeField] BotTacticalWeights tacticalWeights = BotTacticalWeights.Neutral;
-        [SerializeField] float decisionNoise;
+        [Tooltip("Finite and nonnegative. Added to every effective item-use delay (beginner handicap).")]
+        [SerializeField] float extraItemDelaySeconds;
+        [Tooltip("Mini-game success, pick odds, lookahead and recovery/defense multipliers of this difficulty.")]
+        [SerializeField] BotJudgementSettings judgement = BotJudgementSettings.Advanced;
         [SerializeField] int retryBudget;
         [SerializeField] BotStatProfileSO statOverride;
         [Tooltip("When assigned, replaces the entire base item-delay policy; it does not merge missing overrides from the base.")]
@@ -26,9 +26,8 @@ namespace AbsoluteZero.Core.Solo.Configuration
         public float MaximumThinkSeconds => maximumThinkSeconds;
         public BotReadyPolicy ReadyPolicy => readyPolicy;
         public float ReadyReserveSeconds => readyReserveSeconds;
-        public bool OverrideTacticalWeights => overrideTacticalWeights;
-        public BotTacticalWeights TacticalWeights => tacticalWeights;
-        public float DecisionNoise => decisionNoise;
+        public float ExtraItemDelaySeconds => extraItemDelaySeconds;
+        public BotJudgementSettings Judgement => judgement;
         public int RetryBudget => retryBudget;
         public BotStatProfileSO StatOverride => statOverride;
         public BotItemUsePolicySO ItemUseOverride => itemUseOverride;

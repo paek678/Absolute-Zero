@@ -75,6 +75,9 @@ namespace AbsoluteZero.Core.Solo.Configuration
                             $"{row.NominalMinimum:0.###}..{row.NominalMaximum:0.###}s reaches the " +
                             $"{settings.RuleSnapshot.PrepPhaseDuration:0.###}s preparation window. " +
                             "The runtime may shorten thinking or choose another action / Ready fallback. This is not a launch failure.");
+                    if (settings.HasItemKnowledge && row.Enabled && !settings.ItemProfiles[i].Known)
+                        warnings.Add($"[{row.CatalogIndex}] {row.ItemName}: no item knowledge entry. " +
+                            "The bot never uses it and values it 0 while the opponent holds it.");
                 }
                 if (settings.ProvisionalTuning)
                     warnings.Add("Tuning is provisional. Development/fixture validation does not approve shipping balance.");
