@@ -34,7 +34,8 @@ namespace AbsoluteZero.Core.Player
         CannotUse,
         StaleCandidate,
         BotUsePending,
-        NoSelection
+        NoSelection,
+        MiniGameFailed
     }
 
     public readonly struct PlayerActionResult

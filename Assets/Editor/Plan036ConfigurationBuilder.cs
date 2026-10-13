@@ -96,7 +96,7 @@ public static class Plan036ConfigurationBuilder
             throw new InvalidOperationException("Validation fixture was accepted as a normal encounter.");
         var draft = AssetDatabase.LoadAssetAtPath<SoloDuelDefinitionSO>(DraftPath);
         if (draft != null && draft.Readiness == SoloConfigurationReadiness.Ready)
-            return Plan036BotGraphBuilder.Validate();
+            return Plan046SoloBotBuilder.Validate();
         if (draft == null || draft.Readiness != SoloConfigurationReadiness.Draft
             || SoloSettingsResolver.TryResolveForValidation(draft, context, out _, out var draftErrors)
             || !draftErrors.Any(error => error.Contains("Draft")))

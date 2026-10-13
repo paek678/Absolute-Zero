@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 47f0d5ac5cdad0c4ba3aa8a15930f03f, type: 3}
+  m_Name: Advanced
+  m_EditorClassIdentifier: AbsoluteZero.Core::AbsoluteZero.Core.Solo.Configuration.BotDifficultyProfileSO
+  configId: solo.difficulty.advanced
+  version: 1
+  provisionalTuning: 1
+  minimumThinkSeconds: 0
+  maximumThinkSeconds: 0
+  readyPolicy: 0
+  readyReserveSeconds: 0.25
+  extraItemDelaySeconds: 0
+  judgement:
+    EasyMiniGameSuccess: 0.9
+    NormalMiniGameSuccess: 0.8
+    HardMiniGameSuccess: 0.7
+    BestPickChance: 0.9
+    SecondPickChance: 0.08
+    LookaheadFactor: 0.8
+    OpponentBlockChance: 0.3
+    OpponentAttackChance: 0.7
+    KillBonus: 100
+    CrisisCareMultiplier: 2
+    ComfortCareMultiplier: 0.5
+    ComfortMargin: 10
+    MayMissLethal: 0
+    MayMissCrisis: 0
+  retryBudget: 2
+  statOverride: {fileID: 0}
+  itemUseOverride: {fileID: 11400000, guid: d2adabe1393304244827f72bec422239, type: 2}

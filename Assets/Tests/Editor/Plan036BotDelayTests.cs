@@ -11,10 +11,14 @@ namespace AbsoluteZero.Tests
         sealed class Boundary : IBotItemUseBoundary
         {
             public PrepInputKey Key = new(1, 1, 1, 1);
-            public bool Current = true, Open = true, Available = true, Queued;
-            public int QueueCount, ReadyCount;
+            public bool Current = true, Open = true, Available = true, Queued, Succeeds = true, OpponentReady;
+            public int QueueCount, ReadyCount, RollCount, FailCount;
             public System.Action OnQueue;
             public double Delay = 2;
+            public bool RollSuccess(PrepInputKey key, ulong requestId, PlayerActionCandidate candidate) { RollCount++; return Succeeds; }
+            public bool OthersReady(PrepInputKey key) => OpponentReady;
+            public PlayerActionResult FailMiniGame(PrepInputKey key, PlayerActionCandidate candidate)
+            { FailCount++; return new PlayerActionResult(PlayerActionStatus.Cancelled, PlayerActionReason.MiniGameFailed); }
             public bool IsCurrent(PrepInputKey key) => Current && key == Key;
             public bool TryWindow(PrepInputKey key, out PrepInputSnapshot snapshot)
             { snapshot = new PrepInputSnapshot(Key, 10, 20, 10, new float[] { 37, 37 }); return Open; }
@@ -155,6 +159,58 @@ namespace AbsoluteZero.Tests
             _boundary.Delay = delay;
             Assert.That(_use.Begin(_boundary.Key, 1, 9, 0).Status, Is.EqualTo(PlayerActionStatus.Rejected));
             Assert.That(_boundary.QueueCount, Is.Zero);
+        }
+        [Test] public void FailedRollConsumesAtDueInsteadOfQueueing()
+        {
+            _boundary.Succeeds = false;
+            Assert.That(_use.Begin(_boundary.Key, 1, 9, 0).Status, Is.EqualTo(PlayerActionStatus.Pending));
+            _clock.Time = 11.9;
+            Assert.That(_use.Poll(_boundary.Key, 1).Status, Is.EqualTo(PlayerActionStatus.Pending));
+            Assert.That(_boundary.FailCount, Is.Zero);
+            _clock.Time = 12;
+            var result = _use.Poll(_boundary.Key, 1);
+            Assert.That(result.Status, Is.EqualTo(PlayerActionStatus.Cancelled));
+            Assert.That(result.Reason, Is.EqualTo(PlayerActionReason.MiniGameFailed));
+            Assert.That(_boundary.FailCount, Is.EqualTo(1));
+            Assert.That(_boundary.QueueCount, Is.Zero);
+            Assert.That(_use.HasPending, Is.False);
+        }
+        [Test] public void OutcomeIsFixedOnceWhenTheRequestStarts()
+        {
+            _boundary.Succeeds = false;
+            _use.Begin(_boundary.Key, 1, 9, 0);
+            _boundary.Succeeds = true; _clock.Time = 12;
+            Assert.That(_use.Poll(_boundary.Key, 1).Reason, Is.EqualTo(PlayerActionReason.MiniGameFailed));
+            Assert.That(_boundary.RollCount, Is.EqualTo(1));
+            Assert.That(_use.Begin(_boundary.Key, 1, 9, 0).Reason, Is.EqualTo(PlayerActionReason.MiniGameFailed));
+            Assert.That(_boundary.RollCount, Is.EqualTo(1));
+        }
+        [Test] public void OpponentReadyEndsTheRemainingDelay()
+        {
+            _use.Begin(_boundary.Key, 1, 9, 0); _clock.Time = 10.5;
+            Assert.That(_use.Poll(_boundary.Key, 1).Status, Is.EqualTo(PlayerActionStatus.Pending));
+            _boundary.OpponentReady = true;
+            Assert.That(_use.Poll(_boundary.Key, 1).Status, Is.EqualTo(PlayerActionStatus.Queued));
+            Assert.That(_boundary.QueueCount, Is.EqualTo(1));
+        }
+        [Test] public void OpponentReadyKeepsAFailedRoll()
+        {
+            _boundary.Succeeds = false; _use.Begin(_boundary.Key, 1, 9, 0);
+            _boundary.OpponentReady = true;
+            Assert.That(_use.Poll(_boundary.Key, 1).Reason, Is.EqualTo(PlayerActionReason.MiniGameFailed));
+            Assert.That(_boundary.QueueCount, Is.Zero);
+        }
+        [Test] public void OpponentReadyCannotBypassAClosedWindowOrMissingCopy()
+        {
+            _use.Begin(_boundary.Key, 1, 9, 0);
+            _boundary.OpponentReady = true; _boundary.Open = false;
+            var closed = _use.Poll(_boundary.Key, 1);
+            Assert.That(closed.Status, Is.EqualTo(PlayerActionStatus.Cancelled));
+            Assert.That(closed.Reason, Is.EqualTo(PlayerActionReason.InputClosed));
+            _boundary.Open = true; _boundary.Succeeds = false;
+            _use.Begin(_boundary.Key, 2, 9, 0); _boundary.Available = false;
+            Assert.That(_use.Poll(_boundary.Key, 2).Status, Is.EqualTo(PlayerActionStatus.Cancelled));
+            Assert.That(_boundary.QueueCount + _boundary.FailCount, Is.Zero);
         }
     }
 }

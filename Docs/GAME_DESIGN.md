@@ -44,7 +44,7 @@ Starting Temp: 37°  |  Fan: -1°/sec  |  Prep Time: 20s  |  Defeat: 0°  |  Rec
 
 **Solo (1인 + 봇):**
 - Same rules as 1v1
-- BT AI bot with 2~3 difficulty levels
+- BT AI bot with two difficulty levels: 초급 (beginner) and 상급 (advanced) — [PLAN_046](Plans/PLAN_046_solo_bot_difficulty.md)
 - No Relay needed, local host execution
 - Bot execution: single executable with an internal NGO local host and a server-controlled bot participant (confirmed 2026-09-28; implementation planned in [PLAN_036](Plans/PLAN_036_solo_duel_bt_graph.md))
 
@@ -619,16 +619,32 @@ When a player dies:
 | Rules | Same as 1v1 (Bo3) |
 | Network | Internal NGO local host; no Relay or UGS login required for Solo (planned) |
 | Bot execution | One executable; server-controlled logical bot participant, no separate bot client (confirmed 2026-09-28) |
-| Difficulty | 2~3 levels |
-| Logic | Shared 1v1 rules and combat; dedicated Solo lifecycle and BT decision adapter (planned) |
+| Difficulty | 2 levels: 초급 / 상급 (approved 2026-10-13) |
+| Logic | Shared 1v1 rules and combat; dedicated Solo lifecycle and BT decision adapter |
 
 ### Bot AI Requirements
 
 - BT (Behavior Tree) based decision making
 - Must handle: item selection, Ready timing
-- **Bot does NOT play mini-games** — applies per-item use penalties such as delay, then follows normal 1v1 item processing; no simulated mini-game score or random success roll. Delay values remain tuning data. Pending use must not bypass Prep expiry or ordinary effect timing.
-- Difficulty tuning scope: starting temperature, baseline fan speed, starting items and AI response/temperament; exact values remain to be authored. No approved attack/block/heal multipliers or maximum-temperature changes.
-- Visual BT graph and configurable Solo scene implementation plan: [PLAN_036](Plans/PLAN_036_solo_duel_bt_graph.md). Baseline progression, grants and threshold rewards follow existing 1v1. Per-item penalty values and optional custom starting-profile semantics remain to be specified.
+- Start temperature, fan and initial random items are identical to the human player for both difficulties. No custom bot start stats.
+- **Item delay:** the bot readies a fixed time after choosing its item. Advanced: 2 s for items without a mini-game, 4 s with one. Beginner adds 2 s to every item (4 s / 6 s). If the human readies first, the remaining delay is skipped: the chosen item resolves and the bot readies at once.
+- **Mini-games:** the bot plays no mini-game UI. When it chooses a mini-game item, success is rolled from the difficulty's tier rate:
+
+  | Tier | Items | Beginner | Advanced |
+  |---|---|---|---|
+  | Easy (tapping) | Hot Pack, Buldak | 75% | 90% |
+  | Normal (timing / pattern) | Blue Tape, Smartphone, Red Card | 60% | 80% |
+  | Hard (aiming) | Water Gun, Screwdriver, Claw, Hug T-shirt | 45% | 70% |
+
+  A failure is handled exactly like a human failure: one use is consumed and there is no effect. A delay cut short by the human's Ready keeps the rolled outcome.
+- **Decision order each Prep:**
+  1. Keep only usable items.
+  2. Score each item by the approved formulas, in temperature units.
+  3. In mortal danger, take the best recovery or defense.
+  4. Advanced always takes a lethal attack.
+  5. Otherwise pick the best, second or any positive item by difficulty odds: advanced 90 / 8 / 2, beginner 60 / 25 / 15.
+- **Information:** the bot sees only public information. That includes the opponent's held items (Q15) but not the item the opponent selected this turn (Q22).
+- Values, formulas and the per-item sheet: [PLAN_046](Plans/PLAN_046_solo_bot_difficulty.md); authoring: [SOLO_BT_AUTHORING](SOLO_BT_AUTHORING.md). Earlier Solo BT infrastructure: [PLAN_036](Plans/PLAN_036_solo_duel_bt_graph.md). Baseline progression, grants and threshold rewards follow existing 1v1.
 - Historical handover: [BOT_HANDOVER](BOT_HANDOVER.md); its old integration snippets are superseded by PLAN_036's identity and perspective contracts.
 
 ---

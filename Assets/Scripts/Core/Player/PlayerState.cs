@@ -632,6 +632,34 @@ namespace AbsoluteZero.Core.Player
             return QueueValidatedItem(candidate);
         }
 
+        // The bot's mini-game outcome was fixed when its delayed request started. A failure
+        // is consumed exactly like a failed human mini-game: one use, no effect, no selection.
+        internal PlayerActionResult ServerFailBotMiniGameItem(PrepInputKey key, PlayerActionCandidate candidate,
+            TrustedBotCommandAdapter authorization)
+        {
+            var check = Admission.CheckBotCommand(key);
+            if (!check.Succeeded) return check;
+            if (!candidate.PrepKey.HasValue || candidate.PrepKey.Value != key || candidate.CopyId == 0
+                || !ReferenceEquals(candidate.Binding, _binding))
+                return PlayerActionResult.Stale(PlayerActionReason.StaleCandidate);
+            if (_botCommands == null || !ReferenceEquals(_botCommands, authorization))
+                return PlayerActionResult.Reject(PlayerActionReason.WrongController);
+            var result = Admission.ValidateItemCandidate(candidate.SlotIndex, candidate.CopyId,
+                candidate.TargetSeat, candidate.PrepKey, out var current);
+            if (!result.Succeeded) return result;
+            if (current.ItemData != candidate.ItemData || !current.ItemData.RequiresMiniGame)
+                return PlayerActionResult.Stale(PlayerActionReason.StaleCandidate);
+            ConsumeFailedMiniGameItem(current.SlotIndex);
+            return new PlayerActionResult(PlayerActionStatus.Cancelled, PlayerActionReason.MiniGameFailed);
+        }
+
+        void ConsumeFailedMiniGameItem(byte slotIndex)
+        {
+            Debug.Log($"[PlayerState P{SyncedPlayerIndex.Value}] Mini-game FAILED: slot {slotIndex} — consuming 1 use");
+            _inventory.ConsumeItem(slotIndex);
+            _inventory.CompactSlots();
+        }
+
         internal PlayerActionResult ServerCancelBotSelection(PrepInputKey key)
         {
             var check = Admission.CheckBotCommand(key);
@@ -724,9 +752,7 @@ namespace AbsoluteZero.Core.Player
 
                 if (!success)
                 {
-                    Debug.Log($"[PlayerState P{SyncedPlayerIndex.Value}] Mini-game FAILED: slot {slotIndex} — consuming 1 use");
-                    _inventory.ConsumeItem(slotIndex);
-                    _inventory.CompactSlots();
+                    ConsumeFailedMiniGameItem(slotIndex);
                     return;
                 }
 

@@ -7,7 +7,7 @@ Use this tool to check a Solo bot configuration before starting a match. It does
 1. Open the Absolute Zero project in Unity, outside Play Mode.
 2. Select **Absolute Zero → Solo → Bot Authoring**.
 3. Alternatively, select a bot configuration asset and click **봇 설정 검증 창 열기** in its Inspector.
-4. Select **DefaultSoloDuel** for the current baseline. Its asset is `Assets/Data/Solo/Encounters/DefaultSoloDuel.asset`.
+4. Select **BeginnerSoloDuel** or **AdvancedSoloDuel** for the player profiles (`Assets/Data/Solo/Encounters/`). **DefaultSoloDuel** remains the repeatable development baseline.
 5. After editing and saving configuration, press **저장된 로비 연결로 다시 검사**.
 
 The tool reads the **saved LobbyScene** item/cosmetic bindings and the enabled scenes in Build Settings. Unsaved lobby changes are not included. It preserves the active scene and closes its temporary preview scene.
@@ -32,12 +32,13 @@ The tool reads the **saved LobbyScene** item/cosmetic bindings and the enabled s
 | Asset | Fields / responsibility |
 |---|---|
 | SoloDuelDefinitionSO | Stable encounter ID/version, readiness, bot, difficulty, shared 1v1 rules and dedicated scene path. |
-| BotDefinitionSO | Display name, bot-only cosmetic IDs, compiled Behavior graph, base stats, base item policy, default tactical weights. |
-| BotDifficultyProfileSO | Think-time range, Ready policy/reserve, tactical-weight override, decision noise, bounded retry count and optional policy override. |
+| BotDefinitionSO | Display name, bot-only cosmetic IDs, compiled Behavior graph, base stats, base item policy, item knowledge. |
+| BotDifficultyProfileSO | One column of the approved bot settings: mini-game success per tier, best/second pick chances, lookahead, opponent block/attack chances, kill bonus, crisis/comfort multipliers, may-miss flags, extra item delay, think time, Ready policy/reserve, retry count and optional policy override. |
+| BotItemKnowledgeSO | The per-item sheet: opponent item worth, mini-game tier and score coefficients. Row order breaks score ties; items without a row are never chosen. Required for normal launches. |
 | BotItemUsePolicySO | Positive default item delay and per-item overrides using asset references. Duplicate overrides are invalid. |
 | BotStatProfileSO | Reserved start-state inputs. **Currently inherit-only**: all override flags off and initial items empty. |
 
-The difficulty item policy **replaces the entire base policy** when assigned. It does not merge missing entries from the base policy. Tactical weights use the difficulty values only when `Override Tactical Weights` is enabled; they score candidates without reordering graph branches.
+The difficulty item policy **replaces the entire base policy** when assigned. It does not merge missing entries from the base policy. The difficulty's extra item delay is then added to every item. Judgement values score and pick items; branch priority (crisis → lethal → odds) comes from the graph order.
 
 Start temperature, fan baseline and initial grants continue to follow current 1v1 rules. Custom start values need the start/reset/grant policy decision in BT01-B before activation.
 
@@ -45,7 +46,7 @@ Start temperature, fan baseline and initial grants continue to follow current 1v
 
 1. Select the intended encounter and open its bot/difficulty/item-policy assets through **수정 위치**.
 2. For an independent variant, duplicate the relevant assets, give each copy a new stable lowercase `Config Id`, and link the copies from a copied encounter. Retain provisional tuning while values are unapproved.
-3. Change the approved think/delay/weight fields. Do not edit the shared 1v1 rule merely to tune one bot.
+3. Change the approved success/odds/multiplier/delay fields. Do not edit the shared 1v1 rule merely to tune one bot.
 4. Save, then refresh the workbench. Resolve errors in the ordinary development result.
 5. Check whether timing warnings match the intended behavior. Near a deadline the runtime may shorten thinking, select another action, or use Ready fallback. A nominal sum exceeding the preparation time is a warning, not a new gameplay rule.
 6. Validate the actual graph and play a match. The workbench checks compiled roots/placeholders; a structurally valid graph can still contain incorrect behavior or priorities.
@@ -56,7 +57,7 @@ Adding an asset does not automatically expose it in the player menu. The lobby's
 
 The player flow is **main lobby → 봇 대전 → select a profile → 대전 시작**. Merely opening the screen performs local validation; it does not authenticate with UGS or start a host.
 
-- In saved `LobbyScene`, select the object with `AZLobbyUI` and edit **Solo Profiles**. Each entry contains `Title`, `Description` and `Encounter`. The current list contains one baseline entry. Do not invent difficulty labels or balance values before approval.
+- In saved `LobbyScene`, select the object with `AZLobbyUI` and edit **Solo Profiles**. Each entry contains `Title`, `Description` and `Encounter`. The current list contains the approved **초급** and **상급** profiles (PLAN046). Do not invent difficulty labels or balance values before approval.
 - Use unique encounter IDs in this explicit list. Duplicate IDs and invalid configurations disable Start with a reason. `ValidationFixture` entries are excluded from ordinary choices even in a development player.
 - **뒤로** before Start returns to the main menu. During startup it requests cleanup through the existing Solo coordinator; additional clicks do not start or cancel multiple sessions. If cleanup fails, retry Back; a new game remains blocked while the old session owns the network.
 - A successful Start captures configuration IDs, versions and resolved values. **Replay keeps that snapshot**. Changing lobby selection affects the next new match. The human cosmetic profile and bot cosmetic IDs remain separate.

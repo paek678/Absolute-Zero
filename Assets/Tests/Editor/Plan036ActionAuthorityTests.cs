@@ -77,6 +77,7 @@ namespace AbsoluteZero.Tests
             AssertResult(_state.ServerValidateBotItem(_key, 77, 0, out var candidate), status, reason);
             Assert.That(candidate.ItemData, Is.Null);
             AssertResult(_state.ServerQueueBotItem(_key, candidate), status, reason);
+            AssertResult(_state.ServerFailBotMiniGameItem(_key, candidate, null), status, reason);
             AssertResult(_state.ServerCancelBotSelection(_key), status, reason);
             AssertResult(_state.ServerPressBotReady(_key), status, reason);
             Assert.That(_state.HasSelectedItem.Value, Is.False);

@@ -5,6 +5,8 @@
 
 ---
 
+[2026-10-13] [Claude] [Feature] — PLAN_046 솔로 봇 난이도(초급/상급) 구현. 사용자 승인 봇 설계 반영: 아이템 데이터 기반 점수식 + BT 판단 순서(위기 Conditional Guard → 처치 Conditional Guard(상급) → 확률 선택 60/25/15·90/8/2), 미니게임 난이도별 성공률(선택 시점 판정, 실패 시 사람과 같은 1회 소모), 사람이 먼저 준비 완료하면 지연 즉시 종료, 상대 공개 보유 아이템 관찰(이번 턴 선택은 비공개 유지). 설정: BotJudgementSettings·BotItemKnowledgeSO·난이도 추가 지연, 전술 가중치/결정 노이즈 제거. 결정 그래프 재생성(22노드), 로비 초급/상급 등록, 2s/4s 지연 정책. Editor 1061/1061 통과, 실제 대전 trace로 지연·조기 준비·미니게임 실패 확인. 커밋 9a34c21의 NUL 손상 .meta 6개 재생성.
+
 [2026-09-11] [Claude] [Docs] — PLAN_021 전체 진행도 점검 + GAME_DESIGN.md 동기화. 64 task 중 56 완료 확인 (87.5%), PLAN_021 체크박스 전면 갱신, GAME_DESIGN.md 3건 불일치 수정 (drag→click 타겟, Ghost TBD→Implemented, Multi 씬 레이아웃), Open Questions Q24/Q27 Resolved 이동.
 
 [2026-09-04] [Claude] [Feature] — PLAN_025 Phase B-6 Balance 구현 (Codex 4→6, self-review 8/10). GetRandomSlotCount(basic 제외), 바람막이 1-use(InitializeBasicItems+ResetForNewRound), 타로 필터(GetRuleAwareDropTable), Deathmatch 지급(GrantDeathmatchItems), MultiRule.asset 값 설정(2/4/4/false/false). 3파일 수정 + 1 asset 수정, 컴파일 에러 0건.
