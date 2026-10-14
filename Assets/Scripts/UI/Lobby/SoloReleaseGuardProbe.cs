@@ -16,7 +16,7 @@ namespace AbsoluteZero.UI.LobbyUI
 {
     // Included only by the explicitly instrumented non-development guard build.
     // The production button and resolver compile without DEVELOPMENT_BUILD.
-    public sealed class SoloReleaseGuardProbe : MonoBehaviour
+    public sealed partial class SoloReleaseGuardProbe : MonoBehaviour
     {
         [Serializable] sealed class Report { public bool passed; public string failure; public string[] checks; }
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -42,7 +42,9 @@ namespace AbsoluteZero.UI.LobbyUI
                     "AbsoluteZero.Core.Solo.SoloMatchProbe", "AbsoluteZero.Core.Solo.SoloModeTransitionProbe",
                     "AbsoluteZero.UI.LobbyUI.ClosetValidationProbe", "AbsoluteZero.UI.LobbyUI.ClosetLayoutValidationProbe",
                     "AbsoluteZero.UI.LobbyUI.SettingsValidationProbe", "AbsoluteZero.UI.Game.SettingsGameplayProbe",
-                    "AbsoluteZero.UI.LobbyUI.SoloSelectionValidationProbe"
+                    "AbsoluteZero.UI.LobbyUI.SoloSelectionValidationProbe",
+                    "AbsoluteZero.Core.Solo.FullMatchPlaytestDriver", "AbsoluteZero.Core.Solo.PlaytestItemEvaluation",
+                    "AbsoluteZero.Core.Solo.PlaytestSoloEvidence", "AbsoluteZero.Core.Solo.ISoloPlaytestSelection"
                 };
                 foreach (var name in diagnosticTypes)
                     if (AppDomain.CurrentDomain.GetAssemblies().Any(a => a.GetType(name, false) != null))
@@ -54,6 +56,14 @@ namespace AbsoluteZero.UI.LobbyUI
                 var graph = typeof(BotDefinitionSO).GetProperty("Graph").GetValue(encounter.Bot);
                 bool graphValid = (bool)typeof(SoloSettingsResolver).GetMethod("HasCompiledRoot").Invoke(null, new[] { graph });
                 if (!graphValid) throw new InvalidOperationException("Release graph lost compiled root/types");
+                if (Array.IndexOf(Environment.GetCommandLineArgs(), "--plan036-release-approved-source") >= 0)
+                {
+                    report.checks = new[] { "Non-development compilation; development APIs absent", "Production compiled graph retained" }
+                        .Concat(await ValidateApprovedSourceMenu()).ToArray();
+                    report.passed = true;
+                }
+                else
+                {
                 var button = GameObject.Find("MainUI/MainPanel/SoloBtn").GetComponent<Button>(); button.onClick.Invoke();
                 await Task.Delay(500);
                 bool message = FindObjectsByType<TextMeshProUGUI>(FindObjectsSortMode.None).Any(x => x.text.Contains("Provisional tuning"));
@@ -66,9 +76,12 @@ namespace AbsoluteZero.UI.LobbyUI
                     || NetworkManager.Singleton.IsListening || new UnityServicesGateway().IsInitialized
                     || NetworkSessionCoordinator.Instance.State != SessionState.Offline
                     || SceneManager.GetActiveScene().name != "LobbyScene") throw new InvalidOperationException("Provisional release launch was not safely rejected with usable menu.");
-                report.passed = true;
                 report.checks = new[] { "Non-development compilation; development launch API absent", diagnosticTypes.Length + " development diagnostic types absent even with diagnostic CLI flags", "Production graph compiled root/types retained",
                     "Real Solo button rejects unapproved provisional tuning", "Menu restored; no session/network/UGS start" };
+                if (Array.IndexOf(Environment.GetCommandLineArgs(), "--plan036-release-integrated") >= 0)
+                    report.checks = report.checks.Concat(await ValidateIntegratedProfiles()).ToArray();
+                report.passed = true;
+                }
             }
             catch (Exception error) { report.failure = error.ToString(); }
             var args = Environment.GetCommandLineArgs(); int i = Array.IndexOf(args, "--plan036-output");

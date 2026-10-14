@@ -7,8 +7,9 @@ namespace AbsoluteZero.Core.Session
     public sealed class MatchSessionLease
     {
         public long Generation { get; }
-        public GameMode Mode { get; }
+        public GameMode Mode { get; private set; }
         internal MatchSessionLease(long generation, GameMode mode) { Generation = generation; Mode = mode; }
+        internal void AdoptOnlineMode(GameMode mode) => Mode = mode;
     }
 
     // One application owns this router. Work validity ends before asynchronous cleanup,
@@ -36,6 +37,16 @@ namespace AbsoluteZero.Core.Session
 
         public bool Owns(MatchSessionLease lease) => lease != null && ReferenceEquals(Current, lease);
         public bool IsCurrent(MatchSessionLease lease) => Owns(lease) && !IsStopping;
+
+        // Lobby metadata is authoritative before transport/scene startup. Keep
+        // the same exclusive owner: End/TryBegin would expose an ownership gap.
+        internal bool TryAdoptOnlineLobbyMode(MatchSessionLease lease, GameMode mode)
+        {
+            if (!IsCurrent(lease) || LaunchContext != null || IsSolo ||
+                (mode != GameMode.OneVsOne && mode != GameMode.Multi)) return false;
+            lease.AdoptOnlineMode(mode);
+            return true;
+        }
 
         public bool BindLaunchContext(MatchSessionLease lease, MatchLaunchContext context)
         {

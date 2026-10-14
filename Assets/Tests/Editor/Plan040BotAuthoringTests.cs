@@ -148,12 +148,23 @@ namespace AbsoluteZero.Tests
         }
 
         [Test]
-        public void NominalTimeOverflowWarnsButPreservesRuntimeThinkingClamp()
+        public void UnsupportedThinkingCannotLaunchAnIntegratedProductionBot()
         {
             Edit(_difficulty, "minimumThinkSeconds", p => p.floatValue = 50);
             Edit(_difficulty, "maximumThinkSeconds", p => p.floatValue = 60);
+            AssertBlocked("requires zero thinking");
+            Assert.That(_difficulty.MinimumThinkSeconds, Is.EqualTo(50), "Preview must not retune data.");
+        }
+
+        [Test]
+        public void ExplicitFixtureRetainsNominalTimeOverflowWarningWithoutRetuning()
+        {
+            Edit(_encounter, "readiness", p => p.enumValueIndex = (int)SoloConfigurationReadiness.ValidationFixture);
+            Edit(_difficulty, "minimumThinkSeconds", p => p.floatValue = 50);
+            Edit(_difficulty, "maximumThinkSeconds", p => p.floatValue = 60);
             var preview = SoloAuthoringPreview.Inspect(_encounter, Context());
-            Assert.That(preview.Development.CanLaunch, Is.True);
+            Assert.That(preview.Development.CanLaunch || preview.Release.CanLaunch, Is.False);
+            Assert.That(preview.Fixture.CanLaunch, Is.True, string.Join(";", preview.Fixture.Errors));
             Assert.That(preview.ItemTiming.Where(r => r.Enabled).All(r => r.NeedsTimingReview), Is.True);
             Assert.That(preview.Warnings.Any(w => w.Contains("shorten thinking")), Is.True);
             Assert.That(_difficulty.MinimumThinkSeconds, Is.EqualTo(50), "Preview must not retune data.");

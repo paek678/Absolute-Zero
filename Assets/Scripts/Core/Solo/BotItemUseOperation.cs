@@ -26,7 +26,12 @@ namespace AbsoluteZero.Core.Solo
         bool TryWindow(PrepInputKey key, out PrepInputSnapshot snapshot);
         PlayerActionResult Validate(PrepInputKey key, uint copy, byte target, out PlayerActionCandidate candidate);
         bool TryDelay(PlayerActionCandidate candidate, out double delay);
+        // Mini-game success is fixed when the request starts (item selection), never by the caller.
+        bool RollSuccess(PrepInputKey key, ulong requestId, PlayerActionCandidate candidate);
+        // True once every other participant pressed Ready: the remaining delay is skipped.
+        bool OthersReady(PrepInputKey key);
         PlayerActionResult Queue(PrepInputKey key, PlayerActionCandidate candidate);
+        PlayerActionResult FailMiniGame(PrepInputKey key, PlayerActionCandidate candidate);
         PlayerActionResult CancelSelection(PrepInputKey key);
         PlayerActionResult Ready(PrepInputKey key);
     }
@@ -40,6 +45,7 @@ namespace AbsoluteZero.Core.Solo
             internal uint Copy;
             internal byte Target;
             internal PlayerActionCandidate Candidate;
+            internal bool Succeeds = true;
             internal BotUseResult Result;
         }
         const int HistoryLimit = 64;
@@ -82,6 +88,7 @@ namespace AbsoluteZero.Core.Solo
                 else
                 {
                     record.Candidate = candidate;
+                    record.Succeeds = _boundary.RollSuccess(key, requestId, candidate);
                     result = new BotUseResult(PlayerActionStatus.Pending, operationId: requestId, dueTime: now + delay);
                     _pending = record;
                 }
@@ -124,7 +131,13 @@ namespace AbsoluteZero.Core.Solo
             var valid = _boundary.Validate(record.Key, record.Copy, record.Target, out var current);
             if (!valid.Succeeded || current.ItemData != record.Candidate.ItemData)
             { End(record, PlayerActionStatus.Cancelled, valid.Succeeded ? PlayerActionReason.StaleCandidate : valid.Reason); return; }
-            if (now < record.Result.DueTime) return;
+            if (now < record.Result.DueTime && !_boundary.OthersReady(record.Key)) return;
+            if (!record.Succeeds)
+            {
+                var failed = _boundary.FailMiniGame(record.Key, current);
+                End(record, failed.Status, failed.Reason);
+                return;
+            }
             // Revalidation resolves CopyId again after compaction. The production
             // queue boundary checks it again immediately before mutation.
             var queued = _boundary.Queue(record.Key, current);

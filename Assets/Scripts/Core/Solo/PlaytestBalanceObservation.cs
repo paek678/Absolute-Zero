@@ -17,6 +17,14 @@ namespace AbsoluteZero.Core.Solo
     }
 
     [Serializable]
+    public sealed class BalanceDropCandidate
+    {
+        public string item;
+        public float weight;
+        public bool eligible;
+    }
+
+    [Serializable]
     public sealed class BalanceObservation
     {
         public int version = 1;
@@ -28,6 +36,9 @@ namespace AbsoluteZero.Core.Solo
         public double seconds;
         public int[] order;
         public PlaytestItemRecord previousSlot, nextSlot;
+        public BalanceDropCandidate[] dropCandidates;
+        public string selectedDrop;
+        public float eligibleWeight;
     }
 
     // Immutable-at-emission DTOs only. No replicated state, gameplay timing or random draws.

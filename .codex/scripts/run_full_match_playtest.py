@@ -166,6 +166,93 @@ def compare_terminals(peers):
             'reason': 'stable terminal shared state comparison'}
 
 
+SOLO_EVIDENCE_FIELDS = ('encounterId','difficultyId','botId','graphName','graphAuthoringId',
+    'configurationVersions','catalogNames','effectiveDelays','miniGameSuccess','minimumThinkSeconds',
+    'maximumThinkSeconds','readyPolicy','readyReserveSeconds','extraItemDelaySeconds','retryBudget',
+    'provisionalTuning','validationFixture','inheritOneVsOneGrants','judgement','coefficients')
+
+
+def equal_effective_value(actual, expected):
+    if isinstance(expected, bool):return type(actual) is bool and actual == expected
+    if isinstance(expected, (int,float)):
+        return type(actual) in (int,float) and math.isfinite(actual) and math.isfinite(expected) and math.isclose(actual,expected,rel_tol=1e-6,abs_tol=1e-5)
+    if isinstance(expected,list):
+        return isinstance(actual,list) and len(actual)==len(expected) and all(equal_effective_value(a,b) for a,b in zip(actual,expected))
+    if isinstance(expected,dict):
+        return isinstance(actual,dict) and set(actual)==set(expected) and all(equal_effective_value(actual[k],v) for k,v in expected.items())
+    return type(actual) is type(expected) and actual==expected
+
+
+def solo_decision_seed(bot_id,generation,round_number,turn):
+    value=2166136261
+    encoded=(bot_id+'/'+str(generation)+'/'+str(round_number)+'/'+str(turn)).encode('utf-16-le')
+    for index in range(0,len(encoded),2):
+        value=((value ^ int.from_bytes(encoded[index:index+2],'little'))*16777619)&0xffffffff
+    return value if value<0x80000000 else value-0x100000000
+
+
+def validate_solo_identity(folder, expected, encounter, difficulty, seed):
+    """Additive new-cohort gate; inspect_peer remains unchanged for legacy callers."""
+    problems=[]
+    try:
+        summary=json.loads((folder/'summary.json').read_text(encoding='utf-8-sig'))
+        actual=json.loads((folder/'solo-identity.json').read_text(encoding='utf-8-sig'))
+        if not isinstance(actual,dict) or not isinstance(summary,dict):raise ValueError('identity object expected')
+    except (OSError,ValueError):return ['missing or malformed Solo identity evidence']
+    if summary.get('schema')!=3:problems.append('Solo identity summary schema missing')
+    for key,value in [('requestedEncounterId',encounter),('resolvedEncounterId',encounter),
+                      ('expectedDifficultyId',difficulty),('resolvedDifficultyId',difficulty)]:
+        if summary.get(key)!=value:problems.append('summary '+key+' mismatch')
+    for key,value in [('requestedEncounterId',encounter),('expectedDifficultyId',difficulty),
+                      ('encounterId',encounter),('difficultyId',difficulty),('humanDriverSeed',seed)]:
+        if actual.get(key)!=value:problems.append('identity '+key+' mismatch')
+    if type(actual.get('generation')) is not int or actual['generation']<=0:problems.append('invalid Solo session generation')
+    for key in SOLO_EVIDENCE_FIELDS:
+        if key not in expected or key not in actual or not equal_effective_value(actual[key],expected[key]):
+            problems.append('effective Solo setting missing/mismatch: '+key)
+    if actual.get('validationFixture') is not False:problems.append('validation fixture cannot certify natural Solo')
+    log=(folder/'player.log').read_text(encoding='utf-8-sig',errors='replace') if (folder/'player.log').exists() else ''
+    starts=re.findall(r'^\[SoloBT\] g=(\d+) r=(\d+) t=(\d+) seq=(\d+) time=[\d.]+ start seed=(-?\d+) difficulty=(\S+)',log,re.M)
+    if not starts or any(int(x[0])!=actual.get('generation') or x[5]!=difficulty for x in starts):
+        problems.append('actual bot decision seed/session/difficulty trace missing or mismatched')
+    if any(int(x[4])!=solo_decision_seed(actual.get('botId',''),int(x[0]),int(x[1]),int(x[2])) for x in starts):
+        problems.append('actual bot decision seed does not match stable key derivation')
+    pending=re.findall(r'^\[SoloBT\] .* submit Pending:.* request=(\d+) operation=(\d+) copy=(\d+) target=(\d+)',log,re.M)
+    if not pending or any(any(int(v)<=0 for v in x[:3]) for x in pending):
+        problems.append('actual bot request/operation/copy identity evidence missing')
+    return problems
+
+
+def load_solo_expectation(path, fingerprints, encounter, difficulty):
+    manifest=json.loads(path.read_text(encoding='utf-8-sig'))
+    if manifest.get('kind')!='solo-bot-integrated-build' or manifest.get('development') is not True:
+        raise ValueError('explicit integrated development build manifest required')
+    expected_hashes=manifest.get('build_hashes',{})
+    if not expected_hashes or set(expected_hashes)!=set(fingerprints) or any(expected_hashes.get(k)!=v for k,v in fingerprints.items()):
+        raise ValueError('runtime build does not match the certified build manifest')
+    profiles=manifest.get('profiles')
+    if not isinstance(profiles,list):raise ValueError('profile expectations missing')
+    matches=[p for p in profiles if isinstance(p,dict) and p.get('encounterId')==encounter]
+    if len(matches)!=1 or matches[0].get('difficultyId')!=difficulty:
+        raise ValueError('requested profile absent/ambiguous/mismatched in build manifest')
+    if any(key not in matches[0] for key in SOLO_EVIDENCE_FIELDS):raise ValueError('incomplete effective setting expectations')
+    return matches[0]
+
+
+def qualify_solo_cohort(records):
+    seen={key:set() for key in ('case_id','attempt_id','source')}
+    problems=[] if records else ['no selected Solo attempts']
+    for row in records:
+        if row.get('passed') is not True or row.get('identity_problems'):
+            problems.append('selected Solo attempt did not pass all identity/runtime gates')
+        for key in seen:
+            value=row.get(key)
+            if not isinstance(value,str) or not value or value in seen[key]:
+                problems.append('missing or duplicate selected Solo '+key)
+            seen[key].add(value if isinstance(value,str) else '')
+    return {'passed':not problems,'problems':sorted(set(problems)),'selected':len(records)}
+
+
 def run(args):
     root = args.output.resolve()
     root.mkdir(parents=True, exist_ok=False)
@@ -173,6 +260,20 @@ def run(args):
     build_root = exe.parent
     fingerprints = {str(p.relative_to(build_root)): digest(p) for p in build_root.rglob('*')
                     if p.is_file() and (p.name == exe.name or p.name.startswith('AbsoluteZero.') and p.suffix == '.dll')}
+    encounter=getattr(args,'solo_encounter_id',None)
+    difficulty=getattr(args,'solo_difficulty_id',None)
+    build_manifest=getattr(args,'solo_build_manifest',None)
+    explicit_solo=any(x is not None for x in (encounter,difficulty,build_manifest))
+    expectation=None
+    if explicit_solo:
+        if args.players!=1 or not all((encounter,difficulty,build_manifest)):
+            raise ValueError('explicit Solo requires one local player and encounter/difficulty/build manifest')
+        if getattr(args,'trial_kills',None) is not None or getattr(args,'trial_rounds',None) is not None:
+            raise ValueError('new Solo profile cohort cannot override shared rules')
+        for path in build_root.rglob('*'):
+            if path.is_file() and path.suffix in ('.assets','.resS','.resource'):
+                fingerprints[str(path.relative_to(build_root))]=digest(path)
+        expectation=load_solo_expectation(build_manifest,fingerprints,encounter,difficulty)
     repository = Path(__file__).resolve().parents[2]
     sources = [p for directory in ('Assets/Scripts', 'Assets/Data', 'Assets/Scenes', 'Packages', 'ProjectSettings')
                for p in (repository / directory).rglob('*')
@@ -188,6 +289,9 @@ def run(args):
                     build_hashes=fingerprints, primary_counted=False, time_scale=1,
                     timeout=args.timeout, resolution=[1280, 720], frame_cap=30,
                     causal_attribution_certified=False)
+    if explicit_solo:
+        manifest['case_id']=getattr(args,'case_id',None) or root.name
+        manifest['attempt_id']=getattr(args,'attempt_id',None) or uuid.uuid4().hex
     manifest['source_snapshot_hash'] = digest(root / 'source-hashes.json')
     manifest['eligible_primary'] = cohort == 'primary' and args.behavior == 'normal'
     visible = getattr(args, 'visible', False)
@@ -197,6 +301,9 @@ def run(args):
     manifest['trial_rounds'] = getattr(args, 'trial_rounds', None)
     manifest['policy_version'] = '2; seat-seeded ties; Ready seconds attacker=1.25 resource=1.75 survival=2 balanced/utility=2.5 cautious=5'
     manifest['source_snapshot_note'] = 'launch-time working tree, not proof that every source edit is in this executable; build hashes identify runtime'
+    if explicit_solo:
+        manifest['solo_request']={'encounter':encounter,'difficulty':difficulty,'build_manifest':str(build_manifest.resolve()),
+                                  'build_manifest_sha256':digest(build_manifest),'expected':expectation}
     (root / 'manifest.json').write_text(json.dumps(manifest, indent=2), encoding='utf-8')
     processes = []
     token = uuid.uuid4().hex[:10]
@@ -221,12 +328,21 @@ def run(args):
                        '--az-playtest-timeout', str(args.timeout), '--az-services-profile', f'azp-{token}-{peer}']
             if getattr(args, 'ready_delay', None) is not None:
                 command += ['--az-playtest-ready-delay', str(args.ready_delay)]
+            if explicit_solo:
+                command += ['--az-solo-encounter-id',encounter,'--az-solo-difficulty-id',difficulty]
+            if args.players==1 and getattr(args,'solo_local_port',None) is not None:
+                command += ['--az-solo-local-port',str(args.solo_local_port)]
+            if getattr(args,'record_video',False):
+                if not visible or not getattr(args,'ffmpeg',None) or not args.ffmpeg.is_file():
+                    raise ValueError('recording requires visible rendering and an existing ffmpeg')
+                command += ['--az-record-video',str(folder/'raw-video.mp4'),'--az-ffmpeg',str(args.ffmpeg.resolve())]
             if args.gameplay_seed is not None:
                 command += ['--az-gameplay-seed', str(args.gameplay_seed)]
             if getattr(args, 'trial_kills', None) is not None:
                 command += ['--az-trial-kills', str(args.trial_kills), '--az-trial-rounds', str(args.trial_rounds)]
             if visible:
                 command += ['--plan036-framebuffer-captures']
+            (folder/'command.json').write_text(json.dumps(command,indent=2),encoding='utf-8')
             processes.append(subprocess.Popen(command, startupinfo=None if visible else info))
         deadline = started + args.timeout + 210
         while any(p.poll() is None for p in processes):
@@ -256,6 +372,11 @@ def run(args):
     for i in range(args.players):
         try:
             peers.append(inspect_peer(root / str(i)))
+            if explicit_solo:
+                identity_errors=validate_solo_identity(root/str(i),expectation,encounter,difficulty,args.seed)
+                peers[-1]['solo_identity_problems']=identity_errors
+                peers[-1]['problems']+=identity_errors
+                peers[-1]['passed']=peers[-1]['passed'] and not identity_errors
         except Exception as error:
             peers.append(dict(passed=False, problems=['analyzer: ' + type(error).__name__], events=0))
     comparison = compare_terminals(peers)
@@ -286,6 +407,15 @@ if __name__ == '__main__':
     parser.add_argument('--visible', action='store_true', help='Use a visible player and actual framebuffer captures for visual qualification')
     parser.add_argument('--trial-kills', type=int, choices=range(1, 6))
     parser.add_argument('--trial-rounds', type=int, choices=range(1, 6))
+    parser.add_argument('--cohort',default='instrumentation-preflight')
+    parser.add_argument('--solo-encounter-id')
+    parser.add_argument('--solo-difficulty-id')
+    parser.add_argument('--solo-build-manifest',type=Path)
+    parser.add_argument('--solo-local-port',type=int)
+    parser.add_argument('--record-video',action='store_true')
+    parser.add_argument('--ffmpeg',type=Path)
+    parser.add_argument('--case-id')
+    parser.add_argument('--attempt-id')
     args = parser.parse_args()
     if (args.trial_kills is None) != (args.trial_rounds is None) or (args.trial_kills is not None and args.players != 4):
         parser.error('Balance trials require four players and both --trial-kills and --trial-rounds')

@@ -869,61 +869,61 @@
             "temperature": 0,
             "defense": 0,
             "use": 0,
-            "duel": "+8oGpio1aEXw/o4MJl1rK1WuxbuuUJrgGfcw++OjC3w=",
-            "multi3": "SRGBtdLb0wPwO37XLGgGZ8LJoLS9+SjtKQdIOlqqjkY=",
-            "multi4": "X0aBdiOEhjP9Xaex1Q/xk8f9orp6VfFUtJBPTaH8Z9M="
+            "duel": "Ouw/FSlMsartghcgM81s5Pl4EnAc77GPQjd15tHE+Ns=",
+            "multi3": "7wIdYxpMIMq2GRkv383LbynEZHwuRCd2acGmOI9MR/U=",
+            "multi4": "SXvBPs3UX9kDoawNj17d+SJecwOrS+dSzJqbnJN0xac="
         },
         {
             "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
             "temperature": 0,
             "defense": 0,
             "use": 1,
-            "duel": "+8oGpio1aEXw/o4MJl1rK1WuxbuuUJrgGfcw++OjC3w=",
-            "multi3": "SRGBtdLb0wPwO37XLGgGZ8LJoLS9+SjtKQdIOlqqjkY=",
-            "multi4": "X0aBdiOEhjP9Xaex1Q/xk8f9orp6VfFUtJBPTaH8Z9M="
+            "duel": "Ouw/FSlMsartghcgM81s5Pl4EnAc77GPQjd15tHE+Ns=",
+            "multi3": "7wIdYxpMIMq2GRkv383LbynEZHwuRCd2acGmOI9MR/U=",
+            "multi4": "SXvBPs3UX9kDoawNj17d+SJecwOrS+dSzJqbnJN0xac="
         },
         {
             "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
             "temperature": 0,
             "defense": 1,
             "use": 0,
-            "duel": "qF9jWdqjimirNqpbau0+2YWw6WQnakjhOeEYqsmpux4=",
-            "multi3": "BKJQ+ZnBUICgVRu5Q7VnB+yt8sTRnsvWPwAJg4tbHk0=",
-            "multi4": "U/TILkFTHf131p+t+zmygSVaueJ3WK2jJY2TcxoJqNc="
+            "duel": "IcYpep2s8+ZtUbWjpfqVdZF4cSYyEXYV9w9yLKbZ/QU=",
+            "multi3": "fjQrIkgJ4kx9ENSuP8fokmXqxYHohetd+nWxrqI2c48=",
+            "multi4": "f+NHhCswRf/pqou/CgZOINE51ow6g6FrxoJEvhGxrlI="
         },
         {
             "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
             "temperature": 0,
             "defense": 1,
             "use": 1,
-            "duel": "qF9jWdqjimirNqpbau0+2YWw6WQnakjhOeEYqsmpux4=",
-            "multi3": "BKJQ+ZnBUICgVRu5Q7VnB+yt8sTRnsvWPwAJg4tbHk0=",
-            "multi4": "U/TILkFTHf131p+t+zmygSVaueJ3WK2jJY2TcxoJqNc="
+            "duel": "IcYpep2s8+ZtUbWjpfqVdZF4cSYyEXYV9w9yLKbZ/QU=",
+            "multi3": "fjQrIkgJ4kx9ENSuP8fokmXqxYHohetd+nWxrqI2c48=",
+            "multi4": "f+NHhCswRf/pqou/CgZOINE51ow6g6FrxoJEvhGxrlI="
         },
         {
             "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
             "temperature": 0,
             "defense": 2,
             "use": 0,
-            "duel": "6f8sEUGAinLYuzNZY5r8+KW6DVrN1BkwjCGzgosCpok=",
-            "multi3": "SRGBtdLb0wPwO37XLGgGZ8LJoLS9+SjtKQdIOlqqjkY=",
-            "multi4": "X0aBdiOEhjP9Xaex1Q/xk8f9orp6VfFUtJBPTaH8Z9M="
+            "duel": "k+WUzqgEEgs4Bzs0H3dnx0yjzL5lrNHuzNRtxJiy03M=",
+            "multi3": "7wIdYxpMIMq2GRkv383LbynEZHwuRCd2acGmOI9MR/U=",
+            "multi4": "SXvBPs3UX9kDoawNj17d+SJecwOrS+dSzJqbnJN0xac="
         },
         {
             "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
             "temperature": 0,
             "defense": 2,
             "use": 1,
-            "duel": "6f8sEUGAinLYuzNZY5r8+KW6DVrN1BkwjCGzgosCpok=",
-            "multi3": "SRGBtdLb0wPwO37XLGgGZ8LJoLS9+SjtKQdIOlqqjkY=",
-            "multi4": "X0aBdiOEhjP9Xaex1Q/xk8f9orp6VfFUtJBPTaH8Z9M="
+            "duel": "k+WUzqgEEgs4Bzs0H3dnx0yjzL5lrNHuzNRtxJiy03M=",
+            "multi3": "7wIdYxpMIMq2GRkv383LbynEZHwuRCd2acGmOI9MR/U=",
+            "multi4": "SXvBPs3UX9kDoawNj17d+SJecwOrS+dSzJqbnJN0xac="
         },
         {
             "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
             "temperature": 0,
             "defense": 3,
             "use": 0,
-            "duel": "/VTZ6Xf0Fm8QgTXYor3NyMmht6mJ0tWJ6KmMS6qcaAg=",
+            "duel": "Zuq5dL9T/3a/TPaB30Rz1JVTLmoHvqQJfdlWI3X9Ao0=",
             "multi3": "BKJQ+ZnBUICgVRu5Q7VnB+yt8sTRnsvWPwAJg4tbHk0=",
             "multi4": "U/TILkFTHf131p+t+zmygSVaueJ3WK2jJY2TcxoJqNc="
         },
@@ -932,7 +932,7 @@
             "temperature": 0,
             "defense": 3,
             "use": 1,
-            "duel": "/VTZ6Xf0Fm8QgTXYor3NyMmht6mJ0tWJ6KmMS6qcaAg=",
+            "duel": "Zuq5dL9T/3a/TPaB30Rz1JVTLmoHvqQJfdlWI3X9Ao0=",
             "multi3": "BKJQ+ZnBUICgVRu5Q7VnB+yt8sTRnsvWPwAJg4tbHk0=",
             "multi4": "U/TILkFTHf131p+t+zmygSVaueJ3WK2jJY2TcxoJqNc="
         },
@@ -941,61 +941,61 @@
             "temperature": 1,
             "defense": 0,
             "use": 0,
-            "duel": "+8oGpio1aEXw/o4MJl1rK1WuxbuuUJrgGfcw++OjC3w=",
-            "multi3": "EdIjEiKDagdxb3unu+qbWx5jxKkNC+lKMT39hG03W/c=",
-            "multi4": "hZb8pCbIjXZYBJAVaoiSMTWsI+EJpSo/DZKePfq/LqE="
+            "duel": "Ouw/FSlMsartghcgM81s5Pl4EnAc77GPQjd15tHE+Ns=",
+            "multi3": "y1TlS195EHMR9hJlUPJJ6+YHUFvgmAmNSBbxGBqCPJQ=",
+            "multi4": "wpTBIim4MvZlVLSUdCiY/uIm2kNeZEBPaG3m8aRb+mM="
         },
         {
             "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
             "temperature": 1,
             "defense": 0,
             "use": 1,
-            "duel": "+8oGpio1aEXw/o4MJl1rK1WuxbuuUJrgGfcw++OjC3w=",
-            "multi3": "EdIjEiKDagdxb3unu+qbWx5jxKkNC+lKMT39hG03W/c=",
-            "multi4": "hZb8pCbIjXZYBJAVaoiSMTWsI+EJpSo/DZKePfq/LqE="
+            "duel": "Ouw/FSlMsartghcgM81s5Pl4EnAc77GPQjd15tHE+Ns=",
+            "multi3": "y1TlS195EHMR9hJlUPJJ6+YHUFvgmAmNSBbxGBqCPJQ=",
+            "multi4": "wpTBIim4MvZlVLSUdCiY/uIm2kNeZEBPaG3m8aRb+mM="
         },
         {
             "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
             "temperature": 1,
             "defense": 1,
             "use": 0,
-            "duel": "qF9jWdqjimirNqpbau0+2YWw6WQnakjhOeEYqsmpux4=",
-            "multi3": "umPoeZOyqROqrMkXTaxTZPlGiCmv5luHs/tfwJneg30=",
-            "multi4": "STvi0r5JIduNF3o2PFUP7zzoauNXepz6hVxf1rAqKeA="
+            "duel": "IcYpep2s8+ZtUbWjpfqVdZF4cSYyEXYV9w9yLKbZ/QU=",
+            "multi3": "qw00pPSfZ2LTreJTfoiL5+geL+s+gnjbvqxMxnKGIVI=",
+            "multi4": "uEvO6PUthPWpPbaNZNZQBYzXLBaUF6bfOBJpYYeHeJU="
         },
         {
             "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
             "temperature": 1,
             "defense": 1,
             "use": 1,
-            "duel": "qF9jWdqjimirNqpbau0+2YWw6WQnakjhOeEYqsmpux4=",
-            "multi3": "umPoeZOyqROqrMkXTaxTZPlGiCmv5luHs/tfwJneg30=",
-            "multi4": "STvi0r5JIduNF3o2PFUP7zzoauNXepz6hVxf1rAqKeA="
+            "duel": "IcYpep2s8+ZtUbWjpfqVdZF4cSYyEXYV9w9yLKbZ/QU=",
+            "multi3": "qw00pPSfZ2LTreJTfoiL5+geL+s+gnjbvqxMxnKGIVI=",
+            "multi4": "uEvO6PUthPWpPbaNZNZQBYzXLBaUF6bfOBJpYYeHeJU="
         },
         {
             "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
             "temperature": 1,
             "defense": 2,
             "use": 0,
-            "duel": "6f8sEUGAinLYuzNZY5r8+KW6DVrN1BkwjCGzgosCpok=",
-            "multi3": "EdIjEiKDagdxb3unu+qbWx5jxKkNC+lKMT39hG03W/c=",
-            "multi4": "hZb8pCbIjXZYBJAVaoiSMTWsI+EJpSo/DZKePfq/LqE="
+            "duel": "k+WUzqgEEgs4Bzs0H3dnx0yjzL5lrNHuzNRtxJiy03M=",
+            "multi3": "y1TlS195EHMR9hJlUPJJ6+YHUFvgmAmNSBbxGBqCPJQ=",
+            "multi4": "wpTBIim4MvZlVLSUdCiY/uIm2kNeZEBPaG3m8aRb+mM="
         },
         {
             "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
             "temperature": 1,
             "defense": 2,
             "use": 1,
-            "duel": "6f8sEUGAinLYuzNZY5r8+KW6DVrN1BkwjCGzgosCpok=",
-            "multi3": "EdIjEiKDagdxb3unu+qbWx5jxKkNC+lKMT39hG03W/c=",
-            "multi4": "hZb8pCbIjXZYBJAVaoiSMTWsI+EJpSo/DZKePfq/LqE="
+            "duel": "k+WUzqgEEgs4Bzs0H3dnx0yjzL5lrNHuzNRtxJiy03M=",
+            "multi3": "y1TlS195EHMR9hJlUPJJ6+YHUFvgmAmNSBbxGBqCPJQ=",
+            "multi4": "wpTBIim4MvZlVLSUdCiY/uIm2kNeZEBPaG3m8aRb+mM="
         },
         {
             "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
             "temperature": 1,
             "defense": 3,
             "use": 0,
-            "duel": "/VTZ6Xf0Fm8QgTXYor3NyMmht6mJ0tWJ6KmMS6qcaAg=",
+            "duel": "Zuq5dL9T/3a/TPaB30Rz1JVTLmoHvqQJfdlWI3X9Ao0=",
             "multi3": "umPoeZOyqROqrMkXTaxTZPlGiCmv5luHs/tfwJneg30=",
             "multi4": "STvi0r5JIduNF3o2PFUP7zzoauNXepz6hVxf1rAqKeA="
         },
@@ -1004,7 +1004,7 @@
             "temperature": 1,
             "defense": 3,
             "use": 1,
-            "duel": "/VTZ6Xf0Fm8QgTXYor3NyMmht6mJ0tWJ6KmMS6qcaAg=",
+            "duel": "Zuq5dL9T/3a/TPaB30Rz1JVTLmoHvqQJfdlWI3X9Ao0=",
             "multi3": "umPoeZOyqROqrMkXTaxTZPlGiCmv5luHs/tfwJneg30=",
             "multi4": "STvi0r5JIduNF3o2PFUP7zzoauNXepz6hVxf1rAqKeA="
         },
@@ -1013,70 +1013,70 @@
             "temperature": 2,
             "defense": 0,
             "use": 0,
-            "duel": "+8oGpio1aEXw/o4MJl1rK1WuxbuuUJrgGfcw++OjC3w=",
-            "multi3": "bespcDU7aZbz9dcRq3WpA2+Ev4Adv0/K+Dz/En0pHIg=",
-            "multi4": "eFfDFM1CHXQ1YToH/VOmtF/kUbAx5p9kOnZrAnfetjM="
+            "duel": "Ouw/FSlMsartghcgM81s5Pl4EnAc77GPQjd15tHE+Ns=",
+            "multi3": "JfOo6owdx8aSRoTieYvT2dfKcZl7jDUYg1cw2mt4ZqU=",
+            "multi4": "IUGJurAGQMSLTLK5O9etftHNihfj7UcAASbIb3J2cJA="
         },
         {
             "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
             "temperature": 2,
             "defense": 0,
             "use": 1,
-            "duel": "+8oGpio1aEXw/o4MJl1rK1WuxbuuUJrgGfcw++OjC3w=",
-            "multi3": "bespcDU7aZbz9dcRq3WpA2+Ev4Adv0/K+Dz/En0pHIg=",
-            "multi4": "eFfDFM1CHXQ1YToH/VOmtF/kUbAx5p9kOnZrAnfetjM="
+            "duel": "Ouw/FSlMsartghcgM81s5Pl4EnAc77GPQjd15tHE+Ns=",
+            "multi3": "JfOo6owdx8aSRoTieYvT2dfKcZl7jDUYg1cw2mt4ZqU=",
+            "multi4": "IUGJurAGQMSLTLK5O9etftHNihfj7UcAASbIb3J2cJA="
         },
         {
             "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
             "temperature": 2,
             "defense": 1,
             "use": 0,
-            "duel": "qF9jWdqjimirNqpbau0+2YWw6WQnakjhOeEYqsmpux4=",
+            "duel": "IcYpep2s8+ZtUbWjpfqVdZF4cSYyEXYV9w9yLKbZ/QU=",
+            "multi3": "DTiDEA101ht2BtlrAfzxG9w6CianBPI9gMxOQscUoZA=",
+            "multi4": "ejmXi8IV8Yx3A/+bIWwhMHXum0lH0t65RTZTxSUaSV0="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
+            "temperature": 2,
+            "defense": 1,
+            "use": 1,
+            "duel": "IcYpep2s8+ZtUbWjpfqVdZF4cSYyEXYV9w9yLKbZ/QU=",
+            "multi3": "DTiDEA101ht2BtlrAfzxG9w6CianBPI9gMxOQscUoZA=",
+            "multi4": "ejmXi8IV8Yx3A/+bIWwhMHXum0lH0t65RTZTxSUaSV0="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
+            "temperature": 2,
+            "defense": 2,
+            "use": 0,
+            "duel": "k+WUzqgEEgs4Bzs0H3dnx0yjzL5lrNHuzNRtxJiy03M=",
+            "multi3": "JfOo6owdx8aSRoTieYvT2dfKcZl7jDUYg1cw2mt4ZqU=",
+            "multi4": "IUGJurAGQMSLTLK5O9etftHNihfj7UcAASbIb3J2cJA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
+            "temperature": 2,
+            "defense": 2,
+            "use": 1,
+            "duel": "k+WUzqgEEgs4Bzs0H3dnx0yjzL5lrNHuzNRtxJiy03M=",
+            "multi3": "JfOo6owdx8aSRoTieYvT2dfKcZl7jDUYg1cw2mt4ZqU=",
+            "multi4": "IUGJurAGQMSLTLK5O9etftHNihfj7UcAASbIb3J2cJA="
+        },
+        {
+            "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
+            "temperature": 2,
+            "defense": 3,
+            "use": 0,
+            "duel": "Zuq5dL9T/3a/TPaB30Rz1JVTLmoHvqQJfdlWI3X9Ao0=",
             "multi3": "JxWN5kxuDMkWUA1h05+9A//QC/E67r7Z/Oo+/j9qD5U=",
             "multi4": "2O1vL/U5I+DWSktO4YD6XC0NrbhhIJhvv9YHjdxrTkA="
         },
         {
             "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
             "temperature": 2,
-            "defense": 1,
-            "use": 1,
-            "duel": "qF9jWdqjimirNqpbau0+2YWw6WQnakjhOeEYqsmpux4=",
-            "multi3": "JxWN5kxuDMkWUA1h05+9A//QC/E67r7Z/Oo+/j9qD5U=",
-            "multi4": "2O1vL/U5I+DWSktO4YD6XC0NrbhhIJhvv9YHjdxrTkA="
-        },
-        {
-            "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
-            "temperature": 2,
-            "defense": 2,
-            "use": 0,
-            "duel": "6f8sEUGAinLYuzNZY5r8+KW6DVrN1BkwjCGzgosCpok=",
-            "multi3": "bespcDU7aZbz9dcRq3WpA2+Ev4Adv0/K+Dz/En0pHIg=",
-            "multi4": "eFfDFM1CHXQ1YToH/VOmtF/kUbAx5p9kOnZrAnfetjM="
-        },
-        {
-            "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
-            "temperature": 2,
-            "defense": 2,
-            "use": 1,
-            "duel": "6f8sEUGAinLYuzNZY5r8+KW6DVrN1BkwjCGzgosCpok=",
-            "multi3": "bespcDU7aZbz9dcRq3WpA2+Ev4Adv0/K+Dz/En0pHIg=",
-            "multi4": "eFfDFM1CHXQ1YToH/VOmtF/kUbAx5p9kOnZrAnfetjM="
-        },
-        {
-            "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
-            "temperature": 2,
-            "defense": 3,
-            "use": 0,
-            "duel": "/VTZ6Xf0Fm8QgTXYor3NyMmht6mJ0tWJ6KmMS6qcaAg=",
-            "multi3": "JxWN5kxuDMkWUA1h05+9A//QC/E67r7Z/Oo+/j9qD5U=",
-            "multi4": "2O1vL/U5I+DWSktO4YD6XC0NrbhhIJhvv9YHjdxrTkA="
-        },
-        {
-            "asset": "Assets/Data/Items/Random/Attack/HandFan.asset",
-            "temperature": 2,
             "defense": 3,
             "use": 1,
-            "duel": "/VTZ6Xf0Fm8QgTXYor3NyMmht6mJ0tWJ6KmMS6qcaAg=",
+            "duel": "Zuq5dL9T/3a/TPaB30Rz1JVTLmoHvqQJfdlWI3X9Ao0=",
             "multi3": "JxWN5kxuDMkWUA1h05+9A//QC/E67r7Z/Oo+/j9qD5U=",
             "multi4": "2O1vL/U5I+DWSktO4YD6XC0NrbhhIJhvv9YHjdxrTkA="
         },

@@ -46,19 +46,39 @@ namespace AbsoluteZero.Core.Item
 
         public bool IsEmpty => _entries.Length == 0;
 
-        public ItemDataSO Roll(Predicate<ItemDataSO> eligibility)
+        public ItemDataSO Roll(Predicate<ItemDataSO> eligibility, string context = "unspecified", int seat = -1)
         {
             if (_entries.Length == 0 || eligibility == null) return null;
 
             float eligibleWeight = 0f;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            var recorder = Solo.PlaytestTelemetry.Current;
+            var candidates = recorder != null ? new List<Solo.BalanceDropCandidate>(_entries.Length) : null;
+#endif
             for (int i = 0; i < _entries.Length; i++)
-                if (eligibility(_entries[i].Item))
+            {
+                bool allowed = eligibility(_entries[i].Item);
+                if (allowed)
                     eligibleWeight += _entries[i].Weight;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                candidates?.Add(new Solo.BalanceDropCandidate { item = _entries[i].Item.ItemName,
+                    weight = _entries[i].Weight, eligible = allowed });
+#endif
+            }
 
-            if (eligibleWeight <= 0f) return null;
-
-            float roll = Common.GameplayRandom.Range("item-drop", 0f, eligibleWeight);
-            return SelectEligible(eligibility, roll);
+            ItemDataSO selected = null;
+            if (eligibleWeight > 0f)
+            {
+                float roll = Common.GameplayRandom.Range("item-drop", 0f, eligibleWeight);
+                selected = SelectEligible(eligibility, roll);
+            }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            recorder?.Balance("drop_draw", new Solo.BalanceObservation {
+                action = new Solo.BalanceActionIdentity { source = seat, item = -1 },
+                reason = context, dropCandidates = candidates?.ToArray(),
+                selectedDrop = selected != null ? selected.ItemName : null, eligibleWeight = eligibleWeight });
+#endif
+            return selected;
         }
 
         // Draws remain in Roll. Explicit values make selection independently

@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using AbsoluteZero.Core.Session;
+using AbsoluteZero.Core.Solo;
+using AbsoluteZero.Core.Item.Data;
 using AbsoluteZero.Core.Solo.Configuration;
 using AbsoluteZero.UI.LobbyUI;
 using NUnit.Framework;
@@ -153,6 +155,65 @@ namespace AbsoluteZero.Tests
             Assert.AreSame(second,launched);
             await _presenter.BackAsync(); _presenter.Open(); _view.Choose(0); await _presenter.StartAsync();
             Assert.AreSame(_encounter,launched);
+        }
+
+        [TestCase(false)] [TestCase(true)]
+        [Category("SoloIntegration")]
+        public void ExplicitDevelopmentLookupUsesFilteredIdsAfterMenuReorder(bool reversed)
+        {
+            var beginner = AssetDatabase.LoadAssetAtPath<SoloDuelDefinitionSO>("Assets/Data/Solo/Encounters/BeginnerSoloDuel.asset");
+            var advanced = AssetDatabase.LoadAssetAtPath<SoloDuelDefinitionSO>("Assets/Data/Solo/Encounters/AdvancedSoloDuel.asset");
+            var fixture = AssetDatabase.LoadAssetAtPath<SoloDuelDefinitionSO>("Assets/Tests/Plan036Behavior/Configuration/FixtureSoloDuel.asset");
+            var profiles = new[] { new SoloLobbyProfile { Encounter = beginner }, new SoloLobbyProfile { Encounter = advanced } };
+            if (reversed) Array.Reverse(profiles);
+            Make(new[] { new SoloLobbyProfile { Encounter = fixture }, profiles[0], profiles[1] });
+            Assert.IsTrue(_presenter.Open());
+            foreach (var encounter in new[] { beginner, advanced })
+            {
+                Assert.IsTrue(_presenter.TryFindDevelopmentEncounter(encounter.ConfigId, out var index, out var difficulty, out var error), error);
+                Assert.AreEqual(encounter.Difficulty.ConfigId, difficulty);
+                _view.Choose(index);
+                Assert.IsTrue(_presenter.IsDevelopmentEncounterSelected(encounter.ConfigId));
+            }
+            Assert.AreEqual(0, _starts); // Lookup and normal option selection never start a session.
+        }
+
+        [Test]
+        [Category("SoloIntegration")]
+        public void ExplicitDevelopmentLookupFailsForUnknownDuplicateDisabledOrHiddenProfiles()
+        {
+            Assert.IsFalse(_presenter.TryFindDevelopmentEncounter(_encounter.ConfigId, out _, out _, out _));
+            _presenter.Open();
+            foreach (var id in new[] { "unknown", "", "   " })
+                Assert.IsFalse(_presenter.TryFindDevelopmentEncounter(id, out _, out _, out _));
+            _valid = false;
+            Assert.IsFalse(_presenter.TryFindDevelopmentEncounter(_encounter.ConfigId, out _, out _, out _));
+            _valid = true;
+            Make(new[] { new SoloLobbyProfile { Encounter = _encounter }, new SoloLobbyProfile { Encounter = _encounter } });
+            _presenter.Open();
+            Assert.IsFalse(_presenter.TryFindDevelopmentEncounter(_encounter.ConfigId, out _, out _, out _));
+            Assert.AreEqual(0, _starts);
+        }
+
+        [Test]
+        [Category("SoloIntegration")]
+        public void EffectiveProfileEvidenceHasStableGraphIdentityAndCannotMutateResolvedValues()
+        {
+            var encounter = AssetDatabase.LoadAssetAtPath<SoloDuelDefinitionSO>("Assets/Data/Solo/Encounters/BeginnerSoloDuel.asset");
+            var builder = Type.GetType("Plan036ConfigurationBuilder, Assembly-CSharp-Editor", true);
+            var catalog = (ItemDataSO[])builder.GetMethod("ReadCurrentDuelCatalog").Invoke(null, null);
+            var cosmetics = AssetDatabase.LoadAssetAtPath<AbsoluteZero.Core.Cosmetic.CosmeticRegistrySO>("Assets/Data/Cosmetics/CosmeticRegistry.asset");
+            var context = new SoloConfigurationContext(encounter.SharedOneVsOneRule, catalog, cosmetics, _ => true);
+            Assert.IsTrue(SoloSettingsResolver.TryResolveForDevelopment(encounter, context, out var settings, out var errors), string.Join(";", errors));
+            var evidence = PlaytestSoloEvidence.Capture(settings, encounter.ConfigId, encounter.Difficulty.ConfigId, 7, 6601);
+            Assert.That(evidence.graphAuthoringId, Has.Length.EqualTo(32));
+            Assert.AreEqual(PlaytestSoloEvidence.GraphAuthoringId(settings.Graph), evidence.graphAuthoringId);
+            Assert.AreEqual(catalog.Length, evidence.effectiveDelays.Length);
+            Assert.That(JsonUtility.ToJson(evidence), Does.Contain("EasyMiniGameSuccess").And.Contain("RerollValueFactor"));
+            float original = settings.ItemDelaySeconds[0]; evidence.effectiveDelays[0] = 999;
+            Assert.AreEqual(original, settings.ItemDelaySeconds[0]);
+            Assert.Throws<InvalidOperationException>(() => PlaytestSoloEvidence.Capture(settings, "wrong", encounter.Difficulty.ConfigId, 7, 6601));
+            Assert.Throws<InvalidOperationException>(() => PlaytestSoloEvidence.Capture(settings, encounter.ConfigId, "wrong", 7, 6601));
         }
     }
 }

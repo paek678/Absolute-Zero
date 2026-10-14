@@ -2,9 +2,65 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
-from run_full_match_playtest import inspect_peer, compare_terminals, audit_events
+import copy
+from run_full_match_playtest import inspect_peer, compare_terminals, audit_events, validate_solo_identity, load_solo_expectation, solo_decision_seed, qualify_solo_cohort, SOLO_EVIDENCE_FIELDS
 from plan066_campaign import scenarios, verify_attempt, qualify_pilots
 from unittest.mock import patch
+
+
+class SoloIdentityGateTests(unittest.TestCase):
+    def setUp(self):
+        self.temp=tempfile.TemporaryDirectory();self.root=Path(self.temp.name)
+        self.encounter='solo.encounter.beginner';self.difficulty='solo.difficulty.beginner'
+        self.expected={key:'fixture-value' for key in SOLO_EVIDENCE_FIELDS}
+        self.expected.update(encounterId=self.encounter,difficultyId=self.difficulty,botId='solo.bot.default',
+            graphName='production',graphAuthoringId='a'*32,configurationVersions=['Difficulty|beginner|1'],
+            catalogNames=['Fan'],effectiveDelays=[4.0],miniGameSuccess=[1.0],minimumThinkSeconds=0.,maximumThinkSeconds=0.,
+            readyReserveSeconds=.25,extraItemDelaySeconds=2.,retryBudget=2,provisionalTuning=True,
+            validationFixture=False,inheritOneVsOneGrants=True,judgement={'BestPickChance':.6},coefficients={'StealValueFactor':2.})
+        self.actual=dict(copy.deepcopy(self.expected),requestedEncounterId=self.encounter,expectedDifficultyId=self.difficulty,generation=7,humanDriverSeed=6601)
+        self.summary=dict(schema=3,requestedEncounterId=self.encounter,resolvedEncounterId=self.encounter,
+                          expectedDifficultyId=self.difficulty,resolvedDifficultyId=self.difficulty)
+        decision=solo_decision_seed('solo.bot.default',7,1,1)
+        (self.root/'player.log').write_text('[SoloBT] g=7 r=1 t=1 seq=1 time=1.200 start seed='+str(decision)+' difficulty='+self.difficulty
+            +'\n[SoloBT] g=7 r=1 t=1 seq=1 time=1.300 submit Pending:None due=5.300 request=1 operation=1 copy=9 target=0',encoding='utf-8')
+    def tearDown(self):self.temp.cleanup()
+    def check(self):
+        (self.root/'summary.json').write_text(json.dumps(self.summary),encoding='utf-8')
+        (self.root/'solo-identity.json').write_text(json.dumps(self.actual),encoding='utf-8')
+        return validate_solo_identity(self.root,self.expected,self.encounter,self.difficulty,6601)
+    def test_valid_additive_identity(self):self.assertFalse(self.check())
+    def test_missing_every_effective_field_fails(self):
+        for key in SOLO_EVIDENCE_FIELDS:
+            with self.subTest(key=key):
+                saved=self.actual.pop(key);self.assertTrue(self.check());self.actual[key]=saved
+    def test_summary_cannot_certify_another_profile(self):
+        for key in ['requestedEncounterId','resolvedEncounterId','expectedDifficultyId','resolvedDifficultyId']:
+            with self.subTest(key=key):
+                saved=self.summary[key];self.summary[key]='wrong';self.assertTrue(self.check());self.summary[key]=saved
+    def test_settings_build_graph_seed_and_types_fail_closed(self):
+        for key,value in [('graphAuthoringId','b'*32),('humanDriverSeed',6602),('generation',0),('validationFixture',True),
+                          ('effectiveDelays',[float('nan')]),('miniGameSuccess',[.1]),('retryBudget',True)]:
+            with self.subTest(key=key):
+                saved=self.actual[key];self.actual[key]=value;self.assertTrue(self.check());self.actual[key]=saved
+    def test_trace_must_be_from_actual_difficulty_and_generation(self):
+        for text in ['', '[SoloBT] g=8 r=1 t=1 seq=1 time=1.0 start seed=5 difficulty='+self.difficulty,
+                     '[SoloBT] g=7 r=1 t=1 seq=1 time=1.0 start seed=5 difficulty=advanced']:
+            (self.root/'player.log').write_text(text,encoding='utf-8');self.assertTrue(self.check())
+    def test_manifest_is_independent_and_detects_duplicate_or_other_build(self):
+        path=self.root/'build.json';data={'kind':'solo-bot-integrated-build','development':True,'build_hashes':{'Core':'hash'},'profiles':[self.expected]}
+        path.write_text(json.dumps(data),encoding='utf-8');self.assertEqual(self.expected,load_solo_expectation(path,{'Core':'hash'},self.encounter,self.difficulty))
+        for change in [{'build_hashes':{'Core':'other'}},{'profiles':[self.expected,self.expected]}, {'profiles':[]}, {'development':False}]:
+            bad=copy.deepcopy(data);bad.update(change);path.write_text(json.dumps(bad),encoding='utf-8')
+            with self.assertRaises(ValueError):load_solo_expectation(path,{'Core':'hash'},self.encounter,self.difficulty)
+    def test_duplicate_selected_attempts_do_not_inflate_a_cohort(self):
+        self.assertFalse(qualify_solo_cohort([])['passed'])
+        row={'case_id':'beginner','attempt_id':'a1','source':'folder1','passed':True,'identity_problems':[]}
+        self.assertTrue(qualify_solo_cohort([row])['passed'])
+        self.assertFalse(qualify_solo_cohort([row,row])['passed'])
+        for key in ['case_id','attempt_id','source']:
+            second=dict(row,case_id='advanced',attempt_id='a2',source='folder2');second[key]=row[key]
+            self.assertFalse(qualify_solo_cohort([row,second])['passed'])
 
 
 class EvidenceGateTests(unittest.TestCase):

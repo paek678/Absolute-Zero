@@ -241,7 +241,7 @@ namespace AbsoluteZero.Core.Player
                 {
                     short candidateId = FindItemId(candidate);
                     return !IsBasicItem(candidateId) && CanGenerate(candidate, EnumerateCopies());
-                });
+                }, "topup-direct", GetComponent<PlayerState>()?.PlayerIndex ?? -1);
                 if (item == null) break;
 
                 short itemId = FindItemId(item);
@@ -371,7 +371,7 @@ namespace AbsoluteZero.Core.Player
                 {
                     short candidateId = FindItemId(candidate);
                     return !IsBasicItem(candidateId) && CanGenerate(candidate, staged);
-                });
+                }, "topup-planned", GetComponent<PlayerState>()?.PlayerIndex ?? -1);
                 if (item == null) return false;
                 short itemId = FindItemId(item);
                 var slot = MakeSlot(itemId, item);
@@ -444,7 +444,8 @@ namespace AbsoluteZero.Core.Player
 
         ItemDataSO RollExcludingOwned(ItemDropTable dropTable)
         {
-            return dropTable.Roll(candidate => CanGenerate(candidate, EnumerateCopies()));
+            return dropTable.Roll(candidate => CanGenerate(candidate, EnumerateCopies()),
+                "random-grant", GetComponent<PlayerState>()?.PlayerIndex ?? -1);
         }
 
         internal bool CanGenerate(ItemDataSO candidate, IEnumerable<ItemSlotNetData> slots,
@@ -481,7 +482,8 @@ namespace AbsoluteZero.Core.Player
                 if (!InventoryMutationCalculations.CanReroll(SlotStates[i], existingItem != null ? existingItem.SlotType : (ItemSlotType?)null)) continue;
 
                 string oldName = GetItemData(i)?.ItemName ?? $"id={SlotStates[i].ItemId}";
-                var newItem = dropTable.Roll(candidate => CanGenerate(candidate, EnumerateCopies(), i));
+                var newItem = dropTable.Roll(candidate => CanGenerate(candidate, EnumerateCopies(), i),
+                    "reroll-direct", GetComponent<PlayerState>()?.PlayerIndex ?? -1);
                 if (newItem == null) continue;
 
                 short itemId = FindItemId(newItem);

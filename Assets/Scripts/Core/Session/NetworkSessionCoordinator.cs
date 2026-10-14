@@ -61,6 +61,7 @@ namespace AbsoluteZero.Core.Session
 
         IUnityServicesGateway _services;
         ILobbyGateway _lobbyGateway;
+        LobbyMembershipReservations _membershipReservations = LobbyMembershipReservations.Shared;
         IRelayGateway _relayGateway;
         INetworkRuntime _networkRuntime;
         ISceneTransitionService _sceneTransition;
@@ -190,7 +191,7 @@ namespace AbsoluteZero.Core.Session
         void Update()
         {
             var work = EnsureLobbyWork();
-            work?.Tick(Time.deltaTime, _isHostRole, LobbyManager.Instance?.IsGameSessionActive == true);
+            work?.Tick(Time.unscaledDeltaTime, _isHostRole, LobbyManager.Instance?.IsGameSessionActive == true);
         }
 
         LobbySessionWork EnsureLobbyWork()
@@ -439,6 +440,8 @@ namespace AbsoluteZero.Core.Session
                     { "PlayerCount", new DataObject(DataObject.VisibilityOptions.Public, lobbySlots.ToString()) },
                     { "HostReady", new DataObject(DataObject.VisibilityOptions.Public, "false") },
                     { "RelayJoinCode", new DataObject(DataObject.VisibilityOptions.Member, "") },
+                    { "HostPresence", new DataObject(DataObject.VisibilityOptions.Member, Guid.NewGuid().ToString("N")) },
+                    { "GameStarting", new DataObject(DataObject.VisibilityOptions.Member, "false") },
                     { "GameStarted", new DataObject(DataObject.VisibilityOptions.Member, "false") }
                 }
             });
@@ -478,6 +481,22 @@ namespace AbsoluteZero.Core.Session
             string lobbyId = _currentLobby.Id;
             scope.PushCompensation(() => CleanupLobby(lobbyId, scope));
 
+            // Waiting for the host's button is not a connection timeout. Publish
+            // explicit intent so clients start their bounded startup wait now.
+            SetState(SessionState.Connecting, SessionOperation.AllocatingRelay);
+            var startingWork = EnsureLobbyWork();
+            long startingEpoch = startingWork?.MetadataEpoch ?? 0;
+            var startingResult = await _lobbyGateway.UpdateAsync(lobbyId, new UpdateLobbyOptions
+            {
+                Data = new Dictionary<string, DataObject>
+                { ["GameStarting"] = new(DataObject.VisibilityOptions.Member, "true") }
+            });
+            if (scope.IsStale) return await scope.CancelWithCompensation();
+            if (startingResult.IsFailure || startingResult.Value == null)
+                return await RecoverOperationFailure(scope, startingResult.IsFailure ? startingResult.ErrorCode : OperationErrorCode.Unexpected,
+                    startingResult.ErrorMessage ?? "Missing game-start snapshot");
+            AcceptLobbyResponse(startingWork, startingResult.Value, startingEpoch);
+
             // 1) Allocate relay — maxConnections = joining clients (playerCount - 1)
             SetState(SessionState.Connecting, SessionOperation.AllocatingRelay);
             int relayConnections = _selectedPlayerCount - 1;
@@ -504,6 +523,7 @@ namespace AbsoluteZero.Core.Session
                 Data = new Dictionary<string, DataObject>
                 {
                     { "RelayJoinCode", new DataObject(DataObject.VisibilityOptions.Member, relayResult.Value.JoinCode) },
+                    { "GameStarting", new DataObject(DataObject.VisibilityOptions.Member, "false") },
                     { "GameStarted", new DataObject(DataObject.VisibilityOptions.Member, "true") }
                 }
             });
@@ -532,6 +552,9 @@ namespace AbsoluteZero.Core.Session
 
         public async Task<Result<Unit>> JoinGameAsync(string lobbyCode)
         {
+            lobbyCode = lobbyCode?.Trim().ToUpperInvariant();
+            if (string.IsNullOrEmpty(lobbyCode))
+                return Result<Unit>.Failure(OperationErrorCode.InvalidState, "방 코드를 입력해 주세요.");
             var initialization = EnsureInitializedAsync();
             var lease = _lease;
             var ready = await initialization;
@@ -540,9 +563,14 @@ namespace AbsoluteZero.Core.Session
             if (_state != SessionState.Ready || _currentLobby != null)
                 return Result<Unit>.Failure(OperationErrorCode.InvalidState, $"Cannot join from state {_state}");
 
+            if (!_membershipReservations.TryReserveJoin(lobbyCode, _services.PlayerId, out var membership))
+                return FailAndRecover(OperationErrorCode.InvalidState, LobbyMembershipReservations.PendingMessage);
+            using var membershipReservation = membership;
+
             TrySubscribeNgoCallbacks();
             var scope = BeginOperation();
             _isHostRole = false;
+            string joinedPlayerId = _services.PlayerId;
 
             // 1) Join lobby by code
             SetState(SessionState.Connecting, SessionOperation.JoiningLobby);
@@ -553,17 +581,44 @@ namespace AbsoluteZero.Core.Session
 
             if (scope.IsStale)
             {
-                if (joinResult.IsSuccess) scope.PushCompensation(() => LeaveLobbyCleanup(joinResult.Value.Id, scope));
+                if (joinResult.IsSuccess && joinResult.Value != null)
+                    scope.PushCompensation(() => LeaveLobbyCleanup(joinResult.Value.Id, joinedPlayerId, lobbyCode, scope));
                 return await scope.CancelWithCompensation();
+            }
+            bool recoveredMembership = joinResult.ErrorCode == OperationErrorCode.LobbyAlreadyMember;
+            if (recoveredMembership)
+            {
+                joinResult = await OnlineLobbyJoinPolicy.RecoverMembershipAsync(_lobbyGateway, lobbyCode,
+                    joinedPlayerId, () => !scope.IsStale && _services.PlayerId == joinedPlayerId);
+                if (scope.IsStale) return await scope.CancelWithCompensation();
             }
             if (joinResult.IsFailure) return FailAndRecover(joinResult.ErrorCode, joinResult.ErrorMessage);
 
-            _currentLobby = joinResult.Value;
+            var joined = joinResult.Value;
+            // A returning host must not silently migrate/delete its old room.
+            if (joined == null || joined.HostId == joinedPlayerId || string.IsNullOrEmpty(joined.Id))
+                return FailAndRecover(OperationErrorCode.InvalidState, "기존 방장 정보가 남아 있습니다. 다른 방 코드로 참가하거나 새 방을 만들어 주세요.");
+            string joinedLobbyId = joined.Id;
+            scope.PushCompensation(() => LeaveLobbyCleanup(joinedLobbyId, joinedPlayerId, lobbyCode, scope));
+
+            if (!OnlineLobbyJoinPolicy.TryRead(joined, out var lobbySettings)
+                || !OnlineLobbyJoinPolicy.ContainsPlayer(joined, joinedPlayerId))
+                return await RecoverOperationFailure(scope, OperationErrorCode.InvalidState, OnlineLobbyJoinPolicy.InvalidMetadataMessage);
+            // A second attempt after stale-membership cleanup is a fresh Lobby
+            // join, but still must not reopen a TimedOut seat in a running match.
+            // Already-admitted waiting operations observe start below normally.
+            if (lobbySettings.Started || lobbySettings.Starting)
+                return await RecoverOperationFailure(scope, OperationErrorCode.InvalidState, OnlineLobbyJoinPolicy.RejoinBlockedMessage);
+            if (_networkRuntime.IsListening || !SessionRouter.TryAdoptOnlineLobbyMode(_lease, lobbySettings.Mode))
+                return await RecoverOperationFailure(scope, OperationErrorCode.InvalidState, "방 설정을 적용할 수 없습니다. 로비로 돌아가 다시 참가해 주세요.");
+
+            _selectedMode = lobbySettings.Mode;
+            _selectedPlayerCount = lobbySettings.PlayerCount;
+            Debug.Log($"[SessionCoordinator] Adopted lobby settings — Mode={_selectedMode}, Players={_selectedPlayerCount}, Recovered={recoveredMembership}");
+
+            _currentLobby = joined;
             SyncLobbyManager(_currentLobby, false);
             LobbyManager.Instance?.FireJoinedEvent();
-
-            string joinedLobbyId = _currentLobby.Id;
-            scope.PushCompensation(() => LeaveLobbyCleanup(joinedLobbyId, scope));
 
             // 2) Wait for relay code
             SetState(SessionState.Connecting, SessionOperation.WaitingRelayCode);
@@ -692,7 +747,7 @@ namespace AbsoluteZero.Core.Session
                 if (oldLobby != null)
                 {
                     var cleanup = oldHost ? _lobbyGateway.DeleteAsync(oldLobby.Id)
-                        : _lobbyGateway.RemovePlayerAsync(oldLobby.Id, oldPlayerId);
+                        : RemoveOwnMembershipAsync(oldLobby.Id, oldPlayerId, oldLobby.LobbyCode);
                     if (await Task.WhenAny(cleanup, Task.Delay(3000)) == cleanup)
                         await cleanup;
                     else
@@ -837,12 +892,23 @@ namespace AbsoluteZero.Core.Session
                 response.Reason = "Session is no longer accepting connections";
                 return;
             }
+            // The initial table is created only from the actually connected
+            // participants. Departed seats remain archived/TimedOut; a free NGO
+            // connection count does not reopen them, even with a cached code.
+            if (_participantTable != null && _participantTable.Count >= _selectedPlayerCount)
+            {
+                response.Approved = false;
+                response.CreatePlayerObject = false;
+                response.Reason = OnlineLobbyJoinPolicy.RejoinBlockedMessage;
+                return;
+            }
             var nm = Unity.Netcode.NetworkManager.Singleton;
             int connected = nm != null ? nm.ConnectedClientsIds.Count : 0;
 
             if (connected >= _selectedPlayerCount)
             {
                 response.Approved = false;
+                response.CreatePlayerObject = false;
                 response.Reason = "Lobby full";
                 Debug.Log($"[SessionCoordinator] Connection denied — {connected}/{_selectedPlayerCount}");
                 return;
@@ -911,9 +977,20 @@ namespace AbsoluteZero.Core.Session
             SyncLobbyManager(null, false);
         }
 
-        async Task LeaveLobbyCleanup(string lobbyId, OperationScope scope)
+        Task<Result<Unit>> RemoveOwnMembershipAsync(string lobbyId, string playerId, string lobbyCode)
+            => _membershipReservations.RemoveAsync(lobbyId, playerId, lobbyCode,
+                () => _lobbyGateway.RemovePlayerAsync(lobbyId, playerId));
+
+        async Task LeaveLobbyCleanup(string lobbyId, string playerId, string lobbyCode, OperationScope scope)
         {
-            try { await _lobbyGateway.RemovePlayerAsync(lobbyId, _services.PlayerId); }
+            // Never remove membership that a newer operation has adopted again.
+            if (scope.IsStale && _currentLobby?.Id == lobbyId && HasOnlineOwnership) return;
+            try
+            {
+                var cleanup = RemoveOwnMembershipAsync(lobbyId, playerId, lobbyCode);
+                if (await Task.WhenAny(cleanup, Task.Delay(3000)) == cleanup) await cleanup;
+                else ObserveRemoteCleanup(cleanup);
+            }
             catch (Exception e) { Debug.LogWarning($"[SessionCoordinator] Lobby leave failed: {e.Message}"); }
             if (scope.IsStale) return;
             _currentLobby = null;
@@ -922,50 +999,19 @@ namespace AbsoluteZero.Core.Session
 
         async Task<Result<string>> WaitForRelayCodeAsync(OperationScope scope)
         {
-            var tcs = new TaskCompletionSource<string>();
-            string expectedLobbyId = _currentLobby?.Id;
-
-            void OnLobbyUpdated(Lobby lobby)
+            if (!OnlineLobbyJoinPolicy.TryRead(_currentLobby, out var settings))
+                return Result<string>.Failure(OperationErrorCode.InvalidState, OnlineLobbyJoinPolicy.InvalidMetadataMessage);
+            var wait = new OnlineLobbyWait(_currentLobby, _services.PlayerId, settings,
+                Time.realtimeSinceStartup, relayCodeTimeoutSeconds);
+            // LobbySessionWork owns the single polling flight. Read its accepted
+            // snapshot without adding another SDK poll loop or event subscription.
+            while (this != null && !scope.IsStale)
             {
-                if (!scope.IsStale && lobby?.Id == expectedLobbyId && lobby?.Data != null &&
-                    lobby.Data.TryGetValue("RelayJoinCode", out var data) &&
-                    !string.IsNullOrEmpty(data.Value))
-                {
-                    tcs.TrySetResult(data.Value);
-                }
+                var result = wait.Observe(_currentLobby, Time.realtimeSinceStartup);
+                if (result.IsFailure || result.Value != null) return result;
+                await Task.Delay(50);
             }
-
-            var lobbyMgr = LobbyManager.Instance;
-            if (lobbyMgr == null)
-                return Result<string>.Failure(OperationErrorCode.InvalidState, "LobbyManager not available");
-
-            lobbyMgr.OnLobbyUpdated += OnLobbyUpdated;
-            try
-            {
-                var current = lobbyMgr.CurrentLobby;
-                if (!scope.IsStale && current?.Id == expectedLobbyId && current?.Data != null &&
-                    current.Data.TryGetValue("RelayJoinCode", out var existing) &&
-                    !string.IsNullOrEmpty(existing.Value))
-                {
-                    return Result<string>.Success(existing.Value);
-                }
-
-                float deadline = Time.realtimeSinceStartup + relayCodeTimeoutSeconds;
-                while (!tcs.Task.IsCompleted && !scope.IsStale && Time.realtimeSinceStartup < deadline)
-                    await Task.Delay(50);
-
-                if (scope.IsStale)
-                    return Result<string>.Failure(OperationErrorCode.Cancelled, "Superseded");
-
-                if (!tcs.Task.IsCompleted)
-                    return Result<string>.Failure(OperationErrorCode.Timeout, "Relay code not received in time");
-
-                return Result<string>.Success(tcs.Task.Result);
-            }
-            finally
-            {
-                lobbyMgr.OnLobbyUpdated -= OnLobbyUpdated;
-            }
+            return Result<string>.Failure(OperationErrorCode.Cancelled, "Superseded");
         }
 
         LobbyPlayer CreatePlayerData()

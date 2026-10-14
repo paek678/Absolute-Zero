@@ -52,7 +52,7 @@ namespace AbsoluteZero.UI.Game.Build
             BuildProgressHud(r, root, seatCount);
 
             r.StatusText = CreateText(root, "StatusText",
-                new Vector2(0, 30), new Vector2(600, 35), "Waiting for players...", 20);
+                new Vector2(0, 30), new Vector2(600, 35), "참가자 대기 중", 20);
             r.StatusText.color = new Color(0.8f, 0.8f, 0.8f);
             AnchorBottomCenter(r.StatusText.GetComponent<RectTransform>());
 

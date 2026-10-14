@@ -459,6 +459,14 @@ namespace AbsoluteZero.UI.LobbyUI
                     _roomView.SetStatus("온라인 서비스 연결 중...");
                     break;
                 case SessionState.Ready:
+                    // A failed join can release membership without ending the online
+                    // lease. Restore the entry controls hidden by OnLobbyEntered.
+                    if (_coordinator.CurrentLobby == null)
+                    {
+                        _roomView.ApplyMembership(false);
+                        _roomView.SetCreateInteractable(true);
+                        _roomView.SetStartVisible(false);
+                    }
                     _roomView.SetStatus(_coordinator.LastError ?? "연결 준비 완료");
                     _roomView.SetJoinInteractable(true);
                     _roomView.SetStartInteractable(_coordinator.IsHostRole);

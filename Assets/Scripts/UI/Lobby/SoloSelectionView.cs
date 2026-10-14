@@ -25,6 +25,16 @@ namespace AbsoluteZero.UI.LobbyUI
         }
         void Start() => StartClicked?.Invoke();
         void Back() => BackClicked?.Invoke();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        public bool TrySelectDevelopmentOption(int index)
+        {
+            if (_disposed || _bindings == null || !_bindings.gameObject.activeInHierarchy
+                || index < 0 || index >= _options.Count) return false;
+            var button = _options[index].button;
+            if (button == null || !button.gameObject.activeInHierarchy || !button.interactable) return false;
+            button.onClick.Invoke(); return true;
+        }
+#endif
         public void SetVisible(bool visible) { if (!_disposed && _bindings != null) _bindings.gameObject.SetActive(visible); }
         public void Render(IReadOnlyList<string> titles, int selected, string details, string status, bool canStart, bool canSelect, bool canBack)
         {

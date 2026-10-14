@@ -28,6 +28,7 @@ namespace AbsoluteZero.Core.Solo
             public int schema = 2, peer, players, seat = -1, turns, selections, miniGames, seed;
             public bool completed, visibleResult, healthyTelemetry, returnedToLobby;
             public string failure, policy, behavior, evidenceLevel = "preflight; balance attribution not certified";
+            public string requestedEncounterId, expectedDifficultyId, resolvedEncounterId, resolvedDifficultyId;
             public double seconds;
         }
         Summary _summary;
@@ -42,6 +43,8 @@ namespace AbsoluteZero.Core.Solo
         string _folder, _shared;
         uint _ghostRequest;
         bool _mediaVariety;
+        string _requestedSoloId, _expectedSoloDifficulty;
+        MatchSessionLease _ownedSoloLease;
         readonly Dictionary<short, int> _mediaSelections = new();
         readonly List<string> _policies = new() { "balanced", "attacker", "survival", "resource", "utility", "cautious" };
         static string Arg(string key, string fallback = "") => PlaytestTelemetry.Arg(key, fallback);
@@ -66,6 +69,19 @@ namespace AbsoluteZero.Core.Solo
             try
             {
                 _readyDelayOverride = double.Parse(Arg("--az-playtest-ready-delay", "-1"), System.Globalization.CultureInfo.InvariantCulture);
+                var launchArguments = Environment.GetCommandLineArgs();
+                bool explicitSolo = Array.IndexOf(launchArguments, "--az-solo-encounter-id") >= 0
+                    || Array.IndexOf(launchArguments, "--az-solo-difficulty-id") >= 0;
+                if (explicitSolo)
+                {
+                    _requestedSoloId = Arg("--az-solo-encounter-id");
+                    _expectedSoloDifficulty = Arg("--az-solo-difficulty-id");
+                    if (_summary.players != 1 || string.IsNullOrWhiteSpace(_requestedSoloId) || string.IsNullOrWhiteSpace(_expectedSoloDifficulty)
+                        || launchArguments.Count(x => x == "--az-solo-encounter-id") != 1
+                        || launchArguments.Count(x => x == "--az-solo-difficulty-id") != 1)
+                        throw new InvalidOperationException("Explicit Solo selection requires one local player and both encounter/difficulty IDs.");
+                    _summary.schema = 3; _summary.requestedEncounterId = _requestedSoloId; _summary.expectedDifficultyId = _expectedSoloDifficulty;
+                }
                 if (double.IsNaN(_readyDelayOverride) || double.IsInfinity(_readyDelayOverride)
                     || (_readyDelayOverride != -1 && (_readyDelayOverride < .1 || _readyDelayOverride > 20)))
                     throw new InvalidOperationException("invalid test Ready delay");
@@ -76,7 +92,20 @@ namespace AbsoluteZero.Core.Solo
                 {
                     Button("SoloBtn").onClick.Invoke();
                     await Wait(() => GameObject.Find("MainUI/SoloSelectionPanel/Body/StartBtn") != null, 5, "Solo selection");
+                    if (explicitSolo)
+                    {
+                        var bridges = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None)
+                            .Where(x => x.isActiveAndEnabled).OfType<ISoloPlaytestSelection>().ToArray();
+                        if (bridges.Length != 1) throw new InvalidOperationException("Expected exactly one active Solo selection bridge.");
+                        if (!bridges[0].TrySelectEncounter(_requestedSoloId, out var menuDifficulty, out var error))
+                            throw new InvalidOperationException("Solo profile selection: " + error);
+                        if (menuDifficulty != _expectedSoloDifficulty) throw new InvalidOperationException("Independent expected difficulty does not match the menu profile.");
+                        var start = GameObject.Find("MainUI/SoloSelectionPanel/Body/StartBtn").GetComponent<Button>();
+                        if (!start.interactable || !start.gameObject.activeInHierarchy)
+                            throw new InvalidOperationException("Requested profile's normal Start button is disabled.");
+                    }
                     GameObject.Find("MainUI/SoloSelectionPanel/Body/StartBtn").GetComponent<Button>().onClick.Invoke();
+                    if (explicitSolo) _ownedSoloLease = AppBootstrapper.Instance.SoloSession.Lease;
                 }
                 else
                 {
@@ -125,6 +154,15 @@ namespace AbsoluteZero.Core.Solo
                 if (_summary.players == 1 && (AppBootstrapper.Instance.SessionRouter.LaunchContext.Solo.IsValidationFixture
                     || !FindObjectsByType<BotTurnController>(FindObjectsSortMode.None).Any()))
                     throw new InvalidOperationException("production Solo BT missing");
+                if (explicitSolo)
+                {
+                    var settings = AppBootstrapper.Instance.SessionRouter.LaunchContext.Solo;
+                    var evidence = PlaytestSoloEvidence.Capture(settings, _requestedSoloId, _expectedSoloDifficulty,
+                        root.Generation, _summary.seed);
+                    _summary.resolvedEncounterId = settings.EncounterId; _summary.resolvedDifficultyId = settings.DifficultyId;
+                    File.WriteAllText(Path.Combine(_folder, "solo-identity.json"), JsonUtility.ToJson(evidence, true));
+                    PlaytestTelemetry.Current.Record("solo_identity", JsonUtility.ToJson(evidence), _summary.seat);
+                }
                 PlaytestTelemetry.Current.Record("driver_started", "policy=" + _summary.policy + ";seed=" + _summary.seed, _summary.seat);
                 _driving = true;
                 await Wait(IsTerminal, int.Parse(Arg("--az-playtest-timeout", "900")), "natural match terminal");
@@ -151,6 +189,12 @@ namespace AbsoluteZero.Core.Solo
                 _summary.failure = error.GetType().Name + ": " + error.Message;
                 PlaytestTelemetry.Current?.Record("driver_failed", _summary.failure);
                 try { SoloLaunchProbe.WriteRender(Path.Combine(_folder, "failure.png")); } catch { }
+                if (_ownedSoloLease != null && AppBootstrapper.Instance != null
+                    && AppBootstrapper.Instance.SessionRouter.Owns(_ownedSoloLease))
+                {
+                    try { await AppBootstrapper.Instance.SoloSession.StopAsync(); }
+                    catch (Exception cleanup) { _summary.failure += "; cleanup: " + cleanup.Message; }
+                }
             }
             finally { Finish(); }
         }
@@ -270,7 +314,7 @@ namespace AbsoluteZero.Core.Solo
                 if (item is SpecialItemDataSO special && special.SpecialEffect == SpecialEffectType.RevealOpponent && !targets[0].IsReady.Value) continue;
                 byte target = item.GetTargetMode() == TargetMode.Self ? ActionIntent.NoTarget : (byte)targets[0].PlayerIndex;
                 // Restrict observations to own inventory and visible temperatures. Server remains admission authority.
-                var estimate = BotDecisionModel.Estimate(ItemEffectRuleSnapshot.From(item, slot.ItemId), slot, target, 0,
+                var estimate = PlaytestItemEvaluation.Estimate(ItemEffectRuleSnapshot.From(item, slot.ItemId), slot, target, 0,
                     _owner.Temperature.Value, targets[0].Temperature.Value, item.Persistence == ItemPersistence.Permanent);
                 double score = _summary.policy switch
                 {

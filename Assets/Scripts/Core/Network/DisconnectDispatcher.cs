@@ -24,7 +24,9 @@ namespace AbsoluteZero.Core.Network
         {
             if (Instance != null && Instance != this) { Destroy(this); return; }
             Instance = this;
-            DontDestroyOnLoad(gameObject);
+            // Scene-authored children inherit the persistent Managers root's lifetime.
+            // Unity only permits this call for roots; preserve standalone bootstrap use.
+            if (transform.parent == null) DontDestroyOnLoad(gameObject);
         }
 
         void Start() => RefreshSubscription();

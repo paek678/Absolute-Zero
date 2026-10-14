@@ -46,7 +46,7 @@ namespace AbsoluteZero.Core.Turn
         }
 
         internal static void ApplyDuelTick(PlayerState[] players, TemperatureSystem temperature,
-            bool skipFirstFanTick, float recoveryRate, ItemDropTable dropTable)
+            bool skipFirstFanTick, float recoveryRate, ItemDropTable dropTable, int maxRandomItems)
         {
             for (int i = 0; i < players.Length; i++)
             {
@@ -56,7 +56,7 @@ namespace AbsoluteZero.Core.Turn
                 var inventory = players[i].GetInventory();
                 if (inventory != null)
                     temperature.CheckThresholds(players[i], inventory,
-                        inventory.GetThresholdGranted(), dropTable);
+                        inventory.GetThresholdGranted(), dropTable, false, maxRandomItems);
             }
         }
 

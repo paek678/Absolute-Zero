@@ -1,4 +1,5 @@
 using System;
+using AbsoluteZero.Core.Item.Data;
 using AbsoluteZero.Core.Player;
 using AbsoluteZero.Core.Player.Identity;
 using AbsoluteZero.Core.Session;
@@ -16,7 +17,7 @@ namespace AbsoluteZero.Core.Solo
     }
 
     // One adapter belongs to one exact live binding. Caller payloads never choose
-    // an actor or a delay. Re-entry creates a fresh adapter and invalidates the old.
+    // an actor, a delay or a mini-game outcome. Re-entry creates a fresh adapter and invalidates the old.
     internal sealed class TrustedBotCommandAdapter : IBotItemUseBoundary, IDisposable
     {
         readonly PlayerState _actor;
@@ -65,15 +66,46 @@ namespace AbsoluteZero.Core.Solo
         bool IBotItemUseBoundary.TryDelay(PlayerActionCandidate candidate, out double delay)
         {
             delay = 0;
-            for (short i = 0; i < _settings.Catalog.Count; i++)
-                if (_settings.Catalog[i] == candidate.ItemData && _settings.TryGetItemDelay(i, out float value))
-                { delay = value; return true; }
-            return false;
+            if (!TryCatalogIndex(candidate.ItemData, out short id) || !_settings.TryGetItemDelay(id, out float value)) return false;
+            delay = value;
+            return true;
+        }
+        bool IBotItemUseBoundary.RollSuccess(PrepInputKey key, ulong requestId, PlayerActionCandidate candidate)
+        {
+            if (!TryCatalogIndex(candidate.ItemData, out short id) || !_settings.TryGetMiniGameSuccess(id, out float chance)
+                || chance >= 1) return true;
+            if (chance <= 0) return false;
+            // Private deterministic stream per Prep and request; gameplay RNG is never advanced.
+            int seed = unchecked(BotDecisionModel.Seed(_settings.BotId, key) ^ (int)(requestId * 2654435761UL));
+            return new System.Random(seed).NextDouble() < chance;
+        }
+        bool IBotItemUseBoundary.OthersReady(PrepInputKey key)
+        {
+            var registry = AbsoluteZero.Core.Match.MatchCompositionRoot.Instance?.Registry;
+            if (registry == null || !IsCurrent(key)) return false;
+            bool any = false;
+            foreach (var player in registry.Players)
+            {
+                if (player == null || !player.IsValid || player.State == null || ReferenceEquals(player.State, _actor)) continue;
+                if (!player.State.IsReady.Value) return false;
+                any = true;
+            }
+            return any;
         }
         PlayerActionResult IBotItemUseBoundary.Queue(PrepInputKey key, PlayerActionCandidate candidate)
             => _actor.ServerQueueBotItem(key, candidate, this);
+        PlayerActionResult IBotItemUseBoundary.FailMiniGame(PrepInputKey key, PlayerActionCandidate candidate)
+            => _actor.ServerFailBotMiniGameItem(key, candidate, this);
         PlayerActionResult IBotItemUseBoundary.CancelSelection(PrepInputKey key) => _actor.ServerCancelBotSelection(key);
         PlayerActionResult IBotItemUseBoundary.Ready(PrepInputKey key) => _actor.ServerPressBotReady(key);
         public void Dispose() { _disposed = true; _operation.Dispose(); }
+
+        bool TryCatalogIndex(ItemDataSO item, out short id)
+        {
+            for (int i = 0; i < _settings.Catalog.Count; i++)
+                if (_settings.Catalog[i] == item) { id = (short)i; return true; }
+            id = -1;
+            return false;
+        }
     }
 }

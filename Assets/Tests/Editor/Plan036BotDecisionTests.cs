@@ -12,46 +12,38 @@ using UnityEngine;
 
 namespace AbsoluteZero.Tests
 {
+    // General decision-model contracts. Spec values live in Plan046BotJudgementTests.
+    [Category("SoloIntegration")]
     public sealed class Plan036BotDecisionTests
     {
         static readonly PrepInputKey Key = new(7, 2, 3, 4);
-        static readonly BotCandidate Attack = new(1, 0, 0, 1, 3, 0, 0, 0, true);
-        static readonly BotCandidate Heal = new(2, 1, 1, 1, 0, 7, 0, 0, false);
+        static readonly BotItemProfile[] Profiles =
+        {
+            new(0, true, BotItemFormula.DirectAttack, BotItemCategory.Attack, BotAttackKind.Tool, 3, 0, 1, 3, false, false, 0),
+            new(1, true, BotItemFormula.Heal, BotItemCategory.Recovery, BotAttackKind.None, 0, 0, 1, 7, true, false, 1),
+            new(2, true, BotItemFormula.DirectAttack, BotItemCategory.Attack, BotAttackKind.Food, 5, 0, 1, 5, true, true, 2),
+            new(3, false, BotItemFormula.DirectAttack, BotItemCategory.Attack, BotAttackKind.Tool, 9, 0, 1, 0, true, true, int.MaxValue)
+        };
+        static readonly BotCandidate Attack = new(1, 0, 0, 1);
+        static readonly BotCandidate Heal = new(2, 1, 1, 1, 7);
+        static readonly BotCandidate Food = new(3, 0, 2, 1);
         static BotObservation Observe(float own = 30, float opponent = 30, double remaining = 10,
-            IList<BotCandidate> candidates = null, float opponentFan = 1)
-            => new(Key, 1, 0, own, opponent, 1, opponentFan, false, remaining, candidates ?? new[] { Attack, Heal });
-        static bool Choose(BotObservation observation, BotTactic tactic, out BotCandidate candidate)
-            => BotDecisionModel.TryChoose(observation, tactic, BotTacticalWeights.Neutral, 0, new System.Random(1), 0.25, out candidate);
-        [Test] public void LowTemperatureSelectsHealingSurvival()
-        { Assert.True(Choose(Observe(10), BotTactic.Survival, out var candidate)); Assert.AreEqual(2u, candidate.Copy); }
-        [Test] public void SurvivalDoesNotMaskAnOrdinaryAttackAtFullTemperature()
-        { Assert.False(Choose(Observe(37), BotTactic.Survival, out _)); }
-        [Test] public void FinishRequiresEstimatedLethalDamage()
-        { Assert.True(Choose(Observe(opponent: 3), BotTactic.Finish, out var c)); Assert.AreEqual(1u, c.Copy); Assert.False(Choose(Observe(opponent: 4), BotTactic.Finish, out _)); }
-        [Test] public void ResourcePreservesFiniteItemsWhenBasicAttackIsEnough()
-        { Assert.True(Choose(Observe(), BotTactic.Resource, out var c)); Assert.AreEqual(1u, c.Copy); }
-        [Test] public void CounterUsesPublicPressureAndOwnDefenseOnly()
-        {
-            var defense = new BotCandidate(3, 1, 1, 1, 0, 0, 10, 0, true);
-            var o = Observe(18, candidates: new[] { Attack, defense }, opponentFan: 2);
-            Assert.True(Choose(o, BotTactic.Counter, out var selected)); Assert.AreEqual(3u, selected.Copy);
-            Assert.False(Choose(Observe(18, candidates: new[] { defense }), BotTactic.Counter, out _));
-        }
-        [Test] public void GeneralSelectsLegalUtilityWithoutInventingDamage()
-        {
-            var utility = new BotCandidate(4, 0, 10, .8, 0, 0, 0, 2, false);
-            Assert.True(Choose(Observe(candidates: new[] { utility }), BotTactic.General, out var c));
-            Assert.AreEqual(4u, c.Copy); Assert.AreEqual(0, c.Damage);
-        }
+            IList<BotCandidate> candidates = null, bool opponentReady = false)
+            => new(Key, 1, 0, own, opponent, 1, 1, opponentReady, remaining, 3,
+                Array.Empty<BotOpponentItem>(), candidates ?? new[] { Attack, Heal, Food });
+        static BotScoreSheet Score(BotObservation observation)
+            => BotDecisionModel.Score(observation, Profiles, BotJudgementSettings.Beginner, BotScoringCoefficients.Approved, .25);
+
         [Test] public void IndependentBotEvaluationCannotChangeAnotherBotsDecisionStream()
         {
+            var sheet = Score(Observe());
             var control = new System.Random(22); var subject = new System.Random(22); var unrelated = new System.Random(23);
             for (int i = 0; i < 40; i++)
             {
-                BotDecisionModel.TryChoose(Observe(), BotTactic.General, BotTacticalWeights.Neutral, 1, control, .25, out var a);
+                BotDecisionModel.TryPickWeighted(sheet, BotJudgementSettings.Beginner, control, out var a);
                 for (int extra = 0; extra < i; extra++)
-                    BotDecisionModel.TryChoose(Observe(), BotTactic.General, BotTacticalWeights.Neutral, 1, unrelated, .25, out _);
-                BotDecisionModel.TryChoose(Observe(), BotTactic.General, BotTacticalWeights.Neutral, 1, subject, .25, out var b);
+                    BotDecisionModel.TryPickWeighted(sheet, BotJudgementSettings.Beginner, unrelated, out _);
+                BotDecisionModel.TryPickWeighted(sheet, BotJudgementSettings.Beginner, subject, out var b);
                 Assert.AreEqual(a.Copy, b.Copy);
             }
         }
@@ -78,13 +70,29 @@ namespace AbsoluteZero.Tests
         }
         [TestCase(1.30)] [TestCase(1.29)]
         public void DelayReserveAndDeadlineDoNotFitAtEquality(double remaining)
-        { Assert.False(Choose(Observe(remaining: remaining), BotTactic.General, out _)); }
-        [Test] public void EmptyInventoryYieldsNoCandidateForFallback()
-        { Assert.False(Choose(Observe(candidates: Array.Empty<BotCandidate>()), BotTactic.General, out _)); }
-        [Test] public void DisabledWeightSkipsBranch()
+        { Assert.That(Score(Observe(remaining: remaining)).Ranked, Is.Empty); }
+        [Test] public void OpponentReadySkipsTheDelayInAffordabilityAndOwnCooling()
         {
-            var weights = BotTacticalWeights.Neutral; weights.Survival = 0;
-            Assert.False(BotDecisionModel.TryChoose(Observe(5), BotTactic.Survival, weights, 0, new System.Random(1), 0.25, out _));
+            var sheet = Score(Observe(remaining: 1, opponentReady: true));
+            Assert.That(sheet.Ranked, Is.Not.Empty);
+            Assert.That(sheet.OwnLoss, Is.Zero);
+        }
+        [Test] public void EmptyInventoryYieldsNoCandidateForFallback()
+        {
+            var sheet = Score(Observe(candidates: Array.Empty<BotCandidate>()));
+            Assert.False(BotDecisionModel.TryPickWeighted(sheet, BotJudgementSettings.Beginner, new System.Random(1), out _));
+            Assert.False(BotDecisionModel.TryPickCrisis(sheet, BotJudgementSettings.Beginner, new System.Random(1), out _));
+        }
+        [Test] public void UnknownItemIsNeverChosen()
+        {
+            var unknown = new BotCandidate(4, 0, 3, 1);
+            Assert.That(Score(Observe(candidates: new[] { unknown })).Ranked, Is.Empty);
+        }
+        [Test] public void DuplicateCopiesAreRankedOncePerItem()
+        {
+            var second = new BotCandidate(9, 0, 0, 1);
+            var sheet = Score(Observe(candidates: new[] { Attack, second, Food }));
+            Assert.That(sheet.Ranked.Count, Is.EqualTo(2));
         }
         [Test] public void ObservationCopiesCandidateCollection()
         { var list = new List<BotCandidate> { Attack }; var o = Observe(candidates: list); list.Clear(); Assert.AreEqual(1, o.Candidates.Count); }
@@ -96,10 +104,11 @@ namespace AbsoluteZero.Tests
                 UnityEngine.Random.InitState(17); var baseline = UnityEngine.Random.state;
                 int seed = BotDecisionModel.Seed("default", Key);
                 var a = new System.Random(seed); var b = new System.Random(seed);
+                var sheet = Score(Observe());
                 for (int i = 0; i < 30; i++)
                 {
-                    Assert.True(BotDecisionModel.TryChoose(Observe(), BotTactic.General, BotTacticalWeights.Neutral, 8, a, .25, out var x));
-                    Assert.True(BotDecisionModel.TryChoose(Observe(), BotTactic.General, BotTacticalWeights.Neutral, 8, b, .25, out var y));
+                    Assert.True(BotDecisionModel.TryPickWeighted(sheet, BotJudgementSettings.Beginner, a, out var x));
+                    Assert.True(BotDecisionModel.TryPickWeighted(sheet, BotJudgementSettings.Beginner, b, out var y));
                     Assert.AreEqual(x.Copy, y.Copy);
                 }
                 Assert.AreEqual(JsonUtility.ToJson(baseline), JsonUtility.ToJson(UnityEngine.Random.state));
@@ -107,42 +116,18 @@ namespace AbsoluteZero.Tests
             }
             finally { UnityEngine.Random.state = saved; }
         }
-        [Test] public void RecoveryEstimateUsesCurrentUseAndClampsOverhealWithoutEffects()
+        [Test] public void RecoveryHealUsesCurrentUseAndScoreCapsAtMaximumTemperature()
         {
             var item = ScriptableObject.CreateInstance<RecoveryItemDataSO>();
             try
             {
                 item.MaxUses = 3; item.HealPerUse = new float[] { 2, 5, 9 };
-                var slot = new ItemSlotNetData { CopyId = 9, RemainingUses = 2, ItemId = 0 };
-                var c = BotDecisionModel.Estimate(ItemEffectRuleSnapshot.From(item), slot, 1, 1, 35, 30, false);
-                Assert.AreEqual(2, c.Heal); Assert.AreEqual(2, slot.RemainingUses); Assert.AreEqual(5, item.HealPerUse[1]);
-            }
-            finally { UnityEngine.Object.DestroyImmediate(item); }
-        }
-        [Test] public void NeutralizeIsAUsableUtilityCandidateWithoutInventingDamage()
-        {
-            var item = ScriptableObject.CreateInstance<SabotageItemDataSO>();
-            try
-            {
-                item.SabotageType = SabotageType.Neutralize;
-                var estimate = BotDecisionModel.Estimate(ItemEffectRuleSnapshot.From(item),
-                    new ItemSlotNetData { CopyId = 8, RemainingUses = 1 }, 0, 1.5, 30, 30, false);
-                Assert.That(estimate.Damage, Is.Zero);
-                Assert.That(estimate.Utility, Is.GreaterThan(0));
-                Assert.True(Choose(Observe(candidates: new[] { estimate }), BotTactic.General, out var chosen));
-                Assert.AreEqual(8u, chosen.Copy);
-            }
-            finally { UnityEngine.Object.DestroyImmediate(item); }
-        }
-        [Test] public void EqualizeEstimateCannotCreateDamageAgainstColderOpponent()
-        {
-            var item = ScriptableObject.CreateInstance<AttackItemDataSO>();
-            try
-            {
-                item.EqualizeToUserTemp = true;
-                var slot = new ItemSlotNetData { CopyId = 1, RemainingUses = 1 };
-                Assert.AreEqual(0, BotDecisionModel.Estimate(ItemEffectRuleSnapshot.From(item), slot, 0, 1, 20, 10, false).Damage);
-                Assert.AreEqual(10, BotDecisionModel.Estimate(ItemEffectRuleSnapshot.From(item), slot, 0, 1, 10, 20, false).Damage);
+                var slot = new ItemSlotNetData { CopyId = 9, RemainingUses = 2, ItemId = 1 };
+                float heal = BotDecisionModel.CurrentHeal(ItemEffectRuleSnapshot.From(item), slot);
+                Assert.AreEqual(5, heal); Assert.AreEqual(2, slot.RemainingUses); Assert.AreEqual(5, item.HealPerUse[1]);
+                var sheet = Score(Observe(own: 35, candidates: new[] { new BotCandidate(2, 1, 1, 1, heal) }));
+                // One tick during the delay projects 35 -> 34, leaving three degrees of capacity.
+                Assert.AreEqual(3, sheet.Ranked[0].Score, 1e-4);
             }
             finally { UnityEngine.Object.DestroyImmediate(item); }
         }

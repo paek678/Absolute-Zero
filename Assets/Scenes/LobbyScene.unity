@@ -9888,10 +9888,15 @@ MonoBehaviour:
   _soloCosmetics: {fileID: 11400000, guid: dffa2ac953d567a42b420a54e64833ba, type: 2}
   _soloSelection: {fileID: 791824392}
   _soloProfiles:
-  - Title: "\uAE30\uBCF8 \uBD07"
-    Description: "\uAE30\uC874 \uAE30\uBCF8 \uC124\uC815\uC73C\uB85C \uC9C4\uD589\uD558\uB294
-      \uBD07 \uB300\uC804\uC785\uB2C8\uB2E4."
-    Encounter: {fileID: 11400000, guid: 5cc0110b333ec424da1e9588e0d679f6, type: 2}
+  - Title: "\uCD08\uAE09"
+    Description: "\uCC98\uC74C \uD558\uB294 \uBD84\uAED8 \uB9DE\uB294 \uC0C1\uB300\uC785\uB2C8\uB2E4.
+      \uC544\uC774\uD15C\uC744 \uC4F0\uB294 \uB370 \uC2DC\uAC04\uC774 \uB354 \uAC78\uB9AC\uACE0,
+      \uAC00\uB054 \uB9C8\uBB34\uB9AC\uB97C \uB193\uCE69\uB2C8\uB2E4."
+    Encounter: {fileID: 11400000, guid: e2656caf66dec2b4cb53a8f573512e6e, type: 2}
+  - Title: "\uC0C1\uAE09"
+    Description: "\uBE60\uB974\uAC8C \uD310\uB2E8\uD558\uACE0, \uCC98\uCE58\uD560
+      \uC218 \uC788\uC73C\uBA74 \uB193\uCE58\uC9C0 \uC54A\uB294 \uC0C1\uB300\uC785\uB2C8\uB2E4."
+    Encounter: {fileID: 11400000, guid: ae06f640f2c66694e86f234f63b25c54, type: 2}
 --- !u!4 &1550049076
 Transform:
   m_ObjectHideFlags: 0

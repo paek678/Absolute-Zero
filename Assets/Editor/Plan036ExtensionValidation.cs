@@ -64,9 +64,6 @@ public static class Plan036ExtensionValidation
                 Set(difficulty, "readyPolicy", (int)(scenario == 2 ? BotReadyPolicy.NearDeadline : BotReadyPolicy.AfterSelection));
                 if (scenario == 1)
                 {
-                    Set(difficulty, "overrideTacticalWeights", true);
-                    foreach (string branch in new[] { "Survival", "Finish", "Counter", "Resource", "General" })
-                        Set(difficulty, "tacticalWeights." + branch, branch == "General" ? 1f : 0f);
                     Set(difficulty, "minimumThinkSeconds", 1f); Set(difficulty, "maximumThinkSeconds", 1f);
                 }
                 if (scenario == 3)
@@ -83,7 +80,9 @@ public static class Plan036ExtensionValidation
                 if (scenario == 0)
                 {
                     await Until(() => controller.Trace.Any(x => x.Contains("think=8.000")), 5, "long thought starts");
-                    bot.Temperature.Value = 4; // Deliberate publicly visible urgency stimulus.
+                    // Deliberate publicly visible urgency stimulus: below the opponent's basic Fan
+                    // threat, so the PLAN046 mortal-danger check trips during thinking.
+                    bot.Temperature.Value = 3;
                 }
                 if (scenario == 1)
                 {

@@ -1,97 +1,65 @@
 # Solo bot setup
 
-Implementation: [PLAN 036](Plans/PLAN_036_solo_detailed_implementation.md). Current acceptance and deferred checks: [results](Validation/PLAN_036_results.md).
+Current integration: **2026-10-14**, isolated worktree `C:/Users/paek6/AbsoluteZero-SoloIntegration`, branch `codex/solo-bot-integration-20261013`. This work has not been merged into original main. [Specification](Plans/PLAN_solo_bot_main_integration_20261013.md) and [execution evidence](Validation/solo_bot_main_integration_20261013.md) distinguish current passes, controlled fixtures, natural games and shipping approval.
 
-For graph editing, node code examples, tactical scoring, profile authoring and a validation checklist, use the [Solo BT authoring guide](SOLO_BT_AUTHORING.md).
+## Play the development version
 
-## Play the current development version
+1. Open saved `Assets/Scenes/LobbyScene.unity`, or run the freshly built integration Development Player.
+2. Click **1대 봇 대전**, select **초급** or **상급**, then explicitly start the match. Merely selecting a profile does not acquire a session.
+3. Play the existing 1v1 rules in `GameScene_Solo`. Human mini-games remain unchanged. The bot models an item's mini-game outcome once, waits its effective delay and uses the authoritative selection/Ready boundary.
+4. Results, replay and lobby return use the existing Solo lifecycle. A simultaneous-death draw replays the round without awarding a win.
 
-1. Open `Assets/Scenes/LobbyScene.unity` and enter Play Mode, or run a Windows **Development Build** with the enabled project scenes.
-2. Click **1대 봇 대전**. The dedicated `Assets/Scenes/GameScene_Solo.unity` opens.
-3. Play the existing 1v1 rules against the bot. Humans keep mini-games. The bot waits its configured item delay and submits through the authoritative action boundary.
-4. At match end choose **다시 하기** or **로비로**. Solo has no online rematch vote or automatic vote timeout.
+One local NGO host owns two logical participants. The bot is server-owned; there is no external bot player or second phase driver. Cold Solo does not initialize Authentication/Lobby/Relay. Opening a gameplay scene alone is not a normal launch route.
 
-A simultaneous-death draw replays the same round with no win awarded, matching the existing 1v1 rule.
+## Configuration
 
-The local session uses one NGO host connection and two logical participants. The ordinary bot object is server-owned. Cold Solo does not initialize Unity Authentication, Lobby or Relay. Online buttons still invoke the existing online services explicitly. After online play the process can retain authenticated SDK state, but Solo uses its own localhost transport and does not allocate a Relay server.
-
-Start from the lobby. Opening the gameplay scene alone is not a supported public launch route because it lacks the application/session context; explicit Editor fixtures can supply that same context for testing.
-
-## Configuration assets
-
-| Asset | Edit here |
+| Asset | Responsibility |
 |---|---|
-| `Assets/Data/Solo/Encounters/DefaultSoloDuel.asset` | Default bot, difficulty, shared 1v1 rule, dedicated scene and readiness |
-| `Assets/Data/Solo/Bots/DefaultBot.asset` | Bot identity, existing cosmetic IDs, graph, tactical weights and item policy |
-| `Assets/Data/Solo/Difficulties/NeutralBaseline.asset` | Think delay range, Ready timing/reserve, tactical override, noise and retry limit |
-| `Assets/Data/Solo/ItemUse/DefaultItemUsePolicy.asset` | Default delay and per-item overrides for all 21 current duel items |
-| `Assets/Data/Solo/Graphs/SoloDuelDecision.asset` | Editable Unity Behavior graph; select the asset and open it in the graph editor |
-| `Assets/Data/Solo/Stats/NeutralInherited.asset` | Inherited 1v1 baseline; custom stat/loadout overrides intentionally remain disabled |
+| `Encounters/BeginnerSoloDuel.asset`, `AdvancedSoloDuel.asset` | Stable encounter ID, bot/difficulty, Ready state, shared rule and dedicated scene |
+| `Bots/DefaultBot.asset` | Identity/appearance, compiled graph, inherited stats, base delay policy and knowledge |
+| `Difficulties/Beginner.asset`, `Advanced.asset` | Judgment probabilities, extra item delay, reserve and bounded retry |
+| `ItemUse/StandardItemUsePolicy.asset` | Base per-item delays; difficulty override replaces the whole policy |
+| `Knowledge/DefaultItemKnowledge.asset` | Current catalog item worth, mini-game tier and scoring coefficients; verify its saved binding in the workbench |
+| `Graphs/SoloDuelDecision.asset` | Compiled production decision graph |
+| `Stats/NeutralInherited.asset` | Current shared starting temperature/fan/grants; custom overrides remain disabled |
 
-Duplicate profiles before creating a new difficulty. Give every distinct configuration a unique lowercase ID and positive version. All referenced items/cosmetics must belong to the current catalog. Configuration is copied/resolved at launch; changing an asset during a match is not a live tuning mechanism.
+Paths above are relative to `Assets/Data/Solo/`. The old Default encounter/NeutralBaseline remain compatibility profiles; do not use them as evidence that a named difficulty was selected.
 
-Current provisional test values: ordinary item delay **0.75 s**, mini-game-item delay **1.5 s**, optional thinking **0.2-0.45 s**, Ready reserve **0.25 s**, retry budget **2**. The bot never runs a mini-game. Item effects, targets, uses, cooling, initiative, round grants and win rules are still the current 1v1 implementation.
+Current **provisional** Beginner/Advanced settings: zero thinking, AfterSelection Ready, reserve0.25s and retry budget2. Beginner adds2s to effective item delays and uses best/second/uniform selection chances0.60/0.25/0.15; Advanced adds0s and uses0.90/0.08/0.02. Mini-game outcome chances depend on item tier. Read the workbench's resolved per-item table rather than assuming one universal delay. Normal integrated entry currently rejects nonzero thinking or NearDeadline Ready; those older boundary-fixture values are not normal difficulty options.
 
-## Graph and ownership
+Every independent configuration needs a unique lowercase ID and positive version. Resolved settings are copied at launch; editing assets during play does not retune a running match. Preserve catalog ordering, item values and shared rules.
+
+## Decision and ownership
 
 ```mermaid
 flowchart TD
-  Start --> Observe[Copy own/public observation]
-  Observe --> Legal[Build legal own-item candidates]
-  Legal --> Tactics{Ordered tactical branches}
-  Tactics --> Survival
-  Tactics --> Finish
-  Tactics --> Counter
-  Tactics --> Resource
-  Tactics --> General
-  Survival & Finish & Counter & Resource & General --> Think[Bounded optional thinking]
-  Think --> Use[Submit and await item delay]
-  Use --> Ready[Choose timing and submit Ready]
-  Legal -. bounded retries exhausted .-> Fallback[Ready without new item]
+    Observe[Copy own and public state] --> Legal[Legal own copies and targets]
+    Legal --> Score[Project costs and score]
+    Score --> Crisis{Mortal danger?}
+    Crisis -->|yes| Care[Recovery or defense; otherwise no-item Ready]
+    Crisis -->|no| Lethal{Required lethal choice?}
+    Lethal -->|yes| Finish[Lethal candidate]
+    Lethal -->|no| Odds[Best / second / uniform candidate]
+    Care & Finish & Odds --> Use[One authoritative delayed request]
+    Use --> Ready[Authoritative Ready]
 ```
 
-- `TurnManager` owns phases and the committed preparation window.
-- `BotTurnController` owns one graph run per session/round/turn key, isolated RNG and cancellation.
-- `TrustedBotCommandAdapter` owns bot-authorized requests; `BotItemUseOperation` owns the pending delay and idempotency record.
-- Existing `PlayerState`/`CombatResolver` validate, queue, apply and consume items.
-- `MatchSessionRouter` owns exclusive session lifetime; Solo and online coordinators own their respective cleanup. `PersistentNetworkRoot` rejects the duplicate lobby network root on return.
+- `TurnManager` owns phases and the committed input window.
+- `BotTurnController` owns one manually ticked graph run per generation/round/turn/sequence.
+- `TrustedBotCommandAdapter` validates bot identity; `BotItemUseOperation` owns one outcome roll, delay, cancellation and idempotency.
+- Existing `PlayerState` and combat systems own queueing, consumption and effects. A failed bot mini-game consumes once without an item effect.
+- `MatchSessionRouter` owns exclusive session lifetime and normal cleanup/re-entry.
 
-The bot sees its inventory and public temperatures/fans/Ready state. It does not inspect unrevealed opponent item choices or inventory. Trace entries identify generation, round, turn, seed, candidate/reason, timing and action outcome. Damage estimates are heuristics, not guaranteed combat results.
+The model reads own inventory and public temperatures/fans/Ready/held-item information. It does not read the opponent's unannounced selection or future RNG. Survival, defense, delayed effects and item value are estimates; actual shared combat remains authoritative. [Current graph/code guide](SOLO_BT_AUTHORING.md).
 
-## Shipping gate and scope exclusions
+## Validation and shipping
 
-### Connecting future design work
+The latest ledger records controlled graph/operation checks, explicit Beginner/Advanced natural completion, shared-mode regressions and ordinary guard tests separately. The old sixty-match campaign is an old-bot balance baseline, not new-bot evidence. Automated policies and simulated client verdicts do not establish human fairness or manual mini-game usability.
 
-| Planned extension | Existing connection | Current limit / next decision |
-|---|---|---|
-| Multiple bot personalities | Duplicate BotDefinition and Difficulty; assign the encounter | Existing lobby launches one configured default. A picker/campaign route is separate UI scope |
-| Reaction speed / item penalties | Think range, item-delay policy, Ready policy and bounded retry | Values are provisional. Longer thinking can cross the survival threshold; the graph now reobserves within its retry budget |
-| Aggressive vs defensive ordering | Reorder tactical branches in the Behavior graph | Weights scale candidates **inside** a branch (and zero disables it); they do not reorder the first-success branch sequence. Do not present them as probabilities of selecting branches |
-| Starting temperature/fan/items | BotStatProfile schema and authoritative setup seam | Overrides currently reject. Decide per-round reset, loadout replace/add and temporary fan-upgrade restoration before implementation; fields alone do not provide the feature |
-| New item of a supported type | Existing catalog + ordinary shared validation/effect + item-delay override | Default delay is inherited without an override; review actual intended penalty. Estimates are heuristics, not guaranteed damage or hidden-state prediction |
-| Entirely new item effect type | ItemEffectRuleSnapshot mapping, combat/application rules and bot estimate | Missing mappings now fail Solo launch with an indexed error instead of reaching a BT exception; add authority/consumption/visual tests with the mapping |
-| Additional bot graph | BotDefinition.Graph, named controller action nodes and isolated runtime Blackboard | Must compile without placeholders; preserve the shared command adapter and TurnManager phase ownership |
-| Mid-match pause/save or online bots | No completed integration in this scope | Define clock/persistence/seat rules first. TimeScale alone is not a full NGO pause; current trusted bot commands are Solo-only |
+For named-profile natural evidence use the integration `.codex/scripts/run_full_match_playtest.py` with **all three** `--solo-encounter-id`, `--solo-difficulty-id` and `--solo-build-manifest`, plus unique case/attempt/output identities. The manifest must match the executable/assemblies/serialized runtime and effective settings. Exact commands/seeds are retained in the successful I07 evidence folders. Legacy helpers selecting the default profile do not qualify this new cohort.
 
-The estimator deliberately does not treat reveal/extra-action modifiers as guaranteed useful follow-up actions: ordinary 1v1 currently exposes one queued selection and the bot cannot inspect hidden human choices. Defining reveal-aware replanning or extra-action consumption would be a separate shared gameplay contract, not a silent AI-only shortcut.
+Development-only `--az-solo-local-port` isolates tests from an existing Editor's local server. Its default remains18777 and the override is absent in ordinary builds. Do not kill an unrelated Editor to free a port or change shared transport rules.
 
-The non-development entry **rejects provisional tuning**. Functional development acceptance is separate from shipping approval. Approve final delay/difficulty values and then mark the actual reviewed difficulty/item-policy assets non-provisional before final release validation; do not merely disable the guard.
+**Beginner/Advanced settings are approved for the current build by the user on2026-10-14.** Only their two difficulty approval flags and StandardItemUsePolicy's flag changed; numeric tuning and GUIDs stayed unchanged. Both actual source profiles started through normal menu events and the ordinary AppBootstrapper coordinator/default18777 port; graph/Ready, Advanced replay and normal stop passed. The final uninstrumented standard Windows build succeeded. See the ledger's current-build activation section for exact build/runtime scope. Legacy NeutralBaseline/DefaultItemUsePolicy remain provisional; new or changed tuning still requires deliberate acceptance. The earlier unsaved-copy approval guard is historical pre-promotion evidence. Use `--plan036-release-approved-source` for the instrumented current approved-source check; the old provisional-menu assertion is for pre-approval data. Main merge, push, deployment and human final balance acceptance are not implied.
 
-Custom starting temperature/fan/loadout and reset/replace/add semantics need a separate decision before activation. Side sprites/rigging, new item art, network host migration and bot mini-games are outside this implementation. Final release backend/stripping, prolonged soak and human judgment of difficulty/animation feel remain separately recorded in the results ledger.
-
-## Validation
-
-Normal play does not require probe arguments. `--solo-scripted-slice` is an explicit development-only fixture and must not be used as acceptance evidence for normal AI play.
-
-Reproducible developer helpers:
-
-- `.codex/scripts/run_solo_acceptance.ps1`: fresh evidence directories, exact owned player PIDs, replay/corpus/real Relay transition runs. It uses the fixed existing test executable path.
-- Add `-HumanPolicy mixed` to a corpus run to sample the human's available non-mini-game items through normal selection/Ready commands; the default remains `late-fan`. Rejected special-item requests are recorded, not converted into successful uses. Each run records its seed, actual item choices and natural round/turn counts. `-MatchTimeoutSeconds 600` allows a longer mixed-item match (default 300, supported 30-600); runner and player use the same budget, without accelerating gameplay or changing rules.
-- `Plan036ExtensionValidation.Start()` in Editor Play Mode: 12 cloned-profile/session cycles covering urgent re-observation, a removed CopyId followed by Red Card-only replanning, near-deadline Ready, unaffordable item delay with zero retries, and runtime graph/transport cleanup. This fixture injects boundary state and is not a natural match or a tuning approval.
-- `Plan036BoundaryValidation.Start()` in Editor Play Mode: cloned tuning, zero-think/late Ready/low-temperature/slow-frame, human win, draw and thinking-exit scenarios. Original assets are preserved.
-- `Plan036ExitValidation.Start()` in Editor Play Mode: pending graph item, Attack, Resolution and RoundOver exit, followed by a fresh graph generation. This explicitly injects a death boundary for RoundOver; it is separate from natural-match evidence.
-- Existing Editor test assembly `AbsoluteZero.EditorTests` plus `.codex/scripts/run_validation_matrix.py` for shared online regressions.
-
-Natural player runs record a starting seed for sampling and diagnosis, not a promise of bit-identical full-match replay: real frame timing, preparation cooling/recovery and the shared game loop remain active. Keep actual decisions, turn counts and outcomes with the seed. The bot's separate decision RNG still avoids consuming gameplay RNG.
-
-`Docs` is the Obsidian vault source. Use this guide for configuration navigation, the plan for scope/contracts, and the validation results for actual evidence. No separate note copy or synchronization job is needed.
+Custom starting stats/loadouts, human play-feel acceptance and prolonged soak are separate scope. Read evidence in the ledger before calling any check passed. Keep this guide in `Docs`, with one authoritative copy per code worktree.

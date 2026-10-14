@@ -13,6 +13,7 @@ namespace AbsoluteZero.Core.Session
         Task<Result<Lobby>> QuickJoinAsync(QuickJoinLobbyOptions options);
         Task<Result<List<Lobby>>> QueryAsync(QueryLobbiesOptions options);
         Task<Result<Lobby>> GetAsync(string lobbyId);
+        Task<Result<List<string>>> GetJoinedLobbyIdsAsync();
         Task<Result<Lobby>> UpdateAsync(string lobbyId, UpdateLobbyOptions options);
         Task<Result<Lobby>> UpdatePlayerAsync(string lobbyId, string playerId, UpdatePlayerOptions options);
         Task<Result<Unit>> DeleteAsync(string lobbyId);

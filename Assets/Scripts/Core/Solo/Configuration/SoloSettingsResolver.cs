@@ -102,17 +102,18 @@ namespace AbsoluteZero.Core.Solo.Configuration
             CheckCosmetics(bot.Cosmetics, context.CosmeticRegistry, issues);
             if (bot.Appearance != null && !bot.Appearance.TrySnapshot(out _, out var appearanceError))
                 issues.Add("Bot appearance: " + appearanceError);
-            CheckWeights(bot.TacticalDefaults, "Bot tactical defaults", issues);
-            CheckWeights(difficulty.TacticalWeights, "Difficulty tactical weights", issues);
+            CheckJudgement(difficulty.Judgement, issues);
             CheckNonNegative(difficulty.MinimumThinkSeconds, "Minimum think delay", issues);
             CheckNonNegative(difficulty.MaximumThinkSeconds, "Maximum think delay", issues);
             if (difficulty.MaximumThinkSeconds < difficulty.MinimumThinkSeconds) issues.Add("Think delay range is reversed.");
             if (!Enum.IsDefined(typeof(BotReadyPolicy), difficulty.ReadyPolicy)) issues.Add("Ready policy is undefined.");
+            if (!validation && (difficulty.MinimumThinkSeconds != 0 || difficulty.MaximumThinkSeconds != 0
+                || difficulty.ReadyPolicy != BotReadyPolicy.AfterSelection))
+                issues.Add("Integrated decision projection currently requires zero thinking and AfterSelection Ready.");
             CheckNonNegative(difficulty.ReadyReserveSeconds, "Ready reserve", issues);
             if (rule != null && difficulty.ReadyReserveSeconds >= rule.PrepPhaseDuration)
                 issues.Add("Ready reserve must be less than the shared preparation duration.");
-            if (!Finite(difficulty.DecisionNoise) || difficulty.DecisionNoise < 0 || difficulty.DecisionNoise > 1)
-                issues.Add("Decision noise must be finite and in [0, 1].");
+            CheckNonNegative(difficulty.ExtraItemDelaySeconds, "Extra item delay", issues);
             if (difficulty.RetryBudget < 0 || difficulty.RetryBudget > 32)
                 issues.Add("Retry budget must be in [0, 32] to keep decisions bounded.");
 
@@ -120,17 +121,36 @@ namespace AbsoluteZero.Core.Solo.Configuration
             CheckStats(difficulty.StatOverride, "Difficulty stats", itemIndices, issues, stamps, seen, ids);
             CheckPolicy(bot.ItemUsePolicy, "Base item policy", itemIndices, issues, stamps, seen, ids);
             CheckPolicy(difficulty.ItemUseOverride, "Difficulty item policy", itemIndices, issues, stamps, seen, ids);
+            CheckKnowledge(bot.ItemKnowledge, itemIndices, issues, stamps, seen, ids);
+            // Fixture graphs never score items; every real decision graph needs the item sheet.
+            if (!validation && bot.ItemKnowledge == null) issues.Add("Bot item knowledge is required for normal launches.");
             var policy = difficulty.ItemUseOverride != null ? difficulty.ItemUseOverride : bot.ItemUsePolicy;
             if (policy == null) issues.Add("An effective item-use policy is required.");
             if (!validation && !allowProvisional && (difficulty.ProvisionalTuning || (policy != null && policy.ProvisionalTuning)))
                 issues.Add("Provisional tuning is restricted to explicit validation fixtures.");
             if (issues.Count > 0) return false;
 
+            float extra = difficulty.ExtraItemDelaySeconds;
             var delays = new float[catalog.Length];
-            for (int i = 0; i < delays.Length; i++) delays[i] = policy.DefaultDelaySeconds;
-            foreach (var value in policy.Overrides) delays[itemIndices[value.Item]] = value.DelaySeconds;
-            settings = new ResolvedSoloSettings(encounter, policy, stamps, catalog, delays);
+            for (int i = 0; i < delays.Length; i++) delays[i] = policy.DefaultDelaySeconds + extra;
+            foreach (var value in policy.Overrides) delays[itemIndices[value.Item]] = value.DelaySeconds + extra;
+            settings = new ResolvedSoloSettings(encounter, policy, stamps, catalog, delays,
+                BuildProfiles(catalog, bot.ItemKnowledge, difficulty.Judgement));
             return true;
+        }
+
+        static BotItemProfile[] BuildProfiles(ItemDataSO[] catalog, BotItemKnowledgeSO knowledge, BotJudgementSettings judgement)
+        {
+            var entries = new Dictionary<ItemDataSO, (BotItemKnowledgeEntry Entry, int Order)>();
+            if (knowledge != null)
+                for (int i = 0; i < knowledge.Entries.Count; i++)
+                    if (knowledge.Entries[i].Item != null) entries.TryAdd(knowledge.Entries[i].Item, (knowledge.Entries[i], i));
+            var profiles = new BotItemProfile[catalog.Length];
+            for (int i = 0; i < catalog.Length; i++)
+                profiles[i] = entries.TryGetValue(catalog[i], out var known)
+                    ? BotDecisionModel.Profile(catalog[i], (short)i, known.Entry, known.Order, judgement)
+                    : BotDecisionModel.Profile(catalog[i], (short)i, null, 0, judgement);
+            return profiles;
         }
 
         // Behavior 1.0.16 exposes no public RootGraph. Its generated property bags expose
@@ -229,18 +249,52 @@ namespace AbsoluteZero.Core.Solo.Configuration
             if (item == null || item.Part != part) issues.Add("Unknown or wrong-part cosmetic ID for " + part + ": " + id);
         }
 
-        static void CheckWeights(BotTacticalWeights value, string label, List<string> issues)
+        static void CheckKnowledge(BotItemKnowledgeSO knowledge, Dictionary<ItemDataSO, short> catalog, List<string> issues,
+            List<SoloConfigurationStamp> stamps, HashSet<SoloConfigurationSO> seen, HashSet<string> ids)
         {
-            CheckNonNegative(value.Survival, label + " survival", issues);
-            CheckNonNegative(value.Finish, label + " finish", issues);
-            CheckNonNegative(value.Counter, label + " counter", issues);
-            CheckNonNegative(value.Resource, label + " resource", issues);
-            CheckNonNegative(value.General, label + " general", issues);
-            float sum = value.Survival + value.Finish + value.Counter + value.Resource + value.General;
-            if (!Finite(sum) || sum <= 0) issues.Add(label + " must have a finite positive total.");
+            if (knowledge == null) return;
+            CheckIdentity(knowledge, issues, stamps, seen, ids);
+            var items = new HashSet<ItemDataSO>();
+            foreach (var entry in knowledge.Entries)
+            {
+                if (entry.Item == null || !catalog.ContainsKey(entry.Item))
+                { issues.Add("Item knowledge entry is missing from the current catalog."); continue; }
+                if (!items.Add(entry.Item)) issues.Add("Item knowledge has duplicate entries for one item reference.");
+                CheckNonNegative(entry.OpponentValue, "Item knowledge opponent value", issues);
+                if (!Enum.IsDefined(typeof(BotMiniGameTier), entry.MiniGameTier))
+                    issues.Add("Item knowledge mini-game tier is undefined.");
+                else if (entry.Item.RequiresMiniGame && entry.MiniGameTier == BotMiniGameTier.None)
+                    issues.Add("Item knowledge needs a mini-game tier for " + entry.Item.name + ".");
+            }
+            var factors = knowledge.Coefficients;
+            CheckNonNegative(factors.RerollValueFactor, "Cat reroll factor", issues);
+            CheckNonNegative(factors.StealValueFactor, "Claw steal factor", issues);
+            CheckNonNegative(factors.NeutralizeValueFactor, "Red Card factor", issues);
+            CheckNonNegative(factors.BlockBasicsValue, "Blue Tape value", issues);
+            CheckNonNegative(factors.FanBoostTurns, "Screwdriver turns", issues);
+        }
+
+        static void CheckJudgement(BotJudgementSettings value, List<string> issues)
+        {
+            CheckChance(value.EasyMiniGameSuccess, "Easy mini-game success", issues);
+            CheckChance(value.NormalMiniGameSuccess, "Normal mini-game success", issues);
+            CheckChance(value.HardMiniGameSuccess, "Hard mini-game success", issues);
+            CheckChance(value.BestPickChance, "Best pick chance", issues);
+            CheckChance(value.SecondPickChance, "Second pick chance", issues);
+            if (Finite(value.BestPickChance) && Finite(value.SecondPickChance) && value.BestPickChance + value.SecondPickChance > 1.0001f)
+                issues.Add("Best and second pick chances must not exceed 1 in total.");
+            CheckChance(value.LookaheadFactor, "Lookahead factor", issues);
+            CheckChance(value.OpponentBlockChance, "Opponent block chance", issues);
+            CheckChance(value.OpponentAttackChance, "Opponent attack chance", issues);
+            CheckNonNegative(value.KillBonus, "Kill bonus", issues);
+            CheckNonNegative(value.CrisisCareMultiplier, "Crisis recovery/defense multiplier", issues);
+            CheckNonNegative(value.ComfortCareMultiplier, "Comfort recovery/defense multiplier", issues);
+            CheckNonNegative(value.ComfortMargin, "Comfort margin", issues);
         }
 
         static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
+        static void CheckChance(float value, string label, List<string> issues)
+        { if (!Finite(value) || value < 0 || value > 1) issues.Add(label + " must be finite and in [0, 1]."); }
         static void CheckNonNegative(float value, string label, List<string> issues)
         { if (!Finite(value) || value < 0) issues.Add(label + " must be finite and nonnegative."); }
         static void CheckPositive(float value, string label, List<string> issues)

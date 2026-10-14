@@ -19,6 +19,7 @@ namespace AbsoluteZero.UI.LobbyUI
             _root = root;
             _bindings = root.GetComponent<SettingsPanelBindings>();
             if (_bindings == null || !_bindings.IsComplete) throw new InvalidOperationException("Settings panel bindings are incomplete.");
+            _bindings.EnsureQuitButton();
             _display = LocalSettingsRuntime.Instance;
             _settings = settings ?? _display.Service;
             _settings.Changed += Render;
@@ -31,6 +32,7 @@ namespace AbsoluteZero.UI.LobbyUI
             _bindings.Close.onClick.AddListener(Close);
             _bindings.Dim.onClick.AddListener(Close);
             _bindings.Retry.onClick.AddListener(Retry);
+            _bindings.Quit.onClick.AddListener(Quit);
             _bindings.Cancelled += Close;
         }
         bool AcceptsInput => !_disposed && _root.activeInHierarchy;
@@ -41,6 +43,16 @@ namespace AbsoluteZero.UI.LobbyUI
         void Fullscreen(bool value) { if (AcceptsInput && _display != null) { _display.RequestFullscreen(value); Render(); } }
         void Close() { if (AcceptsInput) OnCloseClicked?.Invoke(); }
         void Retry() { if (AcceptsInput) _settings.Save(); }
+        void Quit()
+        {
+            if (!AcceptsInput) return;
+            _settings.Save();
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#else
+            Application.Quit();
+#endif
+        }
         public void SetVisible(bool visible)
         {
             if (_disposed) return;
@@ -80,6 +92,7 @@ namespace AbsoluteZero.UI.LobbyUI
             _bindings.Close.onClick.RemoveListener(Close);
             _bindings.Dim.onClick.RemoveListener(Close);
             _bindings.Retry.onClick.RemoveListener(Retry);
+            _bindings.Quit.onClick.RemoveListener(Quit);
             _bindings.Cancelled -= Close;
         }
     }

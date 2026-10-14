@@ -38,6 +38,7 @@ namespace AbsoluteZero.Core.Solo
         NetworkManager _nm;
         int _captureSeat = -1;
         bool _reentryStarted;
+        float _reentryReadyDeadline = -1f;
         ItemSlotNetData[] _topUpBefore0, _topUpBefore1;
         MiniGameTicket _topUpTicket;
         bool _topUpMiniStarted, _topUpMiniSubmitted;
@@ -509,11 +510,40 @@ namespace AbsoluteZero.Core.Solo
                 {
                     if (!_reentryStarted)
                     {
+                        if (_reentryReadyDeadline < 0f)
+                            _reentryReadyDeadline = Time.realtimeSinceStartup + 45f;
+                        var coordinator = NetworkSessionCoordinator.Instance;
+                        var router = AppBootstrapper.Instance?.SessionRouter;
+                        bool cleanupComplete = coordinator != null && router != null
+                            && coordinator.State == SessionState.Ready
+                            && coordinator.Operation == SessionOperation.None
+                            && coordinator.CurrentLobby == null && !coordinator.HasOnlineOwnership
+                            && router.Current == null && !router.IsStopping
+                            && _nm != null && !_nm.IsListening && !_nm.ShutdownInProgress;
+                        if (!cleanupComplete)
+                        {
+                            if (Time.realtimeSinceStartup >= _reentryReadyDeadline)
+                                Fail("Host-exit cleanup did not reach Ready with released ownership within 45 seconds"
+                                    + "; state=" + (coordinator != null ? coordinator.State.ToString() : "missing")
+                                    + " op=" + (coordinator != null ? coordinator.Operation.ToString() : "missing")
+                                    + " onlineOwned=" + (coordinator != null && coordinator.HasOnlineOwnership)
+                                    + " leaseReferencePresent=" + (coordinator != null && coordinator.OnlineLease != null)
+                                    + " lobbyPresent=" + (coordinator != null && coordinator.CurrentLobby != null)
+                                    + " routerPresent=" + (router != null)
+                                    + " routerOwnerPresent=" + (router != null && router.Current != null)
+                                    + " routerStopping=" + (router != null && router.IsStopping)
+                                    + " ngoPresent=" + (_nm != null)
+                                    + " ngoListening=" + (_nm != null && _nm.IsListening)
+                                    + " ngoStopping=" + (_nm != null && _nm.ShutdownInProgress)
+                                    + " ngoConnected=" + (_nm != null && _nm.IsConnectedClient));
+                            return;
+                        }
                         _reentryStarted = true;
                         Debug.Log("[MATRIX] HOST_EXIT_RETURNED originalSeat=" + _captureSeat);
+                        Debug.Log("[MATRIX] HOST_EXIT_READY_FOR_REENTRY ownership=released lobby=none network=stopped");
                         _role = _captureSeat == 1 ? "host" : "client";
                         _count = 3;
-                        NetworkSessionCoordinator.Instance.SetMatchParameters(Core.Network.GameMode.Multi, 3);
+                        coordinator.SetMatchParameters(Core.Network.GameMode.Multi, 3);
                         StartCoroutine(StartRelayMatrixFlow());
                     }
                 }
@@ -999,7 +1029,11 @@ namespace AbsoluteZero.Core.Solo
                 }
                 else if (_count > 2)
                 {
-                    for (int i = 0; i < 4; i++) state.ServerAddKill(_winner);
+                    // Ghost validation must cross the current rule's threshold,
+                    // rather than starting above it after a balance change.
+                    int seedKills = _case == "ghost"
+                        ? Math.Max(0, root.ActiveConfig.Rule.KillsToWin - 1) : 4;
+                    for (int i = 0; i < seedKills; i++) state.ServerAddKill(_winner);
                     players.First(p => p.PlayerIndex == _victim).Temperature.Value =
                         _case == "disconnect-prep" || _case == "disconnect-attack" ? 37
                             : _case == "ghost" ? 2 : 12;

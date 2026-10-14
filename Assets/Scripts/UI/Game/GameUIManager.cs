@@ -164,7 +164,7 @@ namespace AbsoluteZero.UI.Game
                 _tempPresenter.ReconcilePrepTemperature();
 
             if (_waitingForTarget)
-                CancelTargetSelection();
+                CancelTargetSelection(clearStatus: false);
         }
 
         void OnItemClicked(int slotIndex)
@@ -203,7 +203,7 @@ namespace AbsoluteZero.UI.Game
                 _waitingForTarget = true;
                 _snappedTargetSeat = byte.MaxValue;
                 _snappedTargetTransform = null;
-                _matchHudPresenter.SetStatusText($"{itemData.ItemName} — 대상을 조준한 뒤 클릭하세요");
+                _matchHudPresenter.SetStatusText("대상을 조준한 뒤 클릭하세요");
                 return;
             }
 
@@ -214,7 +214,7 @@ namespace AbsoluteZero.UI.Game
             if (sent)
             {
                 GameAudioManager.Instance?.PlayButtonClick();
-                _matchHudPresenter.SetStatusText($"Selected: {itemData.ItemName}");
+                _matchHudPresenter.SetStatusText("아이템 선택 완료");
             }
         }
 
@@ -258,8 +258,7 @@ namespace AbsoluteZero.UI.Game
             if (sent)
             {
                 GameAudioManager.Instance?.PlayButtonClick();
-                var itemData = _inventoryPresenter?.GetLocalItemData(slot);
-                _matchHudPresenter.SetStatusText($"{itemData?.ItemName} → P{target + 1}");
+                _matchHudPresenter.SetStatusText($"플레이어 {target + 1} 선택 완료");
             }
             else
             {
@@ -281,7 +280,7 @@ namespace AbsoluteZero.UI.Game
             UpdateTargetingArrow();
         }
 
-        void CancelTargetSelection()
+        void CancelTargetSelection(bool clearStatus = true)
         {
             _waitingForTarget = false;
             _snappedTargetSeat = byte.MaxValue;
@@ -291,7 +290,7 @@ namespace AbsoluteZero.UI.Game
             _debugHoverTarget = null;
 #endif
             _targetingArrowPresenter?.Hide();
-            _matchHudPresenter?.SetStatusText("");
+            if (clearStatus) _matchHudPresenter?.SetStatusText("");
         }
 
         bool PointerOverCanvasControl()
@@ -449,7 +448,7 @@ namespace AbsoluteZero.UI.Game
         void OnMiniGameFinished(byte slotIndex, bool success)
         {
             _inventoryPresenter?.NotifyMiniGameFinished(success);
-            _matchHudPresenter?.SetStatusText(success ? "Mini-game clear!" : "Mini-game failed...");
+            _matchHudPresenter?.SetStatusText(success ? "미니게임 성공!" : "미니게임 실패");
         }
 
         void OnDestroy()

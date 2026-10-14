@@ -12,7 +12,8 @@ namespace AbsoluteZero.Core.Session
         NetworkStartFailed,
         Timeout,
         Unexpected,
-        RateLimited
+        RateLimited,
+        LobbyAlreadyMember
     }
 
     public readonly struct Unit

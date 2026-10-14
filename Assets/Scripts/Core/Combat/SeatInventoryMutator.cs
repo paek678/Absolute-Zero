@@ -103,7 +103,8 @@ namespace AbsoluteZero.Core.Combat
                 var existing = inv.GetItemData(i);
                 if (!InventoryMutationCalculations.CanReroll(before, existing != null ? existing.SlotType : (ItemSlotType?)null)) continue;
 
-                var replacement = _dropTable.Roll(candidate => inv.CanGenerate(candidate, staged, i));
+                var replacement = _dropTable.Roll(candidate => inv.CanGenerate(candidate, staged, i),
+                    "reroll-planned", targetSeat);
                 short replacementId = FindItemId(replacement);
                 if (replacement == null || replacementId < 0) continue;
                 staged[i] = MakeSlot(replacementId, replacement);

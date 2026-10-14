@@ -60,6 +60,18 @@ namespace AbsoluteZero.Core.Session
                 "Get");
         }
 
+        public async Task<Result<List<string>>> GetJoinedLobbyIdsAsync()
+        {
+            try
+            {
+                return Result<List<string>>.Success(await LobbyService.Instance.GetJoinedLobbiesAsync());
+            }
+            catch (LobbyServiceException e)
+            {
+                return Result<List<string>>.Failure(MapLobbyError(e), e.Message);
+            }
+        }
+
         public async Task<Result<Lobby>> UpdateAsync(string lobbyId, UpdateLobbyOptions options)
         {
             return await WrapLobbyCall(
@@ -104,6 +116,11 @@ namespace AbsoluteZero.Core.Session
             }
             catch (LobbyServiceException e)
             {
+                // The SDK exposes no AlreadyMember reason. This observed conflict
+                // only enables an authenticated, exact-code membership lookup;
+                // the message itself never authorizes Relay admission or cleanup.
+                if (opName == "JoinByCode" && e.Message?.IndexOf("already a member", StringComparison.OrdinalIgnoreCase) >= 0)
+                    return Result<Lobby>.Failure(OperationErrorCode.LobbyAlreadyMember, e.Message);
                 Debug.LogError($"{LogPrefix} {opName} failed: {e.Message}");
                 return Result<Lobby>.Failure(MapLobbyError(e), e.Message);
             }

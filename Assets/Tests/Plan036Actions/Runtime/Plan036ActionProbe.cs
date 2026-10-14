@@ -73,10 +73,16 @@ namespace AbsoluteZero.Validation.Actions
             for (int i = 0; i + 1 < args.Length; i++)
                 if (args[i] == "--plan036-report") _reportPath = Path.GetFullPath(args[i + 1]);
             Directory.CreateDirectory(Path.GetDirectoryName(_reportPath));
-            _deadline = Time.realtimeSinceStartupAsDouble + 100;
+            bool integration = args.Contains("--solo-integration-fixture");
+            _deadline = Time.realtimeSinceStartupAsDouble + (integration ? 300 : 100);
             Application.logMessageReceived += OnLog;
             TurnManager.OnCombatResult += OnCombat;
-            try { await Run(); _report.passed = _report.errors.Count == 0; }
+            try
+            {
+                if (integration) await RunSoloIntegration();
+                else await Run();
+                _report.passed = _report.errors.Count == 0;
+            }
             catch (Exception error) { _report.failure = error.ToString(); }
             Finish();
         }
@@ -425,6 +431,10 @@ namespace AbsoluteZero.Validation.Actions
         {
             if (ReferenceEquals(_turn, turn)) return;
             if (_turn != null) _turn.PrepInputOpened -= OnPrepOpened;
+            // The previous production TurnManager clears its static subscribers
+            // on destruction. This persistent fixture must rebind each session.
+            TurnManager.OnCombatResult -= OnCombat;
+            TurnManager.OnCombatResult += OnCombat;
             _turn = turn;
             _turn.PrepInputOpened += OnPrepOpened;
         }
@@ -455,7 +465,9 @@ namespace AbsoluteZero.Validation.Actions
             _report.combat.Add($"sequence={result.ResultSequence}; turn={_turn.TurnNumber.Value}; events={result.EventCount}; "
                 + $"items={result.P1MainItemId},{result.P2MainItemId}; "
                 + $"temperatures={result.P1TempBeforeCombat:F2}->{result.P1TempAfterCombat:F2},{result.P2TempBeforeCombat:F2}->{result.P2TempAfterCombat:F2}");
-            _human.PresentationAckServerRpc(result.ResultSequence);
+            // Recorded integration scenarios use the shipped view's ACK so the
+            // real animation is not cut short by the ordinary headless fixture.
+            if (!_integrationPresentation) _human.PresentationAckServerRpc(result.ResultSequence);
         }
         void OnHumanMiniGame(MiniGameTicket ticket) => _humanTickets.Add(ticket);
         void OnBotMiniGame(MiniGameTicket ticket) => _botMiniGames++;

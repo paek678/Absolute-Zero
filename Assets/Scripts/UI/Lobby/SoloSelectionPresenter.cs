@@ -99,6 +99,28 @@ namespace AbsoluteZero.UI.LobbyUI
             catch (Exception error) { return new SoloProfileStatus(false, "", "설정을 확인하지 못했습니다: " + error.Message); }
         }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        public bool TryFindDevelopmentEncounter(string id, out int index, out string difficultyId, out string error)
+        {
+            index = -1; difficultyId = null; error = null;
+            if (!_active || _disposed || IsBusy || !_canLaunch()) { error = "Solo selection is not available."; return false; }
+            if (string.IsNullOrWhiteSpace(id)) { error = "An explicit encounter ID is required."; return false; }
+            var matches = Enumerable.Range(0, _profiles.Length).Where(i => _profiles[i].Encounter != null
+                && _profiles[i].Encounter.ConfigId == id).ToArray();
+            if (matches.Length != 1) { error = "Encounter ID is unknown or ambiguous: " + id; return false; }
+            var encounter = _profiles[matches[0]].Encounter;
+            var state = _inspect(encounter);
+            if (!state.CanStart || encounter.Difficulty == null || string.IsNullOrWhiteSpace(encounter.Difficulty.ConfigId))
+            { error = state.Error ?? "Requested profile cannot start."; return false; }
+            index = matches[0]; difficultyId = encounter.Difficulty.ConfigId; return true;
+        }
+
+        public bool IsDevelopmentEncounterSelected(string id)
+            => _active && !_disposed && !IsBusy && _profiles.Length > _selected
+                && _profiles[_selected].Encounter != null && _profiles[_selected].Encounter.ConfigId == id
+                && Inspect().CanStart;
+#endif
+
         void Render(string message = null)
         {
             if (_disposed || !_active) return;

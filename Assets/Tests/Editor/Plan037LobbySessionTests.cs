@@ -28,6 +28,7 @@ namespace AbsoluteZero.Tests
                 Writes.Add(completion);
                 return completion.Task;
             }
+            public Task<Result<List<string>>> GetJoinedLobbyIdsAsync() => throw new NotSupportedException();
             public Task<Result<Lobby>> GetAsync(string id)
             { var completion = new TaskCompletionSource<Result<Lobby>>(); Reads.Add(completion); return completion.Task; }
             public Task<Result<Unit>> SendHeartbeatAsync(string id)

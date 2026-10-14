@@ -125,18 +125,23 @@ namespace AbsoluteZero.UI.Game.Presenters
             if (newPhase == TurnPhase.PrepPhase)
             {
                 _hasSelectedItem = false;
-                _statusText.text = "Select an item!";
+                SetStatusText("아이템을 선택하세요");
                 GameAudioManager.Instance?.StartFanLoop();
             }
             else if (newPhase == TurnPhase.AttackPhase)
             {
-                _statusText.text = "Resolving...";
+                SetStatusText("행동 진행 중");
                 GameAudioManager.Instance?.StopFanLoop();
             }
             else if (newPhase == TurnPhase.RoundOver)
             {
+                SetStatusText("라운드 종료");
                 GameAudioManager.Instance?.StopFanLoop();
                 GameAudioManager.Instance?.StopEnvironment();
+            }
+            else
+            {
+                SetStatusText(newPhase == TurnPhase.ResolutionPhase ? "결과 정산 중" : "참가자 대기 중");
             }
 
         }
@@ -217,8 +222,9 @@ namespace AbsoluteZero.UI.Game.Presenters
         void HandleHasSelectedItemChanged(bool hasItem)
         {
             _hasSelectedItem = hasItem;
-            if (hasItem)
-                _statusText.text = "Item selected!";
+            // Delayed selection snapshots must not overwrite attack/result feedback.
+            if (hasItem && _bridge != null && _bridge.CurrentMatch.CurrentPhase == TurnPhase.PrepPhase)
+                SetStatusText("아이템 선택 완료");
         }
 
         public bool TryReadyByKey()
@@ -238,7 +244,7 @@ namespace AbsoluteZero.UI.Game.Presenters
             if (MiniGameHub.IsRunning) return;
 
             _commands.PressReady();
-            _statusText.text = _hasSelectedItem ? "Ready!" : "Ready! (No action)";
+            SetStatusText(_hasSelectedItem ? "준비 완료" : "준비 완료 (행동 없음)");
 
             var pressedSprite = GameSprites.Get(GameSprites.BTN_PRESSED);
             if (_readyButtonImage != null && pressedSprite != null)
@@ -303,9 +309,9 @@ namespace AbsoluteZero.UI.Game.Presenters
 
             string itemName = opponentItemId >= 0
                 ? (ItemManager.Instance?.GetItemData(opponentItemId)?.ItemName ?? "???")
-                : "Not Selected";
+                : "미선택";
 
-            _statusText.text = $"Revealed: {itemName}";
+            SetStatusText($"상대 선택: {itemName}");
             Debug.Log($"[UI] Tarot reveal: opponent selected '{itemName}' (id={opponentItemId})");
         }
 

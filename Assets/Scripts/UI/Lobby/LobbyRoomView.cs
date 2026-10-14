@@ -149,8 +149,11 @@ namespace AbsoluteZero.UI.LobbyUI
             if (_joinCodeInput != null) _joinCodeInput.gameObject.SetActive(!inLobby);
             if (_joinBtn != null) _joinBtn.gameObject.SetActive(!inLobby);
 
-            if (!inLobby && _lobbyCodeText != null)
-                _lobbyCodeText.text = "------";
+            if (!inLobby)
+            {
+                ClearPlayerList();
+                if (_lobbyCodeText != null) _lobbyCodeText.text = "------";
+            }
         }
 
         public void RenderPlayerList(LobbyModel lobby, string myPlayerId)
@@ -225,7 +228,14 @@ namespace AbsoluteZero.UI.LobbyUI
         void ClearPlayerList()
         {
             foreach (var go in _slotObjects)
+            {
+                if (go == null) continue;
+                go.SetActive(false);
+#if UNITY_EDITOR
+                if (!Application.isPlaying) { UnityEngine.Object.DestroyImmediate(go); continue; }
+#endif
                 UnityEngine.Object.Destroy(go);
+            }
             _slotObjects.Clear();
         }
 

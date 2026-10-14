@@ -1,4 +1,5 @@
 using AbsoluteZero.Core.Network;
+using AbsoluteZero.Core.Audio;
 using AbsoluteZero.Core.Session;
 using AbsoluteZero.Core.Solo.Configuration;
 using AbsoluteZero.Core.Item.Data;
@@ -13,6 +14,9 @@ using UnityEngine.UI;
 namespace AbsoluteZero.UI.LobbyUI
 {
     public class AZLobbyUI : MonoBehaviour
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        , AbsoluteZero.Core.Solo.ISoloPlaytestSelection
+#endif
     {
         [SerializeField] GameObject _mainPanel;
         [SerializeField] GameObject _modeSelectPanel;
@@ -61,6 +65,7 @@ namespace AbsoluteZero.UI.LobbyUI
                 return;
             }
 
+            EnsureLobbyAudio(canvasRoot);
             CasualLobbySkin.Apply(canvasRoot);
             _mainView = new LobbyMainView(_mainPanel);
             _modeSelectView = new LobbyModeSelectView(_modeSelectPanel);
@@ -103,6 +108,20 @@ namespace AbsoluteZero.UI.LobbyUI
 
         SoloConfigurationContext SoloContext(SoloDuelDefinitionSO encounter)
             => new(encounter?.SharedOneVsOneRule, _soloCatalog, _soloCosmetics);
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        public bool TrySelectEncounter(string encounterId, out string expectedDifficultyId, out string error)
+        {
+            expectedDifficultyId = null; error = null;
+            if (!isActiveAndEnabled || _soloPresenter == null || _soloView == null)
+            { error = "Active Solo selection bridge is missing."; return false; }
+            if (!_soloPresenter.TryFindDevelopmentEncounter(encounterId, out var index, out expectedDifficultyId, out error)) return false;
+            if (!_soloView.TrySelectDevelopmentOption(index) || !_soloPresenter.IsDevelopmentEncounterSelected(encounterId)
+                || _soloSelection == null || !_soloSelection.StartButton.interactable)
+            { error = "The normal menu did not accept the requested encounter."; return false; }
+            return true;
+        }
+#endif
 
         SoloProfileStatus InspectSolo(SoloDuelDefinitionSO encounter)
         {
@@ -153,6 +172,22 @@ namespace AbsoluteZero.UI.LobbyUI
             _settingsView?.Dispose();
             _soloPresenter?.Dispose();
             _soloView?.Dispose();
+        }
+
+        void EnsureLobbyAudio(Transform canvasRoot)
+        {
+            if (GameAudioManager.Instance == null)
+            {
+                var audioRoot = new GameObject("GameAudioManager");
+                audioRoot.AddComponent<GameAudioManager>();
+                DontDestroyOnLoad(audioRoot);
+            }
+            GameAudioManager.Instance.PlayBGM();
+
+            // Include inactive templates so later difficulty/closet clones inherit feedback.
+            foreach (var button in canvasRoot.GetComponentsInChildren<Button>(true))
+                if (button.GetComponent<LobbyButtonAudio>() == null)
+                    button.gameObject.AddComponent<LobbyButtonAudio>();
         }
 
         Transform FindCanvasRoot()

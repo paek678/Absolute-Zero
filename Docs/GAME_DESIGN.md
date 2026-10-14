@@ -181,7 +181,7 @@ Both clients see mirrored view (my items = bottom, opponent = top)
 
 | Item | Cat | Value | Drop% | Mini-game |
 |------|-----|-------|-------|-----------|
-| Hand Fan (손풍기) | ATK | 4° | 12% | — |
+| Hand Fan (손풍기) | ATK | 6° | 12% | — |
 | Ice Cream (아이스크림) | ATK | 5° | 10% | — |
 | Iced Americano (아.아) | ATK | 5° | 10% | — |
 | Water Gun (물총) | ATK | 8° | 6% | 5s: hit 3 moving targets |

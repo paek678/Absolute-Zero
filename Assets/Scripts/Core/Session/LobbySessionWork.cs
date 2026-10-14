@@ -131,6 +131,19 @@ namespace AbsoluteZero.Core.Session
             {
                 var result = await _gateway.SendHeartbeatAsync(_lobbyId);
                 if (IsCurrent && result.IsFailure) _diagnostic?.Invoke(result.ErrorMessage);
+                if (!IsCurrent || _gameActive || result.IsFailure || Current.HostId != _playerId) return;
+                // Lobby heartbeats do not expose a client-visible liveness value.
+                // A host-only nonce every heartbeat lets waiting clients detect
+                // abrupt host loss without relying on synchronized wall clocks.
+                long epoch = MetadataEpoch;
+                var presence = await _gateway.UpdateAsync(_lobbyId, new UpdateLobbyOptions
+                {
+                    Data = new Dictionary<string, DataObject>
+                    { ["HostPresence"] = new(DataObject.VisibilityOptions.Member, Guid.NewGuid().ToString("N")) }
+                });
+                if (!IsCurrent) return;
+                if (presence.IsSuccess && presence.Value != null) TryAccept(presence.Value, epoch);
+                else _diagnostic?.Invoke(presence.ErrorMessage ?? "Host presence update returned no snapshot");
             }
             catch (Exception error) { if (IsCurrent) _diagnostic?.Invoke(error.Message); }
             finally { _heartbeating = false; }

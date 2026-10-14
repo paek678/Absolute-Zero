@@ -714,6 +714,36 @@ namespace AbsoluteZero.Core.Player
             return QueueValidatedItem(candidate);
         }
 
+        // Only the current trusted adapter can consume a fixed failed bot outcome.
+        internal PlayerActionResult ServerFailBotMiniGameItem(PrepInputKey key, PlayerActionCandidate candidate,
+            TrustedBotCommandAdapter authorization)
+        {
+            var check = Admission.CheckBotCommand(key);
+            if (!check.Succeeded) return check;
+            if (_botCommands == null || !ReferenceEquals(_botCommands, authorization))
+                return PlayerActionResult.Reject(PlayerActionReason.WrongController);
+            if (!candidate.PrepKey.HasValue || candidate.PrepKey.Value != key || candidate.CopyId == 0
+                || !ReferenceEquals(candidate.Binding, _binding))
+                return PlayerActionResult.Stale(PlayerActionReason.StaleCandidate);
+            var result = Admission.ValidateItemCandidate(candidate.SlotIndex, candidate.CopyId,
+                candidate.TargetSeat, candidate.PrepKey, out var current);
+            if (!result.Succeeded) return result;
+            if (current.ItemData != candidate.ItemData || !current.ItemData.RequiresMiniGame)
+                return PlayerActionResult.Stale(PlayerActionReason.StaleCandidate);
+            ConsumeFailedMiniGameItem(current.SlotIndex);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            PlaytestTelemetry.Current?.Record("bot_minigame_failed", "consumed", PlayerIndex, current.CopyId);
+#endif
+            return new PlayerActionResult(PlayerActionStatus.Cancelled, PlayerActionReason.MiniGameFailed);
+        }
+
+        void ConsumeFailedMiniGameItem(byte slotIndex)
+        {
+            Debug.Log($"[PlayerState P{SyncedPlayerIndex.Value}] Mini-game FAILED: slot {slotIndex} — consuming 1 use");
+            _inventory.ConsumeItem(slotIndex);
+            _inventory.CompactSlots();
+        }
+
         internal PlayerActionResult ServerCancelBotSelection(PrepInputKey key)
         {
             var check = Admission.CheckBotCommand(key);
@@ -867,9 +897,7 @@ namespace AbsoluteZero.Core.Player
 
                 if (!success)
                 {
-                    Debug.Log($"[PlayerState P{SyncedPlayerIndex.Value}] Mini-game FAILED: slot {slotIndex} — consuming 1 use");
-                    _inventory.ConsumeItem(slotIndex);
-                    _inventory.CompactSlots();
+                    ConsumeFailedMiniGameItem(slotIndex);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
                     playtestObservation.Verdict("MiniGameFailureConsumed");
 #endif

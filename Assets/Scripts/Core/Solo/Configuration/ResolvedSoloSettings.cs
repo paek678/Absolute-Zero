@@ -22,6 +22,7 @@ namespace AbsoluteZero.Core.Solo.Configuration
     {
         readonly ReadOnlyCollection<ItemDataSO> _catalog;
         readonly ReadOnlyCollection<float> _itemDelays;
+        readonly ReadOnlyCollection<BotItemProfile> _profiles;
         public IReadOnlyList<SoloConfigurationStamp> ConfigurationVersions { get; }
         public string EncounterId { get; }
         public string BotId { get; }
@@ -44,14 +45,18 @@ namespace AbsoluteZero.Core.Solo.Configuration
         public float MaximumThinkSeconds { get; }
         public BotReadyPolicy ReadyPolicy { get; }
         public float ReadyReserveSeconds { get; }
-        public BotTacticalWeights TacticalWeights { get; }
-        public float DecisionNoise { get; }
+        public float ExtraItemDelaySeconds { get; }
+        public BotJudgementSettings Judgement { get; }
+        public BotScoringCoefficients Coefficients { get; }
+        public bool HasItemKnowledge { get; }
         public int RetryBudget { get; }
         public IReadOnlyList<ItemDataSO> Catalog => _catalog;
+        // Effective delays: item-use policy plus the difficulty's extra delay.
         public IReadOnlyList<float> ItemDelaySeconds => _itemDelays;
+        internal IReadOnlyList<BotItemProfile> ItemProfiles => _profiles;
 
         internal ResolvedSoloSettings(SoloDuelDefinitionSO encounter, BotItemUsePolicySO policy,
-            IList<SoloConfigurationStamp> versions, ItemDataSO[] catalog, float[] delays)
+            IList<SoloConfigurationStamp> versions, ItemDataSO[] catalog, float[] delays, BotItemProfile[] profiles)
         {
             var bot = encounter.Bot;
             var difficulty = encounter.Difficulty;
@@ -66,10 +71,13 @@ namespace AbsoluteZero.Core.Solo.Configuration
             if (bot.Appearance != null && bot.Appearance.TrySnapshot(out var appearance, out _)) Appearance = appearance;
             MinimumThinkSeconds = difficulty.MinimumThinkSeconds; MaximumThinkSeconds = difficulty.MaximumThinkSeconds;
             ReadyPolicy = difficulty.ReadyPolicy; ReadyReserveSeconds = difficulty.ReadyReserveSeconds;
-            TacticalWeights = difficulty.OverrideTacticalWeights ? difficulty.TacticalWeights : bot.TacticalDefaults;
-            DecisionNoise = difficulty.DecisionNoise; RetryBudget = difficulty.RetryBudget;
+            ExtraItemDelaySeconds = difficulty.ExtraItemDelaySeconds; Judgement = difficulty.Judgement;
+            HasItemKnowledge = bot.ItemKnowledge != null;
+            Coefficients = HasItemKnowledge ? bot.ItemKnowledge.Coefficients : BotScoringCoefficients.Approved;
+            RetryBudget = difficulty.RetryBudget;
             _catalog = new ReadOnlyCollection<ItemDataSO>((ItemDataSO[])catalog.Clone());
             _itemDelays = new ReadOnlyCollection<float>((float[])delays.Clone());
+            _profiles = new ReadOnlyCollection<BotItemProfile>((BotItemProfile[])profiles.Clone());
         }
 
         public bool TryGetItemDelay(short catalogItemId, out float delaySeconds)
@@ -77,6 +85,19 @@ namespace AbsoluteZero.Core.Solo.Configuration
             delaySeconds = 0;
             if (catalogItemId < 0 || catalogItemId >= _itemDelays.Count) return false;
             delaySeconds = _itemDelays[catalogItemId];
+            return true;
+        }
+
+        // False for catalog items without a knowledge entry: the bot never chooses them.
+        public bool KnowsItem(short catalogItemId)
+            => catalogItemId >= 0 && catalogItemId < _profiles.Count && _profiles[catalogItemId].Known;
+
+        // 1 for items without a human mini-game or without bot knowledge (fixtures).
+        public bool TryGetMiniGameSuccess(short catalogItemId, out float chance)
+        {
+            chance = 1;
+            if (catalogItemId < 0 || catalogItemId >= _profiles.Count) return false;
+            chance = _profiles[catalogItemId].Success;
             return true;
         }
     }

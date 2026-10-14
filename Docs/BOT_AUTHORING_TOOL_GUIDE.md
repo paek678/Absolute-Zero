@@ -2,12 +2,14 @@
 
 ## Purpose and opening the tool
 
+Updated for the 2026-10-14 isolated Solo integration. Original main is not merged. Current behavior and actual evidence: [setup](SOLO_BOT_SETUP.md), [integration ledger](Validation/solo_bot_main_integration_20261013.md).
+
 Use this tool to check a Solo bot configuration before starting a match. It does not generate a Behavior graph, change balance, save assets, or start a game.
 
 1. Open the Absolute Zero project in Unity, outside Play Mode.
 2. Select **Absolute Zero → Solo → Bot Authoring**.
 3. Alternatively, select a bot configuration asset and click **봇 설정 검증 창 열기** in its Inspector.
-4. Select **DefaultSoloDuel** for the current baseline. Its asset is `Assets/Data/Solo/Encounters/DefaultSoloDuel.asset`.
+4. Select **BeginnerSoloDuel** or **AdvancedSoloDuel** for the integrated named difficulties. DefaultSoloDuel remains a compatibility profile, not proof that either named difficulty was selected.
 5. After editing and saving configuration, press **저장된 로비 연결로 다시 검사**.
 
 The tool reads the **saved LobbyScene** item/cosmetic bindings and the enabled scenes in Build Settings. Unsaved lobby changes are not included. It preserves the active scene and closes its temporary preview scene.
@@ -32,12 +34,13 @@ The tool reads the **saved LobbyScene** item/cosmetic bindings and the enabled s
 | Asset | Fields / responsibility |
 |---|---|
 | SoloDuelDefinitionSO | Stable encounter ID/version, readiness, bot, difficulty, shared 1v1 rules and dedicated scene path. |
-| BotDefinitionSO | Display name, bot-only cosmetic IDs, compiled Behavior graph, base stats, base item policy, default tactical weights. |
-| BotDifficultyProfileSO | Think-time range, Ready policy/reserve, tactical-weight override, decision noise, bounded retry count and optional policy override. |
+| BotDefinitionSO | Display name/appearance, bot-only cosmetic IDs, compiled graph, inherited stats, base item policy and item knowledge. |
+| BotDifficultyProfileSO | Judgment probabilities, extra item delay, Ready reserve, bounded retry and optional full policy override. Normal integrated entry requires zero thinking and AfterSelection Ready. |
 | BotItemUsePolicySO | Positive default item delay and per-item overrides using asset references. Duplicate overrides are invalid. |
+| BotItemKnowledgeSO | Catalog item worth, mini-game tier and scoring coefficients. Preserve catalog references and deterministic entry ordering. |
 | BotStatProfileSO | Reserved start-state inputs. **Currently inherit-only**: all override flags off and initial items empty. |
 
-The difficulty item policy **replaces the entire base policy** when assigned. It does not merge missing entries from the base policy. Tactical weights use the difficulty values only when `Override Tactical Weights` is enabled; they score candidates without reordering graph branches.
+The difficulty item policy **replaces the entire base policy** when assigned. It does not merge missing entries from the base policy. The extra difficulty delay is added to effective per-item timing. Best/second/uniform probabilities select ranked candidates; the graph still orders crisis before required lethal before weighted choice. Legacy tactical weights/noise fields were removed.
 
 Start temperature, fan baseline and initial grants continue to follow current 1v1 rules. Custom start values need the start/reset/grant policy decision in BT01-B before activation.
 
@@ -45,7 +48,7 @@ Start temperature, fan baseline and initial grants continue to follow current 1v
 
 1. Select the intended encounter and open its bot/difficulty/item-policy assets through **수정 위치**.
 2. For an independent variant, duplicate the relevant assets, give each copy a new stable lowercase `Config Id`, and link the copies from a copied encounter. Retain provisional tuning while values are unapproved.
-3. Change the approved think/delay/weight fields. Do not edit the shared 1v1 rule merely to tune one bot.
+3. Change reviewed judgment/knowledge/delay fields. Keep zero thinking and AfterSelection for a normal integrated profile; do not edit shared 1v1 rules to tune one bot.
 4. Save, then refresh the workbench. Resolve errors in the ordinary development result.
 5. Check whether timing warnings match the intended behavior. Near a deadline the runtime may shorten thinking, select another action, or use Ready fallback. A nominal sum exceeding the preparation time is a warning, not a new gameplay rule.
 6. Validate the actual graph and play a match. The workbench checks compiled roots/placeholders; a structurally valid graph can still contain incorrect behavior or priorities.
@@ -82,7 +85,7 @@ The player flow is **main lobby → 봇 대전 → select a profile → 대전 �
 - Inspector editing is disabled during Play Mode. Runtime source assets must remain read-only.
 - The tool reports errors; it does not auto-repair, rename IDs, alter scene bindings, or approve shipping profiles.
 - After a BT change, test legal targets, delayed use, fallback, exit/re-entry and replay as described in [SOLO_BT_AUTHORING](SOLO_BT_AUTHORING.md).
-- Current passes and deferred visual/manual checks: [PLAN040 validation ledger](Validation/PLAN_040_results.md).
+- Current integrated passes and deferred human/shipping approval: [integration ledger](Validation/solo_bot_main_integration_20261013.md). Historical workbench checks remain in [PLAN040](Validation/PLAN_040_results.md).
 - Implementation order and pending design decisions: [PLAN040](Plans/PLAN_040_followup_features.md).
 
 This file lives in the shared `Docs` vault for Obsidian; maintain this copy rather than a second note.

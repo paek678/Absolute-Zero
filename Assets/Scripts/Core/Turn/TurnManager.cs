@@ -729,7 +729,8 @@ namespace AbsoluteZero.Core.Turn
                     }
                     else
                     {
-                        PrepTurnOperations.ApplyDuelTick(_players, _tempSystem, skipFirstFanTick, recoveryRate, dropTable);
+                        PrepTurnOperations.ApplyDuelTick(_players, _tempSystem, skipFirstFanTick, recoveryRate, dropTable,
+                            _gameRule?.MaxRandomItems ?? int.MaxValue);
                     }
                     skipFirstFanTick = false;
                 }

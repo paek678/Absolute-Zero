@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: DefaultBot
   m_EditorClassIdentifier: AbsoluteZero.Core::AbsoluteZero.Core.Solo.Configuration.BotDefinitionSO
   configId: solo.bot.default
-  version: 1
+  version: 2
   displayName: "\uAE30\uBCF8 \uBD07"
   cosmetics:
     Head: 
@@ -25,9 +25,4 @@ MonoBehaviour:
   graph: {fileID: -828625310525461982, guid: 91e27365d529dad4ca59a1c47b3dc5f9, type: 2}
   baseStats: {fileID: 11400000, guid: acdeb473ac4a50840bcc64261a86411a, type: 2}
   itemUsePolicy: {fileID: 11400000, guid: 94bb2338a7d36a343bf36df9a9d811fd, type: 2}
-  tacticalDefaults:
-    Survival: 1
-    Finish: 1
-    Counter: 1
-    Resource: 1
-    General: 1
+  itemKnowledge: {fileID: 11400000, guid: d67efc3267db09b45863c30763e1dfef, type: 2}

@@ -55,10 +55,29 @@ namespace AbsoluteZero.Core.Session
             }
 
             coordinator.Router = SessionRouter;
-            SoloSession = new SoloSessionCoordinator(SessionRouter, new NgoLocalHostRuntime(network));
+            ushort soloPort = 18777;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            soloPort = ResolveDevelopmentSoloPort(Environment.GetCommandLineArgs());
+#endif
+            SoloSession = new SoloSessionCoordinator(SessionRouter, new NgoLocalHostRuntime(network), soloPort);
             IsReady = true;
             Debug.Log("[AppBootstrapper] Local services ready; online services initialize on demand");
             OnReady?.Invoke();
         }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        // Process-local transport isolation for explicit development runs. The
+        // shipping constructor keeps its established loopback port unchanged.
+        internal static ushort ResolveDevelopmentSoloPort(string[] arguments)
+        {
+            const string option = "--az-solo-local-port";
+            int index = Array.IndexOf(arguments, option);
+            if (index < 0) return 18777;
+            if (Array.LastIndexOf(arguments, option) != index || index + 1 >= arguments.Length
+                || !ushort.TryParse(arguments[index + 1], out ushort port) || port < 1024)
+                throw new ArgumentException("Development Solo loopback port must appear once with a value from 1024 to 65535.");
+            return port;
+        }
+#endif
     }
 }

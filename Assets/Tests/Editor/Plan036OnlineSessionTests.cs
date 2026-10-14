@@ -248,6 +248,7 @@ namespace AbsoluteZero.Tests
             public Task<Result<Lobby>> JoinByIdAsync(string id, JoinLobbyByIdOptions options) => throw new NotSupportedException();
             public Task<Result<Lobby>> QuickJoinAsync(QuickJoinLobbyOptions options) => throw new NotSupportedException();
             public Task<Result<List<Lobby>>> QueryAsync(QueryLobbiesOptions options) => throw new NotSupportedException();
+            public Task<Result<List<string>>> GetJoinedLobbyIdsAsync() => throw new NotSupportedException();
             public Task<Result<Lobby>> GetAsync(string id) => throw new NotSupportedException();
             public Task<Result<Lobby>> UpdateAsync(string id, UpdateLobbyOptions options) => throw new NotSupportedException();
             public Task<Result<Lobby>> UpdatePlayerAsync(string id, string player, UpdatePlayerOptions options) => throw new NotSupportedException();
