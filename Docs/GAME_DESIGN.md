@@ -142,6 +142,7 @@ Both clients see mirrored view (my items = bottom, opponent = top)
 
 - Max capacity: **8 random items** (basic items don't count)
 - Threshold grants are **one-time only** — re-crossing doesn't re-grant
+- Grant immediately when the server commits a temperature decrease reaching 30/20/10 degrees; quick Ready must not delay the reward until a later Prep tick. Keep per-mode grant counts and capacity unchanged.
 - Visual: segment markers disappear after grant
 
 ---

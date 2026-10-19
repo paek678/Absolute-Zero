@@ -224,5 +224,122 @@ namespace AbsoluteZero.Tests
                 Assert.That(players[3].GetInventory().GetThresholdGranted(), Is.All.False);
             }
         }
+
+        [TestCase(PlayerControllerKind.Human, 30f, 5)]
+        [TestCase(PlayerControllerKind.Bot, 30f, 5)]
+        [TestCase(PlayerControllerKind.Human, 20f, 7)]
+        [TestCase(PlayerControllerKind.Bot, 20f, 7)]
+        [TestCase(PlayerControllerKind.Human, 10f, 8)]
+        [TestCase(PlayerControllerKind.Bot, 10f, 8)]
+        public void DamageGrantsBeforeAnyPrepTickForEitherDuelSeat(PlayerControllerKind opponent, float target, int expected)
+        {
+            var players = Duel(opponent);
+            var temperature = new TemperatureSystem();
+            using var rewards = new TemperatureThresholdRewards(players, temperature, _table, false, 8, () => true);
+            foreach (var player in players)
+            {
+                temperature.ApplyDamage(player, 37f - target, DamageFilter.Temperature, null);
+                Assert.That(player.GetInventory().GetRandomSlotCount(), Is.EqualTo(expected));
+            }
+            // Reproduce early Ready: the timer never reaches its first tick.
+            temperature.Accumulate(0.25f);
+            Assert.That(temperature.ConsumeTick(), Is.False);
+            foreach (var player in players) player.IsReady.Value = true;
+            Assert.That(PrepTurnOperations.AllReady(players, false), Is.True);
+            Assert.That(players.Select(p => p.GetInventory().GetRandomSlotCount()), Is.All.EqualTo(expected));
+        }
+
+        [Test]
+        public void ImmediateGrantSurvivesRecoveryAndRepeatedCrossingWithoutAnotherDraw()
+        {
+            var players = Duel();
+            var temperature = new TemperatureSystem();
+            using var rewards = new TemperatureThresholdRewards(players, temperature, _table, false, 8, () => true);
+            temperature.ApplyDamage(players[0], 7f, DamageFilter.Temperature, null);
+            var fingerprint = players[0].GetInventory().CurrentFingerprint();
+            var random = Random.state;
+            temperature.ApplyHeal(players[0], 7f);
+            temperature.ApplyDamage(players[0], 7f, DamageFilter.Temperature, null);
+            PrepTurnOperations.ApplyDuelTick(players, temperature, true, 0, _table, 8);
+            Assert.That(players[0].GetInventory().CurrentFingerprint(), Is.EqualTo(fingerprint));
+            Assert.That(Random.state, Is.EqualTo(random));
+        }
+
+        [TestCase(3)] [TestCase(4)]
+        public void MultiRosterAndGhostDamageGrantImmediatelyWithoutTouchingGhostInventory(int count)
+        {
+            var players = Enumerable.Range(0, count).Select(i => Player((byte)i, PlayerControllerKind.Human)).ToArray();
+            new RoundLifecycleService().GrantStartingItems(players, _table, 2, 4);
+            players[count - 1].CurrentLifeState.Value = LifeState.Ghost;
+            var temperature = new TemperatureSystem();
+            using var rewards = new TemperatureThresholdRewards(players, temperature, _table, true, 4, () => true);
+            foreach (var player in players)
+            {
+                // Multi combat and ghost skills commit through the same NetworkVariable.
+                player.Temperature.Value = 29f;
+                player.Temperature.Value = 19f;
+                player.Temperature.Value = 9f;
+            }
+            Assert.That(players.Take(count - 1).Select(p => p.GetInventory().GetRandomSlotCount()), Is.All.EqualTo(4));
+            Assert.That(players[count - 1].GetInventory().GetRandomSlotCount(), Is.EqualTo(2));
+            Assert.That(players[count - 1].GetInventory().GetThresholdGranted(), Is.All.False);
+        }
+
+        [TestCase(true)] [TestCase(false)]
+        public void ClientOrClosedSessionCannotClaimImmediateThresholds(bool server)
+        {
+            var players = Duel();
+            foreach (var player in players) SetInventoryAuthority(player.GetInventory(), server);
+            var random = Random.state;
+            using var rewards = new TemperatureThresholdRewards(players, new TemperatureSystem(), _table, false, 8, () => !server);
+            foreach (var player in players) player.Temperature.Value = 10f;
+            Assert.That(players.Select(p => p.GetInventory().GetRandomSlotCount()), Is.All.EqualTo(4));
+            foreach (var player in players) Assert.That(player.GetInventory().GetThresholdGranted(), Is.All.False);
+            Assert.That(Random.state, Is.EqualTo(random));
+        }
+
+        [Test]
+        public void DisposeUnsubscribesAndNextRoundRestoresImmediateEligibility()
+        {
+            var players = Duel();
+            var temperature = new TemperatureSystem();
+            var rewards = new TemperatureThresholdRewards(players, temperature, _table, false, 8, () => true);
+            temperature.ApplyDamage(players[0], 7f, DamageFilter.Temperature, null);
+            rewards.Dispose(); rewards.Dispose();
+            temperature.ApplyDamage(players[0], 10f, DamageFilter.Temperature, null);
+            Assert.That(players[0].GetInventory().GetRandomSlotCount(), Is.EqualTo(5));
+            var lifecycle = new RoundLifecycleService();
+            lifecycle.ResetPlayersForNewRound(players[0], players[1]);
+            lifecycle.GrantStartingItems(players[0], players[1], _table);
+            using var next = new TemperatureThresholdRewards(players, temperature, _table, false, 8, () => true);
+            temperature.ApplyDamage(players[0], 7f, DamageFilter.Temperature, null);
+            Assert.That(players[0].GetInventory().GetRandomSlotCount(), Is.EqualTo(5));
+        }
+
+        [Test]
+        public void SelfDamageGrantKeepsSelectedCopyAvailableForSingleConsumption()
+        {
+            var players = Duel();
+            var inventory = players[0].GetInventory();
+            var selected = inventory.SlotStates[4];
+            using var rewards = new TemperatureThresholdRewards(players, new TemperatureSystem(), _table, false, 8, () => true);
+            players[0].Temperature.Value = 29f;
+            Assert.That(inventory.SlotStates[4], Is.EqualTo(selected));
+            inventory.ConsumeItem(4);
+            Assert.That(inventory.SlotStates[4].IsEmpty, Is.True);
+            Assert.That(inventory.GetRandomSlotCount(), Is.EqualTo(4));
+        }
+
+        [Test]
+        public void DefeatedTemperatureDoesNotDrawRewardsFromImmediateObserver()
+        {
+            var players = Duel();
+            var random = Random.state;
+            using var rewards = new TemperatureThresholdRewards(players, new TemperatureSystem(), _table, false, 8, () => true);
+            players[0].Temperature.Value = 0f;
+            Assert.That(players[0].GetInventory().GetRandomSlotCount(), Is.EqualTo(4));
+            Assert.That(players[0].GetInventory().GetThresholdGranted(), Is.All.False);
+            Assert.That(Random.state, Is.EqualTo(random));
+        }
     }
 }

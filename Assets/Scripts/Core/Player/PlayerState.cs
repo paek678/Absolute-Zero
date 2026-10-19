@@ -48,7 +48,8 @@ namespace AbsoluteZero.Core.Player
         {
             if (MatchEpoch != current.MatchEpoch) return MatchEpoch > current.MatchEpoch;
             if (RoundEpoch != current.RoundEpoch) return RoundEpoch > current.RoundEpoch;
-            if (Turn != current.Turn) return Turn > current.Turn;
+            // Duel/Solo keep these network epochs at zero across rounds. Turn resets,
+            // but the bound player's attempt counter remains strictly increasing.
             return AttemptId > current.AttemptId;
         }
     }
@@ -124,7 +125,9 @@ namespace AbsoluteZero.Core.Player
             TickCosmeticSubmission();
             TickDisplayNameSubmission();
             if (IsServer && _miniGameAttempts.Pending is MiniGameAttempt attempt
-                && (!IsMiniGameScopeCurrent(attempt) || _turnContext?.Phase != TurnPhase.PrepPhase
+                // An absent UI/result cannot keep the owner locked for the rest of Prep.
+                && (!attempt.IsWithinDeadline(NetworkManager.ServerTime.Time)
+                    || !IsMiniGameScopeCurrent(attempt) || _turnContext?.Phase != TurnPhase.PrepPhase
                     || IsReady.Value || !Admission.IsLiveActionParticipant(_binding)))
                 CancelPendingMiniGame();
         }

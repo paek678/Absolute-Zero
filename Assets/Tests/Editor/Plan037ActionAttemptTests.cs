@@ -77,6 +77,51 @@ namespace AbsoluteZero.Tests
             Assert.That(attempt.IsWithinDeadline(double.NaN), Is.False);
         }
 
+        [TestCase(2)]
+        [TestCase(9)]
+        [TestCase(20)]
+        public void ZeroEpochRoundRolloverUsesMonotonicAttemptIdentity(int previousTurn)
+        {
+            var previous = _tracker.Begin(_binding, 1,
+                new MiniGameTicket(2, MiniGameType.HitTargets, 4, 3, 0, 0, previousTurn, 0, 71),
+                1, 20, 100).Ticket;
+            _tracker.Cancel(out _);
+            var next = _tracker.Begin(_binding, 2,
+                new MiniGameTicket(2, MiniGameType.HitTargets, 4, 3, 0, 0, 1, 0, 72),
+                1, 30, 100).Ticket;
+
+            Assert.That(next.AttemptId, Is.GreaterThan(previous.AttemptId));
+            Assert.That(next.IsNewerThan(previous), Is.True,
+                "Duel/Solo leave network epochs at zero while a new round resets Turn to one.");
+            Assert.That(previous.IsNewerThan(next), Is.False,
+                "A previous-round start cannot replace the new active mini-game.");
+            Assert.That(Take(previous, out _), Is.False);
+            Assert.That(Take(next, out _), Is.True);
+        }
+
+        [TestCase(0u, 0u)]
+        [TestCase(8u, 9u)]
+        public void HigherTurnCannotMakeDuplicateOrOlderAttemptNewer(uint match, uint round)
+        {
+            var current = new MiniGameTicket(2, MiniGameType.HitTargets, 4, 3, match, round, 1, 12, 71);
+            var duplicate = new MiniGameTicket(2, MiniGameType.HitTargets, 4, 3, match, round, 9, 12, 71);
+            var older = new MiniGameTicket(2, MiniGameType.HitTargets, 4, 3, match, round, 9, 11, 70);
+            Assert.That(duplicate.IsNewerThan(current), Is.False);
+            Assert.That(older.IsNewerThan(current), Is.False);
+        }
+
+        [Test]
+        public void EpochChangesStillTakePriorityOverAttemptNumbers()
+        {
+            var oldRound = new MiniGameTicket(2, MiniGameType.HitTargets, 4, 3, 8, 8, 20, 100, 71);
+            var current = new MiniGameTicket(2, MiniGameType.HitTargets, 4, 3, 8, 9, 1, 1, 72);
+            var nextMatch = new MiniGameTicket(2, MiniGameType.HitTargets, 4, 3, 9, 1, 1, 1, 1);
+            Assert.That(current.IsNewerThan(oldRound), Is.True);
+            Assert.That(oldRound.IsNewerThan(current), Is.False);
+            Assert.That(nextMatch.IsNewerThan(current), Is.True);
+            Assert.That(current.IsNewerThan(nextMatch), Is.False);
+        }
+
         [Test]
         public void ScopeIncludesBindingAndRoundEvenWhenNetworkEpochsAreUnchanged()
         {

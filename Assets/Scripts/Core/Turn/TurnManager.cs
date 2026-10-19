@@ -83,6 +83,7 @@ namespace AbsoluteZero.Core.Turn
         PlayerState[] _players = new PlayerState[2];
         PlayerModifiers[] _modifiers = new PlayerModifiers[2];
         TemperatureSystem _tempSystem;
+        TemperatureThresholdRewards _thresholdRewards;
         CombatEngine _combatEngine;
         BuffDebuffSystem _buffSystem;
         ItemManager _itemManager;
@@ -248,6 +249,8 @@ namespace AbsoluteZero.Core.Turn
 
         public override void OnNetworkDespawn()
         {
+            _thresholdRewards?.Dispose();
+            _thresholdRewards = null;
             CancelEnvironmentCamera();
             _prepInput.Close();
             PrepInputOpened = null;
@@ -546,6 +549,14 @@ namespace AbsoluteZero.Core.Turn
                 if (_matchManager.RoundNumber.Value != 1 || _matchManager.CurrentMatchState.Value != MatchState.RoundInProgress)
                     throw new System.InvalidOperationException("Initial round did not start exactly once");
                 mcr.CompleteInitialization();
+                _thresholdRewards?.Dispose();
+                _thresholdRewards = new TemperatureThresholdRewards(_players, _tempSystem,
+                    GetDropTable(), IsMulti, _gameRule?.MaxRandomItems ?? int.MaxValue,
+                    () => IsServer && IsSpawned && mcr != null && mcr.IsSessionCurrent
+                        && mcr.InitializationFailure == null && !IsDeathmatchGrantFaulted
+                        && _multiTerminalWinnerMask == 0
+                        && _matchManager != null
+                        && _matchManager.CurrentMatchState.Value == MatchState.RoundInProgress);
                 Debug.Log($"[TurnManager] Initialized {ready.Length} logical participants, generation={mcr.Generation}");
                 return true;
             }
