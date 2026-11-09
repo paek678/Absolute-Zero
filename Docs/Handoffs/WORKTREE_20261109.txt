@@ -1,0 +1,102 @@
+ M "Absolute Zero.slnx"
+ M Assets/Scripts/Core/Combat/CombatPresentationContext.cs
+ M Assets/Scripts/Core/Combat/ItemPresentationSequence.cs
+ M Assets/Scripts/Core/Common/LocalSettingsRuntime.cs
+ M Assets/Scripts/Core/Cosmetic/CosmeticProfileService.cs
+ M Assets/Scripts/Core/Match/MatchDepartureController.cs
+ M Assets/Scripts/Core/Network/RelayManager.cs
+ M Assets/Scripts/Core/Player/PlayerState.cs
+ M Assets/Scripts/Core/Session/LobbySessionWork.cs
+ M Assets/Scripts/Core/Session/NetworkSessionCoordinator.cs
+ M Assets/Scripts/Core/Session/NgoLocalHostRuntime.cs
+ M Assets/Scripts/Core/Session/NgoNetworkRuntime.cs
+ M Assets/Scripts/Core/Session/OnlineLobbyJoinPolicy.cs
+ M Assets/Scripts/Core/Session/RelayGateway.cs
+ M Assets/Scripts/Core/Session/SceneTransitionService.cs
+ M Assets/Scripts/Core/Solo/GameplayVideoProbe.cs
+ M Assets/Scripts/Core/Solo/MatrixScenarioProbe.cs
+ M Assets/Scripts/Core/Solo/PlaytestJsonlSink.cs
+ M Assets/Scripts/Core/Solo/SoloMatchStarter.cs
+ M Assets/Scripts/Core/Solo/SoloSessionCoordinator.cs
+ M Assets/Scripts/Core/Turn/PrepInputSnapshot.cs
+ M Assets/Scripts/Core/Turn/TurnManager.cs
+ M Assets/Scripts/UI/Common/UiFont.cs
+ M Assets/Scripts/UI/Game/MatchMenu.cs
+ M Assets/Scripts/UI/Lobby/AZLobbyUI.cs
+ M Assets/Scripts/UI/Lobby/LobbyMainView.cs
+ M Assets/Scripts/UI/Lobby/LobbySettingsView.cs
+ M Assets/Tests/Editor/Plan036PrepInputTests.cs
+ M Assets/Tests/Editor/RelayLobbyRegressionTests.cs
+ M Assets/Tests/Plan036Presentation/Runtime/Plan036PresentationProbe.cs
+ M Docs/Plans/PLAN_webgl_implementation_20261019.md
+ M Packages/packages-lock.json
+ M ProjectSettings/EditorSettings.asset
+ M ProjectSettings/ProjectSettings.asset
+ M ProjectSettings/UnityConnectSettings.asset
+?? .codex/scripts/serve_web_build.py
+?? .codex/scripts/test_serve_web_build.py
+?? .codex/scripts/test_web_browser_bridge.cjs
+?? Assets/Editor/WebBuildValidation.cs
+?? Assets/Editor/WebBuildValidation.cs.meta
+?? Assets/Editor/WebColliderPreservation.cs
+?? Assets/Editor/WebColliderPreservation.cs.meta
+?? Assets/Editor/WebPackageRepair.cs
+?? Assets/Editor/WebPackageRepair.cs.meta
+?? Assets/Plugins.meta
+?? Assets/Plugins/
+?? Assets/Scripts/Core/Common/ApplicationExitService.cs
+?? Assets/Scripts/Core/Common/ApplicationExitService.cs.meta
+?? Assets/Scripts/Core/Common/BrowserPlatformBridge.cs
+?? Assets/Scripts/Core/Common/BrowserPlatformBridge.cs.meta
+?? Assets/Scripts/Core/Common/IBrowserTextEntry.cs
+?? Assets/Scripts/Core/Common/IBrowserTextEntry.cs.meta
+?? Assets/Scripts/Core/Session/LocalHostTransportFactory.cs
+?? Assets/Scripts/Core/Session/LocalHostTransportFactory.cs.meta
+?? Assets/Scripts/Core/Session/RelayConnectionPolicy.cs
+?? Assets/Scripts/Core/Session/RelayConnectionPolicy.cs.meta
+?? Assets/Scripts/Core/Session/SessionLoop.cs
+?? Assets/Scripts/Core/Session/SessionLoop.cs.meta
+?? Assets/Scripts/Core/Session/WebHostOnlyTransport.cs
+?? Assets/Scripts/Core/Session/WebHostOnlyTransport.cs.meta
+?? Assets/Scripts/Core/Session/WebSessionDiagnostics.cs
+?? Assets/Scripts/Core/Session/WebSessionDiagnostics.cs.meta
+?? Assets/Scripts/UI/Lobby/BrowserNicknameInput.cs
+?? Assets/Scripts/UI/Lobby/BrowserNicknameInput.cs.meta
+?? Assets/Scripts/UI/Lobby/WebSettingsReviewProbe.cs
+?? Assets/Scripts/UI/Lobby/WebSettingsReviewProbe.cs.meta
+?? Assets/Scripts/UI/MiniGame/WebMiniGameReviewProbe.cs
+?? Assets/Scripts/UI/MiniGame/WebMiniGameReviewProbe.cs.meta
+?? Assets/Settings/WebBuildProfiles.meta
+?? Assets/Settings/WebBuildProfiles/
+?? Assets/Tests/Editor/BrowserNicknameInputTests.cs
+?? Assets/Tests/Editor/BrowserNicknameInputTests.cs.meta
+?? Assets/Tests/Editor/WebBuildSafetyTests.cs
+?? Assets/Tests/Editor/WebBuildSafetyTests.cs.meta
+?? Assets/Tests/Editor/WebColliderPreservationTests.cs
+?? Assets/Tests/Editor/WebColliderPreservationTests.cs.meta
+?? Assets/Tests/Editor/WebFontAssetTests.cs
+?? Assets/Tests/Editor/WebFontAssetTests.cs.meta
+?? Assets/Tests/Editor/WebHostOnlyTransportTests.cs
+?? Assets/Tests/Editor/WebHostOnlyTransportTests.cs.meta
+?? Assets/Tests/Editor/WebPipelinePreservationTests.cs
+?? Assets/Tests/Editor/WebPipelinePreservationTests.cs.meta
+?? Assets/Tests/Editor/WebQuitPresentationTests.cs
+?? Assets/Tests/Editor/WebQuitPresentationTests.cs.meta
+?? Assets/Tests/Editor/WebRelayPolicyTests.cs
+?? Assets/Tests/Editor/WebRelayPolicyTests.cs.meta
+?? Assets/Tests/Editor/WebSceneReturnTests.cs
+?? Assets/Tests/Editor/WebSceneReturnTests.cs.meta
+?? Assets/Tests/Editor/WebSessionLoopTests.cs
+?? Assets/Tests/Editor/WebSessionLoopTests.cs.meta
+?? Assets/Tests/WebSession.meta
+?? Assets/Tests/WebSession/
+?? Assets/WebGLTemplates.meta
+?? Assets/WebGLTemplates/
+?? Docs/Handoffs/
+?? Docs/Plans/PLAN_particle_all_modes_validation_20261105.md
+?? Docs/Plans/PLAN_webgl_code_design_20261019.md
+?? Docs/Validation/balance60_critical_review_20261013.md
+?? Docs/Validation/client_hit_particle_20261105.md
+?? Docs/Validation/webgl_20261019.md
+?? Docs/Validation/webgl_plan_review_20261019.md
+?? Packages/com.unity.pipeline/
